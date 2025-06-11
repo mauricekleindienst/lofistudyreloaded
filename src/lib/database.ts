@@ -549,10 +549,64 @@ export class DatabaseService {
       }
     });
   }
-
   async getSelectedBackground(): Promise<string | null> {
     const userSettings = await this.getUserSettings();
     return userSettings?.settings?.selectedBackground || null;
+  }
+
+  // Leaderboard
+  async getLeaderboard(): Promise<Array<{
+    email: string;
+    totalSessions: number;
+    totalFocusTime: number;
+    rank: number;
+  }>> {
+    try {
+      // Get aggregated stats for all users
+      const { data, error } = await supabase
+        .from('pomodoro_stats')
+        .select('email, sessions_completed, total_focus_time')
+        .order('sessions_completed', { ascending: false });
+
+      if (error) throw error;
+
+      // Aggregate by user and calculate totals
+      const userStats = new Map<string, { sessions: number; focusTime: number }>();
+      
+      data?.forEach(stat => {
+        const existing = userStats.get(stat.email) || { sessions: 0, focusTime: 0 };
+        userStats.set(stat.email, {
+          sessions: existing.sessions + (stat.sessions_completed || 0),
+          focusTime: existing.focusTime + (stat.total_focus_time || 0)
+        });
+      });
+
+      // Convert to leaderboard format and sort
+      const leaderboard = Array.from(userStats.entries())
+        .map(([email, stats]) => ({
+          email,
+          totalSessions: stats.sessions,
+          totalFocusTime: stats.focusTime,
+          rank: 0 // Will be set below
+        }))
+        .sort((a, b) => {
+          // Sort by sessions first, then by focus time
+          if (b.totalSessions !== a.totalSessions) {
+            return b.totalSessions - a.totalSessions;
+          }
+          return b.totalFocusTime - a.totalFocusTime;
+        })
+        .slice(0, 50) // Top 50 users
+        .map((user, index) => ({
+          ...user,
+          rank: index + 1
+        }));
+
+      return leaderboard;
+    } catch (error) {
+      console.error('Error fetching leaderboard:', error);
+      return [];
+    }
   }
 }
 

@@ -344,7 +344,7 @@ export default function PomodoroTimer() {
 
     if (state.isTimerRunning) {
       document.title = `${formatTime(state.timeLeft)} - ${
-        state.currentMode === "pomodoro" ? "Focus Time" : "Break Time"
+        state.currentMode === "pomodoro" ? "Focus" : "Break"
       }`;
     } else {
       document.title = "Pomodoro Timer";
@@ -410,19 +410,19 @@ export default function PomodoroTimer() {
     switch (mode) {
       case "pomodoro":
         return { 
-          label: "Focus Time", 
+          label: "Focus", 
           icon: <Timer size={16} />, 
           color: "var(--accent-color)" 
         };
       case "shortBreak":
         return { 
-          label: "Short Break", 
+          label: "Break", 
           icon: <Coffee size={16} />, 
           color: "#10b981" 
         };
       case "longBreak":
         return { 
-          label: "Long Break", 
+          label: "LBreak", 
           icon: <Coffee size={16} />, 
           color: "#3b82f6" 
         };
@@ -558,7 +558,7 @@ export default function PomodoroTimer() {
             <div className={styles.statValue}>
               {Math.floor((state.pomodoroCount * state.pomodoroDurations.pomodoro) / 3600)}h
             </div>
-            <div className={styles.statLabel}>Focus Time</div>
+            <div className={styles.statLabel}>Focus</div>
           </div>
         </div>
       </div>
@@ -583,7 +583,7 @@ export default function PomodoroTimer() {
                 <h4>Durations</h4>
                 
                 <div className={styles.settingRow}>
-                  <label>Focus Time (minutes)</label>
+                  <label>Focus (minutes)</label>
                   <input
                     type="number"
                     min="1"
@@ -595,7 +595,7 @@ export default function PomodoroTimer() {
                 </div>
 
                 <div className={styles.settingRow}>
-                  <label>Short Break (minutes)</label>
+                  <label>sBreak (minutes)</label>
                   <input
                     type="number"
                     min="1"
@@ -607,7 +607,7 @@ export default function PomodoroTimer() {
                 </div>
 
                 <div className={styles.settingRow}>
-                  <label>Long Break (minutes)</label>
+                  <label>lBreak (minutes)</label>
                   <input
                     type="number"
                     min="1"

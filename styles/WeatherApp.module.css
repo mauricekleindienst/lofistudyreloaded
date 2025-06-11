@@ -1,53 +1,53 @@
 /* Weather App Styles */
 .content {
-  padding: 20px;
+  padding: 12px;
   color: var(--text-primary);
   width: 100%;
-  min-width: 400px;
+  min-width: 200px;
 }
 
 .currentWeather {
-  padding: 24px;
+  padding: 16px;
   background-color: rgba(255, 255, 255, 0.05);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 16px;
-  margin-bottom: 24px;
+  border-radius: 12px;
+  margin-bottom: 16px;
   text-align: center;
   backdrop-filter: blur(10px);
 }
 
 .locationTitle {
-  font-size: 18px;
+  font-size: 16px;
   font-weight: 600;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
   color: white;
-  margin: 0 0 8px 0;
+  margin: 0 0 6px 0;
 }
 
 .weatherMain {
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 16px;
-  margin-bottom: 16px;
+  gap: 12px;
+  margin-bottom: 12px;
 }
 
 .temperatureDisplay {
-  font-size: 36px;
+  font-size: 28px;
   font-weight: bold;
   color: white;
 }
 
 .conditionText {
   color: rgba(255, 255, 255, 0.6);
-  font-size: 14px;
+  font-size: 12px;
 }
 
 .weatherDetails {
   display: grid;
   grid-template-columns: 1fr 1fr;
-  gap: 16px;
-  font-size: 14px;
+  gap: 12px;
+  font-size: 12px;
 }
 
 .detailCard {

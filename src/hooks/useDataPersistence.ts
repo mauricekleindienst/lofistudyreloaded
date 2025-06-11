@@ -158,10 +158,15 @@ export function useDataPersistence() {
   const saveSelectedBackground = useCallback(async (backgroundId: string): Promise<boolean> => {
     return await withLoadingAndError(() => db.saveSelectedBackground(backgroundId)) || false;
   }, []);
-
   const loadSelectedBackground = useCallback(async (): Promise<string | null> => {
     if (!isAuthenticated) return null;
     return await withLoadingAndError(() => db.getSelectedBackground());
+  }, [isAuthenticated]);
+
+  // Leaderboard operations
+  const loadLeaderboard = useCallback(async () => {
+    if (!isAuthenticated) return [];
+    return await withLoadingAndError(() => db.getLeaderboard()) || [];
   }, [isAuthenticated]);
 
   // Auto-sync operations when user logs in/out
@@ -170,8 +175,7 @@ export function useDataPersistence() {
       // Optional: Trigger initial data sync when user becomes authenticated
       console.log('User authenticated, data persistence enabled');
     }
-  }, [isAuthenticated]);
-  return {
+  }, [isAuthenticated]);  return {
     isAuthenticated,
     isLoading,
     error,
@@ -197,5 +201,7 @@ export function useDataPersistence() {
     // Background operations
     saveSelectedBackground,
     loadSelectedBackground,
+    // Leaderboard operations
+    loadLeaderboard,
   };
 }

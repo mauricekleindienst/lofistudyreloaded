@@ -19,7 +19,8 @@ import {
   LogIn,
   Settings,
   AlertTriangle,
-  Expand
+  Expand,
+  BarChart3
 } from 'lucide-react';
 import { backgrounds, DEFAULT_BACKGROUND } from '@/data/backgrounds';
 import styles from '../../styles/SelectionBar.module.css';
@@ -36,6 +37,7 @@ import Calculator from './apps/Calculator';
 import Calendar from './Calendar';
 import AccountSettings from './apps/AccountSettings';
 import MusicPlayerSidebar from './MusicPlayerSidebar';
+import StatsModal from './StatsModal';
 
 // Background interface to support both regular and YouTube backgrounds
 interface Background {
@@ -86,43 +88,43 @@ const modernApps: ModernApp[] = [
     name: 'Focus Timer',
     icon: Timer,
     component: PomodoroTimer,
-    category: 'productivity',
     color: 'orange',
-    description: 'Pomodoro technique for enhanced focus'
+    description: 'Pomodoro technique for enhanced focus',
+    category: 'study'
   },  {
     id: 'todo',
     name: 'Tasks',
     icon: CheckSquare,
     component: TodoList,
-    category: 'productivity',
     color: 'blue',
-    description: 'Organize your tasks and goals'
+    description: 'Organize your tasks and goals',
+    category: 'study'
   },
   {
     id: 'notes',
     name: 'Notes',
     icon: FileText,
     component: NotesApp,
-    category: 'productivity',
     color: 'green',
-    description: 'Take quick notes and organize your thoughts'
+    description: 'Take quick notes and organize your thoughts',
+    category: 'study'
   },  {
     id: 'calculator',
     name: 'Calculator',
     icon: CalculatorIcon,
     component: Calculator,
-    category: 'tools',
     color: 'orange',
-    description: 'Basic calculator for quick calculations'
+    description: 'Basic calculator for quick calculations',
+    category: 'study'
   },
   {
     id: 'account-settings',
     name: 'Account Settings',
     icon: Settings,
     component: AccountSettings,
-    category: 'tools',
     color: 'blue',
-    description: 'Manage your account and preferences'
+    description: 'Manage your account and preferences',
+    category: 'study'
   }
 ];
 
@@ -281,12 +283,12 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
   const [currentTime, setCurrentTime] = useState('');
   const [currentDate, setCurrentDate] = useState('');
   const [isClient, setIsClient] = useState(false);
-  const [notifications, setNotifications] = useState<ModernNotification[]>([]);
-  const [showCalendar, setShowCalendar] = useState(false);
+  const [notifications, setNotifications] = useState<ModernNotification[]>([]);  const [showCalendar, setShowCalendar] = useState(false);
   const [backgroundSaveLoading, setBackgroundSaveLoading] = useState(false);
   const [isMusicSidebarOpen, setIsMusicSidebarOpen] = useState(false);  const [backgroundsToShow, setBackgroundsToShow] = useState(8);
   const [selectedCategory, setSelectedCategory] = useState('all');  const [youtubeUrl, setYoutubeUrl] = useState('');
   const [customBackground, setCustomBackground] = useState<Background | null>(null);
+  const [showStats, setShowStats] = useState(false);
   
   // Refs for event handling
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -401,7 +403,7 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
       'todo': { width: 350, height: 420, minWidth: 300, minHeight: 360 },
       'music': { width: 280, height: 220, minWidth: 240, minHeight: 180 },
       'notes': { width: 400, height: 320, minWidth: 350, minHeight: 280 },
-      'calculator': { width: 240, height: 320, minWidth: 200, minHeight: 280 },
+      'calculator': { width: 240, height: 350, minWidth: 200, minHeight: 280 },
       'account-settings': { width: 360, height: 400, minWidth: 320, minHeight: 360 }
     };
 
@@ -597,7 +599,7 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
           onLoadedData={handleVideoLoad}
           onError={handleVideoError}
         />
-      )}{/* Top Right Icons */}
+      )}      {/* Top Right Icons */}
       <div className={desktopStyles.topRightIcons}>
         {!user && (
           <button
@@ -607,7 +609,18 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
           >
             <AlertTriangle size={20} />
           </button>
-        )}        <button
+        )}        {user && (
+          <button
+            onClick={() => {
+              console.log('Stats button clicked!');
+              setShowStats(true);
+            }}
+            className={desktopStyles.topIcon}
+            title="View Statistics"
+          >
+            <BarChart3 size={20} />
+          </button>
+        )}<button
           onClick={() => {
             if (document.fullscreenElement) {
               document.exitFullscreen();
@@ -781,9 +794,6 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
                     <div className={desktopStyles.backgroundOverlay}>
                       <div className={desktopStyles.backgroundInfo}>
                         <div className={desktopStyles.backgroundName}>{bg.alt}</div>
-                        <div className={desktopStyles.backgroundCategory}>
-                          <span className={desktopStyles.categoryTag}>{bg.category}</span>
-                        </div>
                       </div>
                       {currentBackground.id === bg.id && (
                         <div className={desktopStyles.selectedIndicator}>
@@ -844,65 +854,7 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
             </div>
           </div>
         </div>
-      )}{/* Help Dialog */}
-      {showHelp && (
-        <div className={`${desktopStyles.modalOverlay} ${desktopStyles.helpModal}`}>
-          <div className={`${desktopStyles.modalContainer} ${desktopStyles.helpModal}`}>
-            <div className={desktopStyles.modalHeader}>
-              <h3 className={desktopStyles.helpModalTitle}>Help & Shortcuts</h3>
-              <button
-                onClick={() => setShowHelp(false)}
-                className={styles.iconButton}
-              >
-                <X size={18} />
-              </button>
-            </div>
-            
-            <div className={desktopStyles.helpContent}>
-              <div className={desktopStyles.shortcutItem}>
-                <span className={desktopStyles.shortcutLabel}>Switch Windows</span>
-                <kbd className={desktopStyles.shortcutKey}>Alt + Tab</kbd>
-              </div>
-              <div className={desktopStyles.shortcutItem}>
-                <span className={desktopStyles.shortcutLabel}>Close Dialogs</span>
-                <kbd className={desktopStyles.shortcutKey}>ESC</kbd>
-              </div>              <div className={desktopStyles.shortcutItem}>
-                <span className={desktopStyles.shortcutLabel}>Background Panel</span>
-                <kbd className={desktopStyles.shortcutKey}>B Key</kbd>
-              </div>
-              <div className={desktopStyles.shortcutItem}>
-                <span className={desktopStyles.shortcutLabel}>Music Sidebar</span>
-                <kbd className={desktopStyles.shortcutKey}>M Key</kbd>
-              </div>
-              <div className={desktopStyles.shortcutItem}>
-                <span className={desktopStyles.shortcutLabel}>Show Help</span>
-                <kbd className={desktopStyles.shortcutKey}>? Key</kbd>
-              </div>
-            </div>
-            
-            <div className={desktopStyles.helpSection}>
-              <h4 className={desktopStyles.helpSectionTitle}>Features</h4>
-              <ul className={desktopStyles.featuresList}>
-                <li className={desktopStyles.featureItem}>
-                  <Star size={14} className={desktopStyles.iconYellow} />
-                  <span>Drag windows to move them around</span>
-                </li>
-                <li className={desktopStyles.featureItem}>
-                  <Sparkles size={14} className={desktopStyles.iconPurple} />
-                  <span>Modern glass morphism design</span>
-                </li>
-                <li className={desktopStyles.featureItem}>
-                  <Heart size={14} className={desktopStyles.iconPink} />
-                  <span>Enhanced productivity tools</span>
-                </li>
-                <li className={desktopStyles.featureItem}>
-                  <Music size={14} className={desktopStyles.iconBlue} />
-                  <span>Beautiful ambient backgrounds</span>
-                </li>
-              </ul>            </div>
-          </div>
-        </div>
-      )}
+      )}    
 
       {/* Open Windows */}
       {openWindows.map(window => (
@@ -924,9 +876,7 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
             <div className={`window-handle ${desktopStyles.windowHeader}`}>            <div className={desktopStyles.windowTitleSection}>
               <window.app.icon size={20} className={desktopStyles.whiteIcon} />
               <span className={desktopStyles.windowTitle}>{window.app.name}</span>
-              <span className={desktopStyles.windowCategory}>
-                {window.app.category}
-              </span>
+           
             </div>              <div className={desktopStyles.windowControls}>
                 <button
                   onClick={() => minimizeWindow(window.id)}
@@ -1021,16 +971,8 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
               <div className="font-semibold">Backgrounds</div>
               <div className={desktopStyles.tooltipDescription}>Change ambient background</div>
             </div>
-          </button>          <button
-            onClick={() => setShowHelp(true)}
-            className={styles.iconButton}
-          >
-            <HelpCircle size={20} />
-            <div className={styles.tooltip}>
-              <div className="font-semibold">Help</div>
-              <div className={desktopStyles.tooltipDescription}>Keyboard shortcuts</div>
-            </div>
-          </button>          <button
+          </button>         
+                  <button
             onClick={handleAccountAction}
             className={`${styles.iconButton} ${user ? styles.authenticatedUser : ''}`}
             disabled={!isConfigured}
@@ -1118,6 +1060,7 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
               setShowHelp(false);
               setShowCalendar(false);
               setIsMusicSidebarOpen(false);
+              setShowStats(false);
             }
           }}
           autoFocus        />
@@ -1127,6 +1070,11 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
       <Calendar 
         isVisible={showCalendar} 
         onClose={() => setShowCalendar(false)} 
+      />      {/* Stats Modal */}
+      {console.log('showStats state:', showStats)}
+      <StatsModal 
+        isOpen={showStats} 
+        onClose={() => setShowStats(false)} 
       />
     </div>
   );

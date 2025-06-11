@@ -1,0 +1,687 @@
+/* Stats Modal Styles */
+.modalOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(8px);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 20px;
+}
+
+.modalContainer {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+  border-radius: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(20px);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  width: 100%;
+  max-width: 900px;
+  max-height: 90vh;
+  overflow: hidden;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Header */
+.modalHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 24px 28px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.04) 100%);
+}
+
+.headerContent {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.headerIcon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--accent-color) 0%, #ff9533 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  box-shadow: 0 8px 24px rgba(255, 123, 0, 0.3);
+}
+
+.modalTitle {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.modalSubtitle {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin: 0;
+  margin-top: 4px;
+}
+
+.closeButton {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  border: none;
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.closeButton:hover {
+  background: rgba(255, 68, 68, 0.2);
+  color: #ef4444;
+  transform: scale(1.05);
+}
+
+/* Tab Navigation */
+.tabNavigation {
+  display: flex;
+  gap: 8px;
+  padding: 20px 28px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.tabButton {
+  flex: 1;
+  padding: 12px 16px;
+  background: transparent;
+  border: none;
+  border-radius: 12px;
+  color: rgba(255, 255, 255, 0.6);
+  font-weight: 500;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  position: relative;
+  overflow: hidden;
+}
+
+.tabButton::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, var(--accent-color) 0%, #ff9533 100%);
+  opacity: 0;
+  transition: opacity 0.3s ease;
+}
+
+.tabButton span {
+  position: relative;
+  z-index: 1;
+}
+
+.tabButton svg {
+  position: relative;
+  z-index: 1;
+}
+
+.tabButton:hover {
+  color: rgba(255, 255, 255, 0.8);
+  background: rgba(255, 255, 255, 0.05);
+}
+
+.tabButton.activeTab {
+  color: white;
+  background: linear-gradient(135deg, var(--accent-color) 0%, #ff9533 100%);
+  box-shadow: 0 8px 24px rgba(255, 123, 0, 0.3);
+}
+
+.tabButton.activeTab::before {
+  opacity: 1;
+}
+
+/* Modal Content */
+.modalContent {
+  flex: 1;
+  padding: 28px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+}
+
+.modalContent::-webkit-scrollbar {
+  width: 6px;
+}
+
+.modalContent::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.modalContent::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.2);
+  border-radius: 3px;
+}
+
+/* Loading State */
+.loadingState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  gap: 20px;
+  color: var(--text-secondary);
+}
+
+.spinner {
+  width: 40px;
+  height: 40px;
+  border: 3px solid rgba(255, 255, 255, 0.1);
+  border-top: 3px solid var(--accent-color);
+  border-radius: 50%;
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to { transform: rotate(360deg); }
+}
+
+/* Overview Content */
+.overviewContent {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+/* Quick Stats */
+.quickStats {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 20px;
+}
+
+.statCard {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.04) 100%);
+  border-radius: 16px;
+  padding: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(10px);
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  transition: all 0.3s ease;
+}
+
+.statCard:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
+  border-color: rgba(255, 123, 0, 0.3);
+}
+
+.statIcon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--accent-color) 0%, #ff9533 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+  flex-shrink: 0;
+}
+
+.statContent {
+  flex: 1;
+}
+
+.statValue {
+  font-size: 28px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1;
+  margin-bottom: 4px;
+}
+
+.statLabel {
+  font-size: 14px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+/* Period Stats */
+.periodStats h3 {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 20px 0;
+}
+
+.periodGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 20px;
+}
+
+.periodCard {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.02) 100%);
+  border-radius: 12px;
+  padding: 20px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  text-align: center;
+}
+
+.periodLabel {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+}
+
+.periodValue {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.periodTime {
+  font-size: 16px;
+  color: var(--accent-color);
+  font-weight: 500;
+}
+
+/* Category Breakdown */
+.categoryBreakdown h3 {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 20px 0;
+}
+
+.categoryList {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.categoryItem {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.02) 100%);
+  border-radius: 12px;
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.categoryHeader {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.categoryName {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+.categoryCount {
+  color: var(--text-secondary);
+  font-size: 14px;
+}
+
+.categoryProgress {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  height: 8px;
+  overflow: hidden;
+  margin-bottom: 4px;
+}
+
+.categoryBar {
+  height: 100%;
+  background: linear-gradient(135deg, var(--accent-color) 0%, #ff9533 100%);
+  border-radius: 6px;
+  transition: width 0.3s ease;
+}
+
+.categoryPercentage {
+  text-align: right;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+
+/* Analytics Content */
+.analyticsContent {
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+}
+
+.analyticsContent h3 {
+  font-size: 20px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 20px 0;
+}
+
+/* Activity Chart */
+.activityChart {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.02) 100%);
+  border-radius: 16px;
+  padding: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.chartGrid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  margin-bottom: 16px;
+}
+
+.chartDay {
+  aspect-ratio: 1;
+  border-radius: 4px;
+  position: relative;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.chartDay:hover {
+  transform: scale(1.1);
+  z-index: 1;
+}
+
+.dayLabel {
+  position: absolute;
+  top: -20px;
+  left: 50%;
+  transform: translateX(-50%);
+  font-size: 10px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.chartLegend {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.legendScale {
+  display: flex;
+  gap: 2px;
+}
+
+.legendSquare {
+  width: 12px;
+  height: 12px;
+  border-radius: 2px;
+}
+
+/* Weekly Pattern */
+.weeklyPattern {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.02) 100%);
+  border-radius: 16px;
+  padding: 24px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.weeklyChart {
+  display: flex;
+  align-items: end;
+  justify-content: space-between;
+  gap: 12px;
+  height: 120px;
+}
+
+.weeklyBar {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  height: 100%;
+  position: relative;
+}
+
+.barFill {
+  width: 100%;
+  background: linear-gradient(135deg, var(--accent-color) 0%, #ff9533 100%);
+  border-radius: 4px 4px 0 0;
+  transition: height 0.3s ease;
+  min-height: 4px;
+}
+
+.barLabel {
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+.barValue {
+  position: absolute;
+  top: -20px;
+  font-size: 10px;
+  color: var(--text-primary);
+  font-weight: 500;
+}
+
+/* Leaderboard Content */
+.leaderboardContent {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.leaderboardHeader {
+  text-align: center;
+}
+
+.leaderboardHeader h3 {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0 0 8px 0;
+}
+
+.leaderboardHeader p {
+  color: var(--text-secondary);
+  margin: 0;
+}
+
+.leaderboardList {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.leaderboardItem {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.02) 100%);
+  border-radius: 16px;
+  padding: 20px 24px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  display: flex;
+  align-items: center;
+  gap: 20px;
+  transition: all 0.3s ease;
+  position: relative;
+}
+
+.leaderboardItem:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.15);
+}
+
+.leaderboardItem.currentUser {
+  border: 2px solid var(--accent-color);
+  background: linear-gradient(135deg, rgba(255, 123, 0, 0.1) 0%, rgba(255, 123, 0, 0.05) 100%);
+}
+
+.rank {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-weight: 700;
+  font-size: 18px;
+  flex-shrink: 0;
+}
+
+.medal {
+  width: 48px;
+  height: 48px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: white;
+}
+
+.medal1 {
+  background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
+}
+
+.medal2 {
+  background: linear-gradient(135deg, #c0c0c0 0%, #e5e5e5 100%);
+}
+
+.medal3 {
+  background: linear-gradient(135deg, #cd7f32 0%, #daa520 100%);
+}
+
+.rankNumber {
+  color: var(--text-secondary);
+}
+
+.userInfo {
+  flex: 1;
+}
+
+.userName {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin-bottom: 4px;
+}
+
+.userStats {
+  font-size: 14px;
+  color: var(--text-secondary);
+}
+
+.currentUserBadge {
+  background: var(--accent-color);
+  color: white;
+  padding: 4px 12px;
+  border-radius: 12px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+/* Empty State */
+.emptyState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 60px 20px;
+  text-align: center;
+  color: var(--text-secondary);
+}
+
+.emptyState svg {
+  opacity: 0.5;
+  margin-bottom: 16px;
+}
+
+.emptyState h4 {
+  font-size: 18px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0 0 8px 0;
+}
+
+.emptyState p {
+  margin: 0;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .modalContainer {
+    margin: 10px;
+    max-height: calc(100vh - 20px);
+  }
+  
+  .modalHeader {
+    padding: 20px;
+  }
+  
+  .modalContent {
+    padding: 20px;
+  }
+  
+  .tabNavigation {
+    padding: 16px 20px 0;
+  }
+  
+  .quickStats {
+    grid-template-columns: 1fr;
+  }
+  
+  .periodGrid {
+    grid-template-columns: 1fr;
+  }
+  
+  .chartGrid {
+    gap: 2px;
+  }
+  
+  .weeklyChart {
+    gap: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .modalHeader {
+    flex-direction: column;
+    gap: 16px;
+    text-align: center;
+  }
+  
+  .headerContent {
+    flex-direction: column;
+    gap: 12px;
+  }
+  
+  .tabButton {
+    padding: 10px 12px;
+    font-size: 13px;
+  }
+  
+  .statCard {
+    padding: 16px;
+  }
+  
+  .statValue {
+    font-size: 24px;
+  }
+}

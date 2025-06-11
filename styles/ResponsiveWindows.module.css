@@ -1,0 +1,180 @@
+/* Responsive Window System */
+.responsiveWindow {
+  position: absolute;
+  background: rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 12px;
+  box-shadow: 
+    0 8px 32px rgba(0, 0, 0, 0.3),
+    0 0 0 1px rgba(255, 255, 255, 0.1) inset;
+  overflow: hidden;
+  transition: all 0.3s ease;
+  min-width: 160px;
+  min-height: 140px;
+  max-width: 90vw;
+  max-height: 85vh;
+}
+
+.responsiveWindow:hover {
+  box-shadow: 
+    0 12px 40px rgba(0, 0, 0, 0.4),
+    0 0 0 1px rgba(255, 255, 255, 0.15) inset;
+}
+
+.responsiveWindowContent {
+  height: calc(100% - 40px);
+  overflow: hidden;
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+}
+
+/* Responsive breakpoints */
+@media (max-width: 768px) {
+  .responsiveWindow {
+    min-width: 140px;
+    min-height: 120px;
+    max-width: 95vw;
+    max-height: 80vh;
+    border-radius: 8px;
+  }
+  
+  .responsiveWindowContent {
+    padding: 6px;
+    height: calc(100% - 35px);
+  }
+}
+
+@media (max-width: 480px) {
+  .responsiveWindow {
+    min-width: 120px;
+    min-height: 100px;
+    max-width: 98vw;
+    max-height: 75vh;
+    border-radius: 6px;
+  }
+  
+  .responsiveWindowContent {
+    padding: 4px;
+    height: calc(100% - 30px);
+  }
+}
+
+@media (min-width: 1920px) {
+  .responsiveWindow {
+    max-width: 70vw;
+    max-height: 80vh;
+  }
+}
+
+/* App-specific responsive styles */
+.pomodoroWindow {
+  min-width: 160px;
+  min-height: 240px;
+}
+
+.todoWindow {
+  min-width: 200px;
+  min-height: 260px;
+}
+
+.notesWindow {
+  min-width: 250px;
+  min-height: 200px;
+}
+
+.calculatorWindow {
+  min-width: 140px;
+  min-height: 200px;
+  aspect-ratio: 3/4;
+}
+
+.musicWindow {
+  min-width: 180px;
+  min-height: 140px;
+}
+
+.accountSettingsWindow {
+  min-width: 220px;
+  min-height: 260px;
+}
+
+/* Responsive content scaling */
+@media (max-width: 768px) {
+  .pomodoroWindow { min-width: 140px; min-height: 200px; }
+  .todoWindow { min-width: 160px; min-height: 220px; }
+  .notesWindow { min-width: 200px; min-height: 160px; }
+  .calculatorWindow { min-width: 120px; min-height: 160px; }
+  .musicWindow { min-width: 150px; min-height: 120px; }
+  .accountSettingsWindow { min-width: 180px; min-height: 220px; }
+}
+
+@media (max-width: 480px) {
+  .pomodoroWindow { min-width: 120px; min-height: 180px; }
+  .todoWindow { min-width: 140px; min-height: 200px; }
+  .notesWindow { min-width: 160px; min-height: 140px; }
+  .calculatorWindow { min-width: 100px; min-height: 140px; }
+  .musicWindow { min-width: 130px; min-height: 100px; }
+  .accountSettingsWindow { min-width: 160px; min-height: 200px; }
+}
+
+/* Window resize indicators */
+.resizeHandle {
+  position: absolute;
+  background: transparent;
+  z-index: 10;
+}
+
+.resizeHandle.corner {
+  width: 12px;
+  height: 12px;
+  bottom: 0;
+  right: 0;
+  cursor: se-resize;
+  border-bottom-right-radius: 12px;
+}
+
+.resizeHandle.corner::after {
+  content: '';
+  position: absolute;
+  bottom: 2px;
+  right: 2px;
+  width: 8px;
+  height: 8px;
+  background: linear-gradient(
+    -45deg,
+    transparent 40%,
+    rgba(255, 255, 255, 0.3) 40%,
+    rgba(255, 255, 255, 0.3) 60%,
+    transparent 60%
+  );
+  border-radius: 2px;
+}
+
+/* Minimized state */
+.minimized {
+  transform: scale(0.1);
+  opacity: 0;
+  pointer-events: none;
+  transition: all 0.3s ease;
+}
+
+/* Maximized state adjustments for responsive */
+.maximized {
+  width: 95vw !important;
+  height: 90vh !important;
+  top: 5vh !important;
+  left: 2.5vw !important;
+  border-radius: 8px;
+}
+
+@media (max-width: 768px) {
+  .maximized {
+    width: 98vw !important;
+    height: 85vh !important;
+    top: 7.5vh !important;
+    left: 1vw !important;
+    border-radius: 6px;
+  }
+}
