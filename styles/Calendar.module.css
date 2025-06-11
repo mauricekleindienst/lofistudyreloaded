@@ -1,0 +1,382 @@
+/* Calendar Component Styles */
+
+/* Calendar Overlay */
+.calendarOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.8);
+  backdrop-filter: blur(4px);
+  z-index: 50;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  padding: 16px;
+}
+
+/* Calendar Container */
+.calendarContainer {
+  background: linear-gradient(145deg, var(--bg-primary), var(--bg-secondary));
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 20px;
+  padding: 24px;
+  box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
+  color: white;
+  width: 90%;
+  max-width: 480px;
+  max-height: 80vh;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+/* Calendar Header */
+.calendarHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.monthNavigation {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+}
+
+.navButton {
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+  padding: 8px;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.navButton:hover {
+  background: rgba(255, 255, 255, 0.2);
+  border-color: rgba(255, 255, 255, 0.3);
+}
+
+.monthTitle {
+  color: white;
+  font-size: 20px;
+  font-weight: 600;
+  margin: 0;
+  min-width: 200px;
+  text-align: center;
+}
+
+.closeButton {
+  background: transparent;
+  border: none;
+  color: var(--accent-color);
+  cursor: pointer;
+  padding: 8px;
+  border-radius: 8px;
+  transition: all 0.3s ease;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.closeButton:hover {
+  background: rgba(255, 123, 0, 0.1);
+  color: #ff9900;
+}
+
+/* Day Names */
+.dayNames {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+  margin-bottom: 8px;
+}
+
+.dayName {
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 12px;
+  font-weight: 600;
+  text-align: center;
+  padding: 8px 4px;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Calendar Grid */
+.calendarGrid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.emptyDay {
+  padding: 12px;
+}
+
+.calendarDay {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: white;
+  cursor: pointer;
+  padding: 12px;
+  text-align: center;
+  font-size: 14px;
+  font-weight: 500;
+  transition: all 0.3s ease;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.calendarDay:hover {
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.3);
+  transform: scale(1.05);
+}
+
+.calendarDay.today {
+  background: var(--accent-color);
+  border-color: var(--accent-color);
+  color: white;
+  font-weight: 700;
+  box-shadow: 0 4px 16px rgba(255, 123, 0, 0.4);
+}
+
+.calendarDay.today:hover {
+  background: #ff9900;
+  border-color: #ff9900;
+  transform: scale(1.05);
+}
+
+/* Calendar Footer */
+.calendarFooter {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  padding-top: 16px;
+  margin-top: auto;
+}
+
+.todayInfo {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  color: rgba(255, 255, 255, 0.8);
+  font-size: 14px;
+}
+
+.todayLabel {
+  font-weight: 600;
+  color: var(--accent-color);
+}
+
+.todayDate {
+  font-weight: 500;
+}
+
+/* Responsive Design */
+@media (max-width: 640px) {
+  .calendarContainer {
+    width: 95%;
+    padding: 16px;
+    max-height: 90vh;
+  }
+  
+  .monthTitle {
+    font-size: 18px;
+    min-width: 150px;
+  }
+  
+  .calendarDay {
+    padding: 8px;
+    font-size: 13px;
+    min-height: 32px;
+  }
+  
+  .dayName {
+    font-size: 11px;
+    padding: 6px 2px;
+  }
+}
+
+
+
+.header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+}
+
+.header h2 {
+  margin: 0;
+  font-size: 24px;
+  font-weight: 700;
+}
+
+.closeButton {
+  background-color: transparent;
+  border: none;
+  color: #ff7b00;
+  
+  font-size: 24px;
+  transition: color 0.3s ease;
+}
+
+.closeButton:hover {
+  color: #ff9900;
+}
+
+.addEvent {
+  display: flex;
+  margin-bottom: 20px;
+}
+
+.eventInput {
+  flex: 1;
+  padding: 10px;
+  font-size: 16px;
+  border: none;
+  border-radius: 10px;
+  background-color: rgba(255, 255, 255, 0.1);
+  color: #fff;
+  margin-right: 10px;
+}
+
+.addButton {
+  padding: 10px 15px;
+  font-size: 16px;
+  background-color: #ff7b00;
+  border: none;
+  border-radius: 10px;
+  color: #fff;
+  
+  transition: background-color 0.3s ease;
+}
+
+.addButton:hover {
+  background-color: #ff9900;
+}
+
+/* Styles for react-big-calendar */
+.calendarContainer .rbc-calendar {
+  background-color: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+  padding: 10px;
+  height: calc(100% - 100px);
+}
+
+.calendarContainer .rbc-header {
+  padding: 10px;
+  background-color: rgba(255, 255, 255, 0.05);
+  color: #fff;
+}
+
+.calendarContainer .rbc-today {
+  background-color: rgba(255, 123, 0, 0.3);
+}
+
+.calendarContainer .rbc-event {
+  background-color: #ff7b00;
+  border: none;
+}
+
+.calendarContainer .rbc-event.rbc-selected {
+  background-color: #ff9900;
+}
+
+.calendarContainer .rbc-off-range-bg {
+  background-color: rgba(0, 0, 0, 0.1);
+}
+
+.calendarContainer .rbc-day-bg + .rbc-day-bg {
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.calendarContainer .rbc-month-row + .rbc-month-row {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.calendarContainer .rbc-timeslot-group {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.calendarContainer .rbc-time-view .rbc-header {
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.calendarContainer .rbc-time-content {
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.calendarContainer .rbc-time-header-content {
+  border-left: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.calendarContainer .rbc-day-slot .rbc-time-slot {
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.calendarContainer .rbc-time-view-resources .rbc-time-gutter,
+.calendarContainer .rbc-time-view-resources .rbc-time-header-gutter {
+  border-right: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.calendarContainer .rbc-time-view {
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.calendarContainer .rbc-toolbar button {
+  color: #fff;
+  background-color: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.calendarContainer .rbc-toolbar button:hover {
+  background-color: rgba(255, 255, 255, 0.2);
+}
+
+.calendarContainer .rbc-toolbar button.rbc-active {
+  background-color: #ff7b00;
+}
+
+.calendarContainer .rbc-toolbar button.rbc-active:hover {
+  background-color: #ff9900;
+}
+.tooltip {
+  position: relative;
+  display: inline-block;
+  
+}
+
+.tooltip .tooltiptext {
+  visibility: hidden;
+  width: 120px;
+  background-color: black;
+  color: #fff;
+  text-align: center;
+  border-radius: 6px;
+  padding: 5px 0;
+  position: absolute;
+  z-index: 1;
+  bottom: 125%; /* Position the tooltip above the icon */
+  left: 50%;
+  margin-left: -60px;
+  opacity: 0;
+  transition: opacity 0.3s;
+}
+
+.tooltip:hover .tooltiptext {
+  visibility: visible;
+  opacity: 1;
+}

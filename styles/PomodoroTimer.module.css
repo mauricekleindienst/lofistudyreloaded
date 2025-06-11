@@ -1,0 +1,630 @@
+/* Pomodoro Timer - Clean Compact Design */
+.container {
+  height: 100%;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: 12px;
+  gap: 8px;
+  color: var(--text-primary);
+  background: linear-gradient(135deg, rgba(0, 0, 0, 0.1) 0%, rgba(0, 0, 0, 0.05) 100%);
+  overflow: hidden;
+  box-sizing: border-box;
+  min-height: 280px;
+}
+
+/* Responsive container adjustments */
+@media (max-width: 768px) {
+  .container {
+    padding: 10px;
+    gap: 6px;
+    min-height: 240px;
+  }
+}
+
+@media (max-width: 480px) {
+  .container {
+    padding: 8px;
+    gap: 4px;
+    min-height: 200px;
+  }
+}
+
+/* Mode Selector */
+.modeSelector {
+  display: flex;
+  gap: 4px;
+  background: rgba(255, 255, 255, 0.06);
+  padding: 4px;
+  border-radius: 10px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.modeButton {
+  flex: 1;
+  padding: 6px 8px;
+  border: none;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 4px;
+  transition: all 0.2s ease;
+  cursor: pointer;
+  min-height: 26px;
+}
+
+@media (max-width: 768px) {
+  .modeButton {
+    min-height: 24px;
+    font-size: 10px;
+    padding: 4px 6px;
+  }
+}
+
+@media (max-width: 480px) {
+  .modeButton {
+    min-height: 20px;
+    font-size: 9px;
+    padding: 3px 4px;
+    gap: 2px;
+  }
+}
+
+.modeButton:hover {
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-primary);
+}
+
+.modeButton.active {
+  background: var(--mode-color, var(--accent-color));
+  color: white;
+  box-shadow: 0 4px 16px rgba(255, 107, 0, 0.3);
+}
+
+.modeButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* Timer Section */
+.timerSection {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 0;
+}
+
+.progressRing {
+  position: relative;
+  width: 90px;
+  height: 90px;
+}
+
+/* Responsive progress ring */
+@media (max-width: 768px) {
+  .progressRing {
+    width: 80px;
+    height: 80px;
+  }
+}
+
+@media (max-width: 480px) {
+  .progressRing {
+    width: 70px;
+    height: 70px;
+  }
+}
+
+.progressSvg {
+  width: 100%;
+  height: 100%;
+  transform: rotate(-90deg);
+}
+
+.progressTrack {
+  stroke: rgba(255, 255, 255, 0.1);
+  stroke-linecap: round;
+}
+
+.progressFill {
+  stroke: var(--accent-color);
+  stroke-linecap: round;
+  transition: stroke-dashoffset 1s ease;
+  filter: drop-shadow(0 0 8px currentColor);
+}
+
+.timerDisplay {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+}
+
+.timeText {
+  font-size: 1.1rem;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin-bottom: 1px;
+  font-family: 'JetBrains Mono', monospace;
+  line-height: 1.1;
+}
+
+.modeLabel {
+  font-size: 9px;
+  color: var(--text-secondary);
+  font-weight: 500;
+}
+
+/* Responsive timer display */
+@media (max-width: 768px) {
+  .timeText {
+    font-size: 1rem;
+    margin-bottom: 0;
+  }
+  
+  .modeLabel {
+    font-size: 8px;
+  }
+}
+
+@media (max-width: 480px) {
+  .timeText {
+    font-size: 0.9rem;
+    margin-bottom: 0;
+  }
+  
+  .modeLabel {
+    font-size: 7px;
+  }
+}
+
+/* Controls */
+.controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.playButton {
+  width: 36px;
+  height: 36px;
+  border: none;
+  border-radius: 50%;
+  background: var(--accent-color);
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 16px rgba(255, 107, 0, 0.3);
+}
+
+/* Responsive controls */
+@media (max-width: 768px) {
+  .controls {
+    gap: 6px;
+  }
+  
+  .playButton {
+    width: 32px;
+    height: 32px;
+  }
+}
+
+@media (max-width: 480px) {
+  .controls {
+    gap: 4px;
+  }
+  
+  .playButton {
+    width: 28px;
+    height: 28px;
+  }
+}
+
+
+.playButton:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 28px rgba(255, 107, 0, 0.4);
+}
+
+.playButton.running {
+  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+  box-shadow: 0 6px 24px rgba(239, 68, 68, 0.3);
+}
+
+.resetButton,
+.settingsButton {
+  width: 28px;
+  height: 28px;
+  border: none;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.resetButton:hover,
+.settingsButton:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text-primary);
+  transform: translateY(-1px);
+}
+
+.resetButton:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* Category Section */
+.categorySection {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.categoryLabel {
+  font-size: 10px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+
+.categorySelector {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+
+.categorySelect {
+  width: 100%;
+  padding: 4px 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-size: 12px;
+  backdrop-filter: blur(10px);
+  outline: none;
+  appearance: none;
+  cursor: pointer;
+}
+
+.categorySelect:focus {
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 2px rgba(255, 107, 0, 0.1);
+}
+
+.categorySelect:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.categoryIcon {
+  position: absolute;
+  right: 10px;
+  color: var(--text-secondary);
+  pointer-events: none;
+}
+
+/* Statistics */
+.statsSection {
+  display: flex;
+  gap: 6px;
+}
+
+.statCard {
+  flex: 1;
+  padding: 8px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 8px;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.statIcon {
+  color: var(--accent-color);
+  background: rgba(255, 107, 0, 0.1);
+  padding: 4px;
+  border-radius: 4px;
+  flex-shrink: 0;
+}
+
+.statContent {
+  flex: 1;
+  min-width: 0;
+}
+
+.statValue {
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--text-primary);
+  line-height: 1;
+}
+
+.statLabel {
+  font-size: 9px;
+  color: var(--text-secondary);
+  margin-top: 1px;
+}
+
+/* Settings Modal */
+.settingsOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  backdrop-filter: blur(4px);
+}
+
+.settingsModal {
+  width: 90%;
+  max-width: 400px;
+  background: rgba(30, 30, 30, 0.95);
+  border-radius: 20px;
+  backdrop-filter: blur(20px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+  overflow: hidden;
+}
+
+.settingsHeader {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 20px 24px;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.settingsHeader h3 {
+  margin: 0;
+  color: var(--text-primary);
+  font-size: 18px;
+  font-weight: 600;
+}
+
+.closeButton {
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.closeButton:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text-primary);
+}
+
+.settingsContent {
+  padding: 24px;
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.settingGroup {
+  margin-bottom: 24px;
+}
+
+.settingGroup h4 {
+  margin: 0 0 16px 0;
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.settingRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 16px;
+}
+
+.settingRow label {
+  color: var(--text-primary);
+  font-size: 14px;
+  font-weight: 500;
+}
+
+.settingInput {
+  width: 80px;
+  padding: 8px 12px;
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  color: var(--text-primary);
+  font-size: 14px;
+  outline: none;
+}
+
+.settingInput:focus {
+  border-color: var(--accent-color);
+  box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.1);
+}
+
+.volumeControl {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.volumeButton {
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.08);
+  color: var(--text-secondary);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.volumeButton:hover {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text-primary);
+}
+
+.volumeSlider {
+  flex: 1;
+  height: 4px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 2px;
+  outline: none;
+  appearance: none;
+  cursor: pointer;
+}
+
+.volumeSlider::-webkit-slider-thumb {
+  appearance: none;
+  width: 16px;
+  height: 16px;
+  background: var(--accent-color);
+  border-radius: 50%;
+  cursor: pointer;
+  box-shadow: 0 2px 8px rgba(255, 107, 0, 0.3);
+}
+
+.volumeSlider::-moz-range-thumb {
+  width: 16px;
+  height: 16px;
+  background: var(--accent-color);
+  border-radius: 50%;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 2px 8px rgba(255, 107, 0, 0.3);
+}
+
+.volumeValue {
+  color: var(--text-secondary);
+  font-size: 12px;
+  font-weight: 500;
+  min-width: 32px;
+  text-align: right;
+}
+
+.settingsFooter {
+  padding: 20px 24px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+}
+
+.saveSettingsButton {
+  width: 100%;
+  padding: 12px;
+  border: none;
+  border-radius: 12px;
+  background: linear-gradient(135deg, var(--accent-color) 0%, #ff9533 100%);
+  color: white;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.saveSettingsButton:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 8px 32px rgba(255, 107, 0, 0.3);
+}
+
+/* Responsive Design */
+@media (max-width: 480px) {
+  .container {
+    padding: 12px;
+    gap: 10px;
+  }
+  
+  .progressRing {
+    width: 140px;
+    height: 140px;
+  }
+  
+  .timeText {
+    font-size: 1.8rem;
+  }
+  
+  .playButton {
+    width: 44px;
+    height: 44px;
+  }
+  
+  .resetButton,
+  .settingsButton {
+    width: 32px;
+    height: 32px;
+  }
+  
+  .statCard {
+    padding: 10px;
+  }
+  
+  .statValue {
+    font-size: 14px;
+  }
+}
+
+/* Even smaller screens */
+@media (max-height: 500px) {
+  .container {
+    padding: 10px;
+    gap: 8px;
+  }
+  
+  .progressRing {
+    width: 120px;
+    height: 120px;
+  }
+  
+  .timeText {
+    font-size: 1.6rem;
+  }
+  
+  .modeButton {
+    padding: 6px 8px;
+    font-size: 12px;
+  }
+  
+  .timerSection {
+    gap: 12px;
+  }
+  
+  .statCard {
+    padding: 8px;
+    gap: 6px;
+  }
+}

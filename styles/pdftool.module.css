@@ -1,0 +1,106 @@
+/* styles/pdfeditor.module.css */
+.container {
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    color: #ffffff;
+    font-family: 'Comfortaa', sans-serif;
+    background: linear-gradient(145deg, #1e1e1e, #2a2a2a);
+    animation: gradientAnimation 10s ease infinite;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .title {
+    font-size: 2.5rem;
+    font-weight: 700;
+    color: #ff7b00;
+    text-align: center;
+    margin: 2rem 0;
+  }
+  
+  .studyContainer {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+  }
+  
+  .sidebar {
+    width: 300px;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(10px);
+    transition: width 0.3s ease;
+  }
+  
+  .sidebarCollapsed {
+    width: 60px;
+  }
+  
+  .tabContainer {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .tabButton {
+    display: flex;
+    align-items: center;
+    padding: 1rem;
+    font-size: 1rem;
+    color: #ffffff;
+    background: none;
+    border: none;
+    cursor: pointer;
+    transition: background-color 0.3s ease;
+  }
+  
+  .tabButton:hover {
+    background-color: rgba(255, 255, 255, 0.1);
+  }
+  
+  .activeTab {
+    background-color: rgba(255, 123, 0, 0.2);
+  }
+  
+  .tabIcon {
+    margin-right: 1rem;
+  }
+  
+  .sidebarCollapsed .tabLabel {
+    display: none;
+  }
+  
+  .sidebarContent {
+    padding: 1rem;
+  }
+  
+  .pdfContainer {
+    flex: 1;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .toggleHandle {
+    position: absolute;
+    top: 50%;
+    left: 0;
+    transform: translateY(-50%);
+    background-color: rgba(255, 123, 0, 0.8);
+    color: #ffffff;
+    border: none;
+    padding: 1rem 0.5rem;
+    cursor: pointer;
+    z-index: 10;
+  }
+  
+  @keyframes gradientAnimation {
+    0% {
+      background-position: 0% 50%;
+    }
+    50% {
+      background-position: 100% 50%;
+    }
+    100% {
+      background-position: 0% 50%;
+    }
+  }
+

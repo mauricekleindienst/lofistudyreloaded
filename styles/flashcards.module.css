@@ -1,0 +1,282 @@
+/* Container for the entire flashcards page */
+.container {
+  display: flex;
+  flex-direction: column;
+  color: #ffffff;
+  padding: 40px 20px; /* Increase padding for better spacing */
+  height: 100vh; /* Set the height to 100vh to take up the full viewport */
+  width: 100%;
+  background: rgba(0, 0, 0, 0.8); /* Subtle background overlay */
+  box-shadow: 0 8px 32px 0 rgba(31, 38, 135, 0.37); /* Soft shadow effect */
+  backdrop-filter: blur(8px); /* Add a blur effect */
+  overflow: hidden; /* Prevent the entire container from scrolling */
+}
+
+/* Title as a div instead of h1 */
+.title {
+  font-size: 48px; /* Larger font size for a modern look */
+  font-weight: 800; /* Extra bold for impact */
+  margin-bottom: 20px; /* Adjust spacing */
+  text-align: center; /* Center the title */
+  letter-spacing: 1px; /* Slight letter spacing */
+  text-transform: uppercase; /* Uppercase for emphasis */
+  color: #ff7b00; /* Brand color for the title */
+  position: relative;
+  z-index: 1;
+  background: linear-gradient(90deg, #ff7b00, #ff9900);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
+
+.titleShadow {
+  text-shadow: 0px 4px 6px rgba(0, 0, 0, 0.1); /* Subtle shadow for a 3D effect */
+}
+
+/* Search and filter container */
+.searchContainer {
+  width: 70%;
+  align-self: center;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 20px;
+  padding: 15px 20px; /* Add padding for a more substantial bar */
+  background-color: #2a2a2a; /* Darker background to differentiate from the main content */
+  border-radius: 10px; /* Rounded corners for a modern look */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); /* Subtle shadow for elevation */
+}
+
+/* Search Input */
+.searchInput {
+  flex-grow: 1; /* Make the search bar grow to fill space */
+  padding: 10px 15px;
+  border: none; /* Remove the default border */
+  border-radius: 25px; /* Rounded edges for a smooth look */
+  background-color: #444; /* Slightly lighter background */
+  color: #fff; /* White text for contrast */
+  font-size: 16px;
+  box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.1); /* Inset shadow for depth */
+  transition: background-color 0.3s ease, box-shadow 0.3s ease;
+  outline: none; /* Remove default outline */
+}
+
+.searchInput::placeholder {
+  color: #bbb; /* Lighter color for placeholder text */
+}
+
+.searchInput:focus {
+  background-color: #555; /* Slightly darker on focus */
+  box-shadow: inset 0 2px 8px rgba(0, 0, 0, 0.2); /* More pronounced shadow on focus */
+}
+
+/* Filter Buttons Container */
+.filters {
+  display: flex;
+  gap: 10px;
+  margin-left: 20px; /* Space between search bar and filters */
+}
+
+/* Individual Filter Button */
+.filterButton {
+  padding: 10px 20px;
+  border: none;
+  border-radius: 25px;
+  background-color: #ff7b00;
+  color: #fff;
+  font-size: 14px;
+  cursor: pointer;
+  transition: background-color 0.3s ease, transform 0.3s ease;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1); /* Add a shadow for elevation */
+}
+
+.filterButton:hover {
+  background-color: #ff9900; /* Slightly lighter color on hover */
+  transform: translateY(-2px); /* Lift the button slightly on hover */
+}
+
+.filterButton:active {
+  transform: translateY(0); /* Reset the lift on click */
+}
+
+.filterButton.selected {
+  background-color: #ff9900; /* Different background for selected state */
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2); /* Slightly stronger shadow */
+}
+
+/* Grid layout for the flashcard containers */
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr)); /* Ensure the grid is responsive */
+  gap: 20px; /* Add space between the cards */
+  max-width: 1200px; /* Limit the maximum width of the grid */
+  margin: 0 auto; /* Center the grid */
+  padding: 50px; /* Add padding inside the grid */
+  overflow-y: auto; /* Enable vertical scrolling */
+  height: 100%; /* Allow grid to take the remaining height of the container */
+  flex-grow: 1; /* Make the grid fill the remaining space */
+}
+
+
+/* Card design for each flashcard container */
+.card {
+  background: linear-gradient(145deg, #ff7b00, #ff9900); /* Brand color gradient */
+  box-shadow: 0 8px 16px 0 rgba(255, 123, 0, 0.37); /* Orange shadow effect */
+  border-radius: 20px; /* Larger border radius for a softer look */
+  padding: 50px; /* Increase padding for larger cards */
+  cursor: pointer;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  text-align: center;
+  color: #ffffff; /* Ensure text color contrasts with the background */
+  max-width: fit-content; /* Limit the width of each card */
+  margin: auto; /* Center each card */
+}
+
+.card:hover {
+  transform: scale(1.1); /* Enlarge card slightly on hover */
+  box-shadow: 0 12px 24px 0 rgba(255, 123, 0, 0.47); /* More pronounced shadow on hover */
+}
+
+/* "Add New Container" card - first card in the grid */
+.card:first-of-its-kind {
+  background: rgba(255, 123, 0, 0.1); /* Subtle brand color background */
+  border: 2px dashed #ff7b00; /* Dashed border to indicate it's an action */
+  max-width: 300px; /* Ensure the new container card matches other cards' width */
+}
+
+.card:first-of-its-kind:hover {
+  transform: scale(1.1); /* Slightly more pronounced hover effect */
+  border: 2px solid #ff7b00; /* Solid border on hover */
+}
+
+/* Title within each card */
+.cardTitle {
+  font-size: 22px;
+  font-weight: 700;
+  margin: 15px 0 10px 0;
+  text-transform: uppercase; /* Uppercase title */
+  color: #ffffff; /* Keep text color white */
+}
+
+/* Description within each card */
+.cardDescription {
+  font-size: 16px;
+  color: #f2f2f2; /* Slightly lighter text color for readability */
+  line-height: 1.5; /* Better readability */
+}
+
+/* Card meta information (e.g., last reviewed, progress) */
+.cardMeta {
+  display: flex;
+  justify-content: space-between;
+  width: 100%;
+  font-size: 12px;
+  color: #aaaaaa;
+  margin-top: 10px;
+}
+
+.lastReviewed,
+.progress {
+  display: inline-block;
+}
+
+.progressBar {
+  background-color: #333;
+  border-radius: 8px;
+  overflow: hidden;
+  width: 100%;
+  height: 8px;
+  margin-top: 5px;
+}
+
+.progressFill {
+  background-color: #ff7b00;
+  height: 100%;
+  border-radius: 8px;
+}
+
+/* Tagging system */
+.cardTags {
+  display: flex;
+  gap: 8px;
+  margin-top: 10px;
+}
+
+.tag {
+  background-color: #ff7b00;
+  padding: 5px 10px;
+  border-radius: 12px;
+  color: #fff;
+  font-size: 12px;
+}
+
+/* Favorite Icon */
+.favoriteIcon {
+  margin-left: 10px;
+  cursor: pointer;
+  font-size: 16px;
+  color: #ff7b00;
+}
+
+.favorite .favoriteIcon {
+  color: gold; /* Change the color for favorited containers */
+}
+
+/* Quick Actions */
+.quickActions {
+  display: none; /* Hidden by default */
+  margin-top: 10px;
+}
+
+.card:hover .quickActions {
+  display: flex;
+  gap: 8px;
+}
+
+.actionButton {
+  padding: 5px 10px;
+  border: none;
+  border-radius: 5px;
+  background-color: #ff7b00;
+  color: #fff;
+  cursor: pointer;
+  font-size: 12px;
+}
+
+.actionButton:hover {
+  background-color: #ff9900;
+}
+
+/* Responsive design adjustments */
+@media (max-width: 1024px) {
+  .grid {
+    grid-template-columns: repeat(2, 1fr); /* Adjust grid to two cards per row for tablets */
+  }
+
+  .container {
+    padding: 20px; /* Reduce padding for smaller screens */
+  }
+
+  .title {
+    font-size: 32px; /* Slightly smaller title on medium screens */
+  }
+
+  .sidebarButton {
+    width: 100%; /* Full-width button on mobile */
+  }
+}
+
+@media (max-width: 768px) {
+  .grid {
+    grid-template-columns: repeat(1, 1fr); /* Single column for mobile */
+  }
+
+  .title {
+    font-size: 28px; /* Smaller title on mobile */
+  }
+}
+
+

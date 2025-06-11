@@ -1,0 +1,33 @@
+/* Custom styles for react-pdf-viewer */
+.rpv-core__toolbar {
+    background: rgba(0, 0, 0, 0.8) !important; /* Set toolbar background */
+  }
+  
+  .rpv-core__toolbar-button,
+  .rpv-core__minimal-button {
+    color: #fff !important; /* Ensure toolbar buttons are white */
+  }
+  
+  .rpv-core__toolbar-button:hover,
+  .rpv-core__minimal-button:hover {
+    background: rgba(255, 255, 255, 0.2) !important; /* Hover effect */
+  }
+  
+  .rpv-core__zoom-in-button,
+  .rpv-core__zoom-out-button {
+    color: #fff !important; /* Ensure zoom buttons are white */
+  }
+  
+  /* Ensure all other text and icons in react-pdf-viewer are white */
+  .rpv-core__text-layer {
+    color: #fff !important;
+  }
+  
+  .rpv-core__text-layer * {
+    color: #fff !important;
+  }
+  
+  .rpv-core__icon {
+    fill: #fff !important;
+  }
+  
