@@ -1,12 +1,14 @@
 "use client";
 
-import React from 'react';
+import React, { useState } from 'react';
 import { 
   AlertTriangle, 
   BarChart3, 
   Expand, 
-  Share 
+  Share,
+  Info
 } from 'lucide-react';
+import InfoModal from '../InfoModal';
 import desktopStyles from '../../../styles/Desktop.module.css';
 
 interface TopBarProps {
@@ -16,6 +18,7 @@ interface TopBarProps {
 }
 
 export default function TopBar({ user, onToggleStats, onShare }: TopBarProps) {
+  const [showInfoModal, setShowInfoModal] = useState(false);
   const handleFullscreen = () => {
     if (document.fullscreenElement) {
       document.exitFullscreen();
@@ -23,44 +26,59 @@ export default function TopBar({ user, onToggleStats, onShare }: TopBarProps) {
       document.documentElement.requestFullscreen();
     }
   };
-
+  
   return (
-    <div className={desktopStyles.topRightIcons}>
-      {!user && (
+    <>
+      <div className={desktopStyles.topRightIcons}>
+        {!user && (
+          <button
+            className={desktopStyles.topIcon}
+            title="Sessions won't be saved"
+            style={{ color: '#f59e0b' }}
+          >
+            <AlertTriangle size={20} />
+          </button>
+        )}
+        
+        {user && (
+          <button
+            onClick={onToggleStats}
+            className={desktopStyles.topIcon}
+            title="View Statistics"
+          >
+            <BarChart3 size={20} />
+          </button>
+        )}
+        
         <button
+          onClick={() => setShowInfoModal(true)}
           className={desktopStyles.topIcon}
-          title="Sessions won't be saved"
-          style={{ color: '#f59e0b' }}
+          title="About Lo-Fi.Study"
         >
-          <AlertTriangle size={20} />
+          <Info size={20} />
         </button>
-      )}
-      
-      {user && (
+        
         <button
-          onClick={onToggleStats}
+          onClick={handleFullscreen}
           className={desktopStyles.topIcon}
-          title="View Statistics"
+          title="Toggle Fullscreen"
         >
-          <BarChart3 size={20} />
+          <Expand size={20} />
         </button>
-      )}
-      
-      <button
-        onClick={handleFullscreen}
-        className={desktopStyles.topIcon}
-        title="Toggle Fullscreen"
-      >
-        <Expand size={20} />
-      </button>
-      
-      <button
-        onClick={onShare}
-        className={desktopStyles.topIcon}
-        title="Share"
-      >
-        <Share size={20} />
-      </button>
-    </div>
+        
+        <button
+          onClick={onShare}
+          className={desktopStyles.topIcon}
+          title="Share"
+        >
+          <Share size={20} />
+        </button>
+      </div>
+
+      <InfoModal 
+        isOpen={showInfoModal}
+        onClose={() => setShowInfoModal(false)}
+      />
+    </>
   );
 }

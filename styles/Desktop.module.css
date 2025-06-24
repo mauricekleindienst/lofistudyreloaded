@@ -93,6 +93,16 @@
   flex-shrink: 0;
 }
 
+.modalHeader h2 {
+  color: var(--text-primary, #ffffff);
+  font-size: 1.5rem;
+  font-weight: 700;
+  margin: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
 .modalTitleSection {
   display: flex;
   align-items: center;
@@ -124,48 +134,110 @@
 }
 
 .modalCloseButton {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.12) 0%, rgba(255, 255, 255, 0.08) 100%);
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  border-radius: 14px;
-  color: rgba(255, 255, 255, 0.8);
-  padding: 14px;
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  padding: 8px;
+  color: var(--text-secondary, #e2e8f0);
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   align-items: center;
   justify-content: center;
-  position: relative;
-  overflow: hidden;
-}
-
-.modalCloseButton::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.4), transparent);
-  opacity: 0;
-  transition: opacity 0.3s ease;
 }
 
 .modalCloseButton:hover {
-  background: linear-gradient(135deg, rgba(239, 68, 68, 0.9) 0%, rgba(220, 38, 38, 0.8) 100%);
-  border-color: rgba(239, 68, 68, 0.6);
-  color: white;
+  background: rgba(255, 255, 255, 0.2);
+  color: var(--text-primary, #ffffff);
+  transform: scale(1.1);
+}
+
+.modalContent {
+  padding: 24px 28px 28px;
+}
+
+.modalContent p {
+  color: var(--text-secondary, #e2e8f0);
+  font-size: 1rem;
+  line-height: 1.6;
+  margin: 0 0 24px 0;
+}
+
+.features {
+  margin-bottom: 28px;
+}
+
+.features h3 {
+  color: var(--text-primary, #ffffff);
+  font-size: 1.2rem;
+  font-weight: 600;
+  margin: 0 0 16px 0;
+}
+
+.features ul {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.features li {
+  color: var(--text-secondary, #e2e8f0);
+  font-size: 0.95rem;
+  line-height: 1.5;
+  margin-bottom: 8px;
+  padding-left: 8px;
+}
+
+.modalButtons {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.modalButton {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 12px;
+  padding: 12px 16px;
+  color: var(--text-primary, #ffffff);
+  text-decoration: none;
+  font-weight: 600;
+  font-size: 0.9rem;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  backdrop-filter: blur(10px);
+  min-width: 140px;
+  justify-content: center;
+}
+
+.modalButton:hover {
+  background: var(--accent-color, #ff7b00);
+  border-color: var(--accent-color, #ff7b00);
   transform: translateY(-2px);
-  box-shadow: 0 8px 25px rgba(239, 68, 68, 0.3);
+  box-shadow: 0 8px 20px rgba(255, 123, 0, 0.3);
+  color: var(--text-primary, #ffffff);
+  text-decoration: none;
 }
 
-.modalCloseButton:hover::before {
-  opacity: 1;
+/* Custom scrollbar for modal */
+.infoModal::-webkit-scrollbar {
+  width: 6px;
 }
 
-.helpModalTitle {
-  font-size: 20px;
-  font-weight: bold;
-  color: white;
+.infoModal::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 3px;
+}
+
+.infoModal::-webkit-scrollbar-thumb {
+  background: var(--accent-color, #ff7b00);
+  border-radius: 3px;
+}
+
+.infoModal::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-hover, #ff9900);
 }
 
 /* Categories Filter */
