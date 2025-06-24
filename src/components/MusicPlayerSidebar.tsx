@@ -249,18 +249,18 @@ const MusicPlayerSidebar: React.FC<MusicPlayerSidebarProps> = ({ isOpen, onToggl
   return (
     <>
       {/* Backdrop Overlay */}
-      <div className={`${styles.backdrop} ${isOpen ? styles.backdropOpen : ''}`} onClick={onToggle} />
-
-      {/* Sidebar Toggle Button */}
-      <button
-        className={`${styles.toggleButton} ${isOpen ? styles.open : ''}`}
-        onClick={onToggle}
-        title={isOpen ? "Close Music Player" : "Open Music Player"}
-      >
-        {isOpen ? <ChevronLeft size={20} /> : <Music size={20} />}
-        <span className={styles.toggleButtonText}>
-          {isOpen ? 'Close' : 'Music'}
-        </span>
+      <div className={`${styles.backdrop} ${isOpen ? styles.backdropOpen : ''}`} onClick={onToggle} />      {/* Sidebar Toggle Button */}
+      <div className={styles.toggleButtonWrapper}>
+        <button
+          className={`${styles.toggleButton} ${isOpen ? styles.open : ''}`}
+          onClick={onToggle}
+          title={isOpen ? "Close Music Player" : "Open Music Player"}
+        >
+          {isOpen ? <ChevronLeft size={20} /> : <Music size={20} />}
+          <span className={styles.toggleButtonText}>
+            {isOpen ? 'Close' : 'Music'}
+          </span>
+        </button>
         {isPlaying && !isOpen && (
           <div className={styles.playingIndicator}>
             <span></span>
@@ -268,7 +268,7 @@ const MusicPlayerSidebar: React.FC<MusicPlayerSidebarProps> = ({ isOpen, onToggl
             <span></span>
           </div>
         )}
-      </button>
+      </div>
 
       {/* Sidebar */}
       <div className={`${styles.sidebar} ${isOpen ? styles.sidebarOpen : ''}`}>
