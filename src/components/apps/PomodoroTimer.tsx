@@ -7,6 +7,9 @@ import React, {
   useReducer,
   useMemo,
 } from "react";
+import { useAuth } from '../../contexts/AuthContext';
+import { useDataPersistence } from '../../hooks/useDataPersistence';
+import { useAppState } from '../../contexts/AppStateContext';
 import { 
   Play, 
   Pause, 
@@ -16,15 +19,13 @@ import {
   VolumeX,
   Timer,
   Coffee,
-  CheckCircle,  BookOpen,
-  Code,
-  PenTool,
+  CheckCircle,
+  BookOpen,
+  Code,  PenTool,
   Briefcase,
   MoreHorizontal,
   X
 } from "lucide-react";
-import { useAuth } from "../../contexts/AuthContext";
-import { useDataPersistence } from "../../hooks/useDataPersistence";
 import styles from "../../../styles/PomodoroTimer.module.css";
 
 const categories = ["Studying", "Coding", "Writing", "Working", "Other"];
@@ -90,9 +91,9 @@ function reducer(state: PomodoroState, action: PomodoroAction): PomodoroState {
         ...state,
         timeLeft: state.pomodoroDurations[state.currentMode],
         isTimerRunning: false,
-      };
-    case "TICK":
-      return { ...state, timeLeft: Math.max(0, state.timeLeft - 1) };    case "INCREMENT_POMODORO":
+      };    case "TICK":
+      return { ...state, timeLeft: Math.max(0, state.timeLeft - 1) };
+    case "INCREMENT_POMODORO":
       return { ...state, pomodoroCount: state.pomodoroCount + 1 };
     case "SET_POMODORO_COUNT":
       return { ...state, pomodoroCount: action.payload };
@@ -129,8 +130,7 @@ const getCategoryIcon = (category: string) => {
   }
 };
 
-export default function PomodoroTimer() {
-  const [state, dispatch] = useReducer(reducer, initialState);
+export default function PomodoroTimer() {  const [state, dispatch] = useReducer(reducer, initialState);
   const { user } = useAuth();
   const { 
     isAuthenticated, 
@@ -138,18 +138,19 @@ export default function PomodoroTimer() {
     updatePomodoroStats,
     loadPomodoroSessions 
   } = useDataPersistence();
+  const { updatePomodoroState } = useAppState();
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   
   // Sound refs at the top level
   const pomodoroStartRef = useRef<HTMLAudioElement | null>(null);
   const pomodoroEndRef = useRef<HTMLAudioElement | null>(null);
   const longPauseRef = useRef<HTMLAudioElement | null>(null);
-  
-  const soundRefs = useMemo(() => ({
+    const soundRefs = useMemo(() => ({
     pomodoroStart: pomodoroStartRef,
     pomodoroEnd: pomodoroEndRef,
     longPause: longPauseRef,
   }), []);
+
   // Load sounds on mount
   useEffect(() => {
     if (typeof window !== "undefined") {
@@ -164,7 +165,9 @@ export default function PomodoroTimer() {
         }
       });
     }
-  }, [soundRefs, state.isMuted, state.volume]);// Update sound volumes when volume or mute state changes
+  }, [soundRefs, state.isMuted, state.volume]);
+
+  // Update sound volumes when volume or mute state changes
   useEffect(() => {
     Object.values(soundRefs).forEach(ref => {
       if (ref.current) {
@@ -196,6 +199,7 @@ export default function PomodoroTimer() {
       });
     }
   }, []);
+
   useEffect(() => {
     requestNotificationPermission();
   }, [requestNotificationPermission]);
@@ -348,9 +352,7 @@ export default function PomodoroTimer() {
       }`;
     } else {
       document.title = "Pomodoro Timer";
-    }
-
-    // Dispatch timer update event for other components
+    }    // Dispatch timer update event for other components
     const event = new CustomEvent('pomodoroUpdate', {
       detail: {
         count: state.pomodoroCount,
@@ -359,7 +361,24 @@ export default function PomodoroTimer() {
         mode: state.currentMode
       }
     });
-    window.dispatchEvent(event);  }, [state.timeLeft, state.currentMode, state.isTimerRunning, state.pomodoroCount]);
+    window.dispatchEvent(event);
+  }, [state.timeLeft, state.currentMode, state.isTimerRunning, state.pomodoroCount]);
+
+  // Update app state context for bottom bar display
+  useEffect(() => {
+    const minutes = Math.floor(state.timeLeft / 60);
+    const seconds = state.timeLeft % 60;
+    
+    updatePomodoroState({
+      minutes,
+      seconds,
+      isRunning: state.isTimerRunning,
+      mode: state.currentMode === 'pomodoro' ? 'work' : 
+            state.currentMode === 'shortBreak' ? 'shortBreak' : 'longBreak',
+      cycles: state.pomodoroCount,
+      category: state.category as 'Studying' | 'Coding' | 'Writing' | 'Working' | 'Other'
+    });
+  }, [state.timeLeft, state.isTimerRunning, state.currentMode, state.pomodoroCount, state.category, updatePomodoroState]);
   
   const toggleTimer = useCallback(() => {
     dispatch({ type: "TOGGLE_TIMER" });
@@ -566,24 +585,21 @@ export default function PomodoroTimer() {
       {/* Settings Modal */}
       {state.showSettings && (
         <div className={styles.settingsOverlay}>
-          <div className={styles.settingsModal}>
-            <div className={styles.settingsHeader}>
-              <h3>Timer Settings</h3>
+          <div className={styles.settingsModal}>            <div className={styles.settingsHeader}>
+              <h3>Settings</h3>
               <button
                 className={styles.closeButton}
                 onClick={() => dispatch({ type: "TOGGLE_SETTINGS" })}
               >
-                <X size={20} />
+                <X size={16} />
               </button>
             </div>
 
-            <div className={styles.settingsContent}>
-              {/* Duration Settings */}
+            <div className={styles.settingsContent}>              {/* Duration Settings */}
               <div className={styles.settingGroup}>
                 <h4>Durations</h4>
-                
-                <div className={styles.settingRow}>
-                  <label>Focus (minutes)</label>
+                  <div className={styles.settingRow}>
+                  <label>Focus</label>
                   <input
                     type="number"
                     min="1"
@@ -595,7 +611,7 @@ export default function PomodoroTimer() {
                 </div>
 
                 <div className={styles.settingRow}>
-                  <label>sBreak (minutes)</label>
+                  <label>Short</label>
                   <input
                     type="number"
                     min="1"
@@ -607,7 +623,7 @@ export default function PomodoroTimer() {
                 </div>
 
                 <div className={styles.settingRow}>
-                  <label>lBreak (minutes)</label>
+                  <label>Long</label>
                   <input
                     type="number"
                     min="1"
@@ -621,16 +637,15 @@ export default function PomodoroTimer() {
 
               {/* Audio Settings */}
               <div className={styles.settingGroup}>
-                <h4>Audio</h4>
+                <h4>Volume</h4>
                 
                 <div className={styles.settingRow}>
-                  <label>Volume</label>
                   <div className={styles.volumeControl}>
                     <button
                       className={styles.volumeButton}
                       onClick={() => dispatch({ type: "TOGGLE_MUTE" })}
                     >
-                      {state.isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+                      {state.isMuted ? <VolumeX size={12} /> : <Volume2 size={12} />}
                     </button>
                     <input
                       type="range"
@@ -646,9 +661,7 @@ export default function PomodoroTimer() {
                   </div>
                 </div>
               </div>
-            </div>
-
-            <div className={styles.settingsFooter}>
+            </div>            <div className={styles.settingsFooter}>
               <button
                 className={styles.saveSettingsButton}
                 onClick={() => {
@@ -656,7 +669,7 @@ export default function PomodoroTimer() {
                   resetTimer();
                 }}
               >
-                Save Settings
+                Save
               </button>
             </div>
           </div>

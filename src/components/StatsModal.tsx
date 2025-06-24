@@ -1,12 +1,11 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useCallback } from 'react';
 import { 
   X, 
   Trophy, 
   Clock, 
   Target, 
-  Calendar,
   TrendingUp,
   Award,
   Users,
@@ -18,7 +17,8 @@ import {
   Code,
   PenTool,
   Briefcase,
-  MoreHorizontal
+  MoreHorizontal,
+  RefreshCw
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useDataPersistence } from '../hooks/useDataPersistence';
@@ -73,29 +73,39 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
     loadPomodoroStats,
     loadLeaderboard 
   } = useDataPersistence();
-  
   const [activeTab, setActiveTab] = useState<'overview' | 'analytics' | 'leaderboard'>('overview');
   const [statsData, setStatsData] = useState<StatsData | null>(null);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
-  const [loading, setLoading] = useState(true);
-
-  useEffect(() => {
-    if (isOpen && user?.email) {
-      loadStats();
+  const [loading, setLoading] = useState(false);
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);  const loadStats = useCallback(async () => {
+    // Only show loading if we haven't loaded data before or if user changed
+    if (!hasLoadedOnce) {
+      setLoading(true);
     }
-  }, [isOpen, user?.email]);
-
-  const loadStats = async () => {
-    if (!user?.email) return;
     
-    setLoading(true);
     try {
-      // Load user sessions and stats
-      const [sessions, stats, leaderboardData] = await Promise.all([
+      // Load user sessions and stats - now works for both authenticated and unauthenticated users
+      const [sessions, , leaderboardData] = await Promise.all([
         loadPomodoroSessions(),
         loadPomodoroStats(),
         loadLeaderboard()
       ]);
+
+      if (!sessions || !Array.isArray(sessions)) {
+        console.warn('No sessions data available');
+        setStatsData({
+          totalSessions: 0,
+          totalFocusTime: 0,
+          streakDays: 0,
+          todaySessions: 0,
+          weekSessions: 0,
+          monthSessions: 0,
+          categorySplit: {},
+          dailyActivity: []
+        });
+        setLeaderboard(leaderboardData || []);
+        return;
+      }
 
       // Calculate comprehensive stats
       const now = new Date();
@@ -103,22 +113,22 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
       const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
       const monthAgo = new Date(now.getFullYear(), now.getMonth(), 1);
 
-      // Filter sessions
-      const completedSessions = sessions.filter(s => s.completed);
+      // Filter sessions safely
+      const completedSessions = sessions.filter(s => s?.completed);
       const todaySessions = completedSessions.filter(s => 
-        s.completed_at?.startsWith(today)
+        s?.completed_at?.startsWith(today)
       );
       const weekSessions = completedSessions.filter(s => 
-        s.completed_at && new Date(s.completed_at) >= weekAgo
+        s?.completed_at && new Date(s.completed_at) >= weekAgo
       );
       const monthSessions = completedSessions.filter(s => 
-        s.completed_at && new Date(s.completed_at) >= monthAgo
+        s?.completed_at && new Date(s.completed_at) >= monthAgo
       );
 
       // Calculate category split
       const categorySplit: Record<string, number> = {};
       completedSessions.forEach(session => {
-        const category = session.category || 'Other';
+        const category = session?.category || 'Other';
         categorySplit[category] = (categorySplit[category] || 0) + 1;
       });
 
@@ -128,36 +138,38 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
         const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
         const dateStr = date.toISOString().split('T')[0];
         const daySessions = completedSessions.filter(s => 
-          s.completed_at?.startsWith(dateStr)
+          s?.completed_at?.startsWith(dateStr)
         );
         
         dailyActivity.push({
           date: dateStr,
           sessions: daySessions.length,
-          focusTime: daySessions.reduce((total, s) => total + (s.duration || 0), 0) / 60 // convert to minutes
+          focusTime: daySessions.reduce((total, s) => total + (s?.duration || 0), 0) / 60 // convert to minutes
         });
       }
 
-      // Calculate streak
+      // Calculate streak (improved logic)
       let streakDays = 0;
-      let checkDate = new Date(now);
-      while (true) {
+      const checkDate = new Date(now);
+      let consecutiveDays = true;
+      
+      while (consecutiveDays && streakDays < 365) { // Prevent infinite loop
         const dateStr = checkDate.toISOString().split('T')[0];
         const hasSessions = completedSessions.some(s => 
-          s.completed_at?.startsWith(dateStr)
+          s?.completed_at?.startsWith(dateStr)
         );
         
         if (hasSessions) {
           streakDays++;
           checkDate.setDate(checkDate.getDate() - 1);
         } else {
-          break;
+          consecutiveDays = false;
         }
       }
 
       setStatsData({
         totalSessions: completedSessions.length,
-        totalFocusTime: completedSessions.reduce((total, s) => total + (s.duration || 0), 0) / 60,
+        totalFocusTime: completedSessions.reduce((total, s) => total + (s?.duration || 0), 0) / 60,
         streakDays,
         todaySessions: todaySessions.length,
         weekSessions: weekSessions.length,
@@ -166,13 +178,43 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
         dailyActivity
       });
 
-      setLeaderboard(leaderboardData);
+      setLeaderboard(leaderboardData || []);
+      setHasLoadedOnce(true);
     } catch (error) {
       console.error('Failed to load stats:', error);
+      // Set empty state on error
+      setStatsData({
+        totalSessions: 0,
+        totalFocusTime: 0,
+        streakDays: 0,
+        todaySessions: 0,
+        weekSessions: 0,
+        monthSessions: 0,
+        categorySplit: {},
+        dailyActivity: []
+      });
+      setLeaderboard([]);
+      setHasLoadedOnce(true);
     } finally {
       setLoading(false);
     }
-  };
+  }, [loadPomodoroSessions, loadPomodoroStats, loadLeaderboard, hasLoadedOnce]);  useEffect(() => {
+    if (isOpen && !hasLoadedOnce) {
+      loadStats();
+    }
+  }, [isOpen, loadStats, hasLoadedOnce]);  // Function to manually refresh stats
+  const refreshStats = useCallback(async () => {
+    setLoading(true);
+    await loadStats();
+  }, [loadStats]);
+
+  // Reset state when modal is closed
+  useEffect(() => {
+    if (!isOpen) {
+      setHasLoadedOnce(false);
+      setLoading(false);
+    }
+  }, [isOpen]);
 
   const formatTime = (minutes: number) => {
     const hours = Math.floor(minutes / 60);
@@ -187,8 +229,7 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
 
   return (
     <div className={styles.modalOverlay}>
-      <div className={styles.modalContainer}>
-        {/* Header */}
+      <div className={styles.modalContainer}>        {/* Header */}
         <div className={styles.modalHeader}>
           <div className={styles.headerContent}>
             <div className={styles.headerIcon}>
@@ -199,9 +240,21 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
               <p className={styles.modalSubtitle}>Your productivity insights</p>
             </div>
           </div>
-          <button onClick={onClose} className={styles.closeButton}>
-            <X size={20} />
-          </button>
+          <div className={styles.headerActions}>
+            {user?.email && (
+              <button 
+                onClick={refreshStats} 
+                className={styles.refreshButton}
+                disabled={loading}
+                title="Refresh statistics"
+              >
+                <RefreshCw size={16} className={loading ? styles.spinning : ''} />
+              </button>
+            )}
+            <button onClick={onClose} className={styles.closeButton}>
+              <X size={20} />
+            </button>
+          </div>
         </div>
 
         {/* Tab Navigation */}
@@ -213,118 +266,154 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
           ].map(tab => (
             <button
               key={tab.id}
-              onClick={() => setActiveTab(tab.id as any)}
+              onClick={() => setActiveTab(tab.id as 'overview' | 'analytics' | 'leaderboard')}
               className={`${styles.tabButton} ${activeTab === tab.id ? styles.activeTab : ''}`}
             >
               {tab.icon}
               <span>{tab.label}</span>
             </button>
           ))}
-        </div>
-
-        {/* Content */}
+        </div>        {/* Content */}
         <div className={styles.modalContent}>
-          {loading ? (
+          {loading && !hasLoadedOnce ? (
             <div className={styles.loadingState}>
               <div className={styles.spinner}></div>
               <p>Loading your statistics...</p>
             </div>
-          ) : (
-            <>
+          ) : !user?.email ? (
+            <div className={styles.authRequiredState}>
+              <div className={styles.authIcon}>🔒</div>
+              <h3>Authentication Required</h3>
+              <p>Please sign in to view comprehensive study statistics, leaderboard rankings, and sync your data across devices.</p>
+              <div className={styles.authHint}>
+                <BarChart3 size={20} />
+                <span>Local session data is available but requires login for full features</span>
+              </div>
+            </div>
+          ) : (<>
               {/* Overview Tab */}
               {activeTab === 'overview' && statsData && (
                 <div className={styles.overviewContent}>
-                  {/* Quick Stats */}
-                  <div className={styles.quickStats}>
-                    <div className={styles.statCard}>
-                      <div className={styles.statIcon}>
-                        <CheckCircle size={20} />
-                      </div>
-                      <div className={styles.statContent}>
-                        <div className={styles.statValue}>{statsData.totalSessions}</div>
-                        <div className={styles.statLabel}>Total Sessions</div>
-                      </div>
-                    </div>
-
-                    <div className={styles.statCard}>
-                      <div className={styles.statIcon}>
-                        <Clock size={20} />
-                      </div>
-                      <div className={styles.statContent}>
-                        <div className={styles.statValue}>{formatTime(statsData.totalFocusTime)}</div>
-                        <div className={styles.statLabel}>Focus Time</div>
-                      </div>
-                    </div>
-
-                    <div className={styles.statCard}>
-                      <div className={styles.statIcon}>
-                        <Flame size={20} />
-                      </div>
-                      <div className={styles.statContent}>
-                        <div className={styles.statValue}>{statsData.streakDays}</div>
-                        <div className={styles.statLabel}>Day Streak</div>
-                      </div>
-                    </div>
-
-                    <div className={styles.statCard}>
-                      <div className={styles.statIcon}>
-                        <Target size={20} />
-                      </div>
-                      <div className={styles.statContent}>
-                        <div className={styles.statValue}>{statsData.todaySessions}</div>
-                        <div className={styles.statLabel}>Today</div>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Period Comparison */}
-                  <div className={styles.periodStats}>
-                    <h3>Performance Overview</h3>
-                    <div className={styles.periodGrid}>
-                      <div className={styles.periodCard}>
-                        <div className={styles.periodLabel}>This Week</div>
-                        <div className={styles.periodValue}>{statsData.weekSessions} sessions</div>
-                        <div className={styles.periodTime}>
-                          {formatTime(statsData.dailyActivity.slice(-7).reduce((sum, day) => sum + day.focusTime, 0))}
+                  {statsData.totalSessions === 0 ? (
+                    <div className={styles.emptyDataState}>
+                      <div className={styles.emptyIcon}>📊</div>
+                      <h3>No study data yet</h3>
+                      <p>Start your first focus session to begin tracking your productivity!</p>
+                      <div className={styles.emptyHints}>
+                        <div className={styles.emptyHint}>
+                          <CheckCircle size={16} />
+                          <span>Complete Pomodoro sessions</span>
                         </div>
-                      </div>
-                      <div className={styles.periodCard}>
-                        <div className={styles.periodLabel}>This Month</div>
-                        <div className={styles.periodValue}>{statsData.monthSessions} sessions</div>
-                        <div className={styles.periodTime}>
-                          {formatTime(statsData.dailyActivity.reduce((sum, day) => sum + day.focusTime, 0))}
+                        <div className={styles.emptyHint}>
+                          <Clock size={16} />
+                          <span>Track your focus time</span>
+                        </div>
+                        <div className={styles.emptyHint}>
+                          <Flame size={16} />
+                          <span>Build study streaks</span>
                         </div>
                       </div>
                     </div>
-                  </div>
-
-                  {/* Category Breakdown */}
-                  <div className={styles.categoryBreakdown}>
-                    <h3>Study Categories</h3>
-                    <div className={styles.categoryList}>
-                      {Object.entries(statsData.categorySplit).map(([category, count]) => {
-                        const percentage = (count / statsData.totalSessions) * 100;
-                        return (
-                          <div key={category} className={styles.categoryItem}>
-                            <div className={styles.categoryHeader}>
-                              <div className={styles.categoryName}>
-                                {getCategoryIcon(category)}
-                                <span>{category}</span>
-                              </div>
-                              <div className={styles.categoryCount}>{count} sessions</div>
-                            </div>
-                            <div className={styles.categoryProgress}>
-                              <div 
-                                className={styles.categoryBar}
-                                style={{ width: `${percentage}%` }}
-                              ></div>
-                            </div>
-                            <div className={styles.categoryPercentage}>{Math.round(percentage)}%</div>
+                  ) : (
+                    <>                      {/* Quick Stats */}
+                      <div className={styles.quickStats}>
+                        <div className={styles.statCard}>
+                          <div className={styles.statIcon}>
+                            <CheckCircle size={20} />
                           </div>
-                        );
-                      })}
-                    </div>
-                  </div>
+                          <div className={styles.statContent}>
+                            <div className={styles.statValue}>{statsData.totalSessions}</div>
+                            <div className={styles.statLabel}>Total Sessions</div>
+                          </div>
+                        </div>
+
+                        <div className={styles.statCard}>
+                          <div className={styles.statIcon}>
+                            <Clock size={20} />
+                          </div>
+                          <div className={styles.statContent}>
+                            <div className={styles.statValue}>{formatTime(statsData.totalFocusTime)}</div>
+                            <div className={styles.statLabel}>Focus Time</div>
+                          </div>
+                        </div>
+
+                        <div className={styles.statCard}>
+                          <div className={styles.statIcon}>
+                            <Flame size={20} />
+                          </div>
+                          <div className={styles.statContent}>
+                            <div className={styles.statValue}>{statsData.streakDays}</div>
+                            <div className={styles.statLabel}>Day Streak</div>
+                          </div>
+                        </div>
+
+                        <div className={styles.statCard}>
+                          <div className={styles.statIcon}>
+                            <Target size={20} />
+                          </div>
+                          <div className={styles.statContent}>
+                            <div className={styles.statValue}>{statsData.todaySessions}</div>
+                            <div className={styles.statLabel}>Today</div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Period Comparison */}
+                      <div className={styles.periodStats}>
+                        <h3>Performance Overview</h3>
+                        <div className={styles.periodGrid}>
+                          <div className={styles.periodCard}>
+                            <div className={styles.periodLabel}>This Week</div>
+                            <div className={styles.periodValue}>{statsData.weekSessions} sessions</div>
+                            <div className={styles.periodTime}>
+                              {formatTime(statsData.dailyActivity.slice(-7).reduce((sum, day) => sum + day.focusTime, 0))}
+                            </div>
+                          </div>
+                          <div className={styles.periodCard}>
+                            <div className={styles.periodLabel}>This Month</div>
+                            <div className={styles.periodValue}>{statsData.monthSessions} sessions</div>
+                            <div className={styles.periodTime}>
+                              {formatTime(statsData.dailyActivity.reduce((sum, day) => sum + day.focusTime, 0))}
+                            </div>
+                          </div>
+                        </div>
+                      </div>                      {/* Category Breakdown */}
+                      <div className={styles.categoryBreakdown}>
+                        <h3>Study Categories</h3>
+                        {Object.keys(statsData.categorySplit).length > 0 ? (
+                          <div className={styles.categoryList}>
+                            {Object.entries(statsData.categorySplit).map(([category, count]) => {
+                              const percentage = (count / statsData.totalSessions) * 100;
+                              return (
+                                <div key={category} className={styles.categoryItem}>
+                                  <div className={styles.categoryHeader}>
+                                    <div className={styles.categoryName}>
+                                      {getCategoryIcon(category)}
+                                      <span>{category}</span>
+                                    </div>
+                                    <div className={styles.categoryCount}>{count} sessions</div>
+                                  </div>
+                                  <div className={styles.categoryProgress}>
+                                    <div 
+                                      className={styles.categoryBar}
+                                      style={{ width: `${percentage}%` }}
+                                    ></div>
+                                  </div>
+                                  <div className={styles.categoryPercentage}>{Math.round(percentage)}%</div>
+                                </div>
+                              );
+                            })}
+                          </div>
+                        ) : (
+                          <div className={styles.emptyCategories}>
+                            <BookOpen size={32} />
+                            <p>No study categories yet</p>
+                            <span>Complete some focus sessions to see your category breakdown</span>
+                          </div>
+                        )}
+                      </div>
+                    </>
+                  )}
                 </div>
               )}
 
@@ -453,8 +542,7 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
                       <Users size={48} />
                       <h4>No leaderboard data yet</h4>
                       <p>Complete some focus sessions to see rankings!</p>
-                    </div>
-                  )}
+                    </div>                  )}
                 </div>
               )}
             </>

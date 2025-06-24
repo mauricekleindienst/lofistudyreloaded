@@ -241,15 +241,132 @@
   background: #ff9533;
 }
 
-@media (min-width: 600px) {
+@media (max-width: 768px) {
+  .backgroundModal {
+    max-width: 95%;
+    max-height: 85vh;
+    margin: 0;
+  }
+
   .backgroundGrid {
-    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(160px, 1fr));
+    gap: 8px;
+  }
+
+  .backgroundPreview {
+    height: 100px;
+  }
+
+  .categoriesContainer {
+    gap: 6px;
+  }
+
+  .categoryButton {
+    padding: 4px 8px;
+    font-size: 11px;
+  }
+
+  .categoryCount {
+    display: none;
+  }
+
+  .youtubeInput {
+    font-size: 12px;
+    padding: 8px 10px;
+  }
+
+  .youtubeSubmitButton {
+    padding: 8px 12px;
+    font-size: 12px;
+  }
+
+  .modalFooter {
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+  }
+
+  .footerInfo {
+    text-align: center;
+    font-size: 12px;
+  }
+
+  .footerActions {
+    justify-content: center;
   }
 }
 
-@media (min-width: 800px) {
+@media (max-width: 480px) {
+  .backgroundModal {
+    max-width: 100%;
+    max-height: 90vh;
+    border-radius: 16px 16px 0 0;
+    position: fixed;
+    bottom: 0;
+    top: auto;
+  }
+
   .backgroundGrid {
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+    gap: 6px;
+  }
+
+  .backgroundPreview {
+    height: 80px;
+  }
+
+  .modalHeader {
+    padding-bottom: 8px;
+  }
+
+  .modalTitle {
+    font-size: 16px;
+  }
+
+  .modalSubtitle {
+    font-size: 12px;
+  }
+
+  .youtubeSection {
+    padding: 12px;
+  }
+
+  .youtubeInputContainer {
+    flex-direction: column;
+    gap: 8px;
+  }
+
+  .youtubeSubmitButton {
+    align-self: stretch;
+  }
+
+  .categoriesContainer {
+    flex-wrap: wrap;
+    gap: 4px;
+  }
+
+  .categoryButton {
+    flex: 1;
+    min-width: calc(50% - 2px);
+  }
+
+  .categoryName {
+    display: none;
+  }
+  .categoryIcon {
+    font-size: 16px;
+  }
+
+  .emptyStateIcon {
+    font-size: 36px;
+  }
+
+  .emptyStateTitle {
+    font-size: 16px;
+  }
+
+  .emptyStateMessage {
+    font-size: 12px;
   }
 }
 
@@ -291,11 +408,12 @@
   width: 100%;
   height: 100%;
   object-fit: cover;
-  transition: transform 0.2s ease;
+  transition: transform 0.3s ease;
+  border-radius: 12px;
 }
 
 .backgroundItem:hover .backgroundVideo {
-  transform: scale(1.05);
+  transform: scale(1.02);
 }
 
 .backgroundOverlay {
@@ -327,6 +445,13 @@
   margin-bottom: 4px;
   text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
   line-height: 1.2;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.backgroundName svg {
+  flex-shrink: 0;
 }
 
 .backgroundCategory {
@@ -362,52 +487,13 @@
   border: 2px solid rgba(255, 255, 255, 0.3);
 }
 
-.backgroundActions {
-  display: flex;
-  gap: 6px;
-  padding: 10px;
-  background: rgba(0, 0, 0, 0.4);
-  backdrop-filter: blur(10px);
-}
-
-.previewButton,
-.selectButton {
-  flex: 1;
-  padding: 6px 10px;
-  border-radius: 6px;
-  font-size: 11px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s ease;
-  border: none;
-}
-
-.previewButton {
-  background: rgba(255, 255, 255, 0.1);
-  color: white;
-  border: 1px solid rgba(255, 255, 255, 0.2);
-}
-
-.previewButton:hover {
-  background: rgba(255, 255, 255, 0.2);
-}
-
-.selectButton {
-  background: var(--accent-color);
-  color: white;
-}
-
-.selectButton:hover {
-  background: #ff9533;
-}
-
 /* Modal Footer */
 .modalFooter {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding-top: 20px;
-  border-top: 1px solid rgba(255, 255, 255, 0.15);
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
   flex-shrink: 0;
   background: linear-gradient(135deg, rgba(255, 255, 255, 0.02) 0%, rgba(255, 255, 255, 0.01) 100%);
   backdrop-filter: blur(10px);
@@ -1003,4 +1089,151 @@
 .youtubeSubmitButton:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+/* Enhanced YouTube Section */
+.youtubeSectionHeader {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 12px;
+}
+
+.youtubeSectionHeader svg {
+  color: #ff0000;
+}
+
+.inputError {
+  border-color: #ef4444 !important;
+  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2) !important;
+}
+
+.errorMessage {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: #ef4444;
+  font-size: 12px;
+  margin-top: 8px;
+  padding: 6px 8px;
+  background: rgba(239, 68, 68, 0.1);
+  border-radius: 6px;
+  border: 1px solid rgba(239, 68, 68, 0.2);
+}
+
+.spinning {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to { transform: rotate(360deg); }
+}
+
+/* Enhanced Categories */
+.categoryIcon {
+  font-size: 14px;
+}
+
+.categoryName {
+  font-weight: 500;
+}
+
+.categoryCount {
+  font-size: 10px;
+  opacity: 0.7;
+  margin-left: 4px;
+}
+
+/* Enhanced Background Items */
+.youtubeItem {
+  border-color: rgba(255, 0, 0, 0.3);
+}
+
+.youtubeItem.active {
+  border-color: #ff0000;
+  box-shadow: 0 0 0 2px rgba(255, 0, 0, 0.3);
+}
+
+.previewing {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
+}
+
+.playingIndicator {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  background: rgba(0, 0, 0, 0.7);
+  border-radius: 50%;
+  padding: 6px;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(10px);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+/* Load More */
+.loadMoreContainer {
+  display: flex;
+  justify-content: center;
+  margin: 16px 0;
+}
+
+.loadMoreButton {
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 8px;
+  color: rgba(255, 255, 255, 0.8);
+  padding: 8px 16px;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.loadMoreButton:hover {
+  background: rgba(255, 255, 255, 0.15);
+  color: white;
+  transform: translateY(-1px);
+}
+
+/* Enhanced Footer */
+.modalFooter {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding-top: 16px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  flex-shrink: 0;
+}
+
+.footerActions {
+  display: flex;
+  gap: 8px;
+}
+
+.customIndicator {
+  color: var(--accent-color);
+  font-weight: 500;
+}
+
+@media (min-width: 600px) {
+  .backgroundGrid {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+  }
+}
+
+@media (min-width: 800px) {
+  .backgroundGrid {
+    grid-template-columns: repeat(auto-fill, minmax(220px, 1fr));
+  }
+}
+
+@media (min-width: 1200px) {
+  .backgroundGrid {
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  }
 }

@@ -44,6 +44,12 @@
   gap: 16px;
 }
 
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
 .headerIcon {
   width: 48px;
   height: 48px;
@@ -88,6 +94,34 @@
   background: rgba(255, 68, 68, 0.2);
   color: #ef4444;
   transform: scale(1.05);
+}
+
+.refreshButton {
+  width: 40px;
+  height: 40px;
+  border-radius: 10px;
+  border: none;
+  background: rgba(255, 123, 0, 0.1);
+  color: var(--accent-color);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.refreshButton:hover:not(:disabled) {
+  background: rgba(255, 123, 0, 0.2);
+  transform: scale(1.05);
+}
+
+.refreshButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.spinning {
+  animation: spin 1s linear infinite;
 }
 
 /* Tab Navigation */
@@ -624,6 +658,138 @@
   margin: 0;
 }
 
+/* Auth Required State */
+.authRequiredState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+  gap: 20px;
+}
+
+.authIcon {
+  font-size: 64px;
+  margin-bottom: 8px;
+}
+
+.authRequiredState h3 {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.authRequiredState p {
+  font-size: 16px;
+  color: var(--text-secondary);
+  margin: 0;
+  max-width: 400px;
+  line-height: 1.5;
+}
+
+.authHint {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 16px 20px;
+  background: linear-gradient(135deg, rgba(255, 123, 0, 0.1) 0%, rgba(255, 123, 0, 0.05) 100%);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 123, 0, 0.2);
+  color: var(--text-secondary);
+  font-size: 14px;
+  max-width: 350px;
+}
+
+/* Empty Data State */
+.emptyDataState {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 60px 20px;
+  text-align: center;
+  gap: 24px;
+}
+
+.emptyIcon {
+  font-size: 64px;
+  margin-bottom: 8px;
+}
+
+.emptyDataState h3 {
+  font-size: 24px;
+  font-weight: 700;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.emptyDataState p {
+  font-size: 16px;
+  color: var(--text-secondary);
+  margin: 0;
+  max-width: 400px;
+  line-height: 1.5;
+}
+
+.emptyHints {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  max-width: 300px;
+}
+
+.emptyHint {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.02) 100%);
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  color: var(--text-secondary);
+  font-size: 14px;
+  text-align: left;
+}
+
+.emptyHint svg {
+  color: var(--accent-color);
+  flex-shrink: 0;
+}
+
+/* Empty Categories State */
+.emptyCategories {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 40px 20px;
+  text-align: center;
+  gap: 16px;
+  background: linear-gradient(135deg, rgba(255, 255, 255, 0.03) 0%, rgba(255, 255, 255, 0.01) 100%);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+}
+
+.emptyCategories svg {
+  color: var(--text-secondary);
+  opacity: 0.5;
+}
+
+.emptyCategories p {
+  font-size: 16px;
+  font-weight: 600;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.emptyCategories span {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin: 0;
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
   .modalContainer {
@@ -641,10 +807,22 @@
   
   .tabNavigation {
     padding: 16px 20px 0;
+    gap: 4px;
+  }
+  
+  .tabButton {
+    padding: 10px 8px;
+    font-size: 13px;
+    gap: 6px;
+  }
+  
+  .tabButton span {
+    display: none; /* Hide text on mobile, keep icons */
   }
   
   .quickStats {
-    grid-template-columns: 1fr;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 12px;
   }
   
   .periodGrid {
@@ -658,23 +836,9 @@
   .weeklyChart {
     gap: 8px;
   }
-}
-
-@media (max-width: 480px) {
-  .modalHeader {
-    flex-direction: column;
-    gap: 16px;
-    text-align: center;
-  }
   
-  .headerContent {
-    flex-direction: column;
-    gap: 12px;
-  }
-  
-  .tabButton {
-    padding: 10px 12px;
-    font-size: 13px;
+  .leaderboardItem {
+    padding: 16px 20px;
   }
   
   .statCard {
@@ -683,5 +847,109 @@
   
   .statValue {
     font-size: 24px;
+  }
+  
+  .authRequiredState,
+  .emptyDataState {
+    padding: 40px 20px;
+  }
+  
+  .authIcon,
+  .emptyIcon {
+    font-size: 48px;
+  }
+}
+
+@media (max-width: 480px) {
+  .modalOverlay {
+    padding: 10px;
+  }
+  
+  .modalContainer {
+    border-radius: 16px;
+  }
+  
+  .modalHeader {
+    padding: 16px;
+    gap: 12px;
+  }
+  
+  .headerContent {
+    gap: 12px;
+  }
+  
+  .headerIcon {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .modalTitle {
+    font-size: 20px;
+  }
+  
+  .modalSubtitle {
+    font-size: 13px;
+  }
+  
+  .tabNavigation {
+    padding: 12px 16px 0;
+  }
+  
+  .tabButton {
+    padding: 8px 6px;
+    border-radius: 8px;
+  }
+  
+  .modalContent {
+    padding: 16px;
+  }
+  
+  .quickStats {
+    grid-template-columns: 1fr;
+    gap: 12px;
+  }
+  
+  .statCard {
+    padding: 16px;
+    gap: 12px;
+  }
+  
+  .statIcon {
+    width: 40px;
+    height: 40px;
+  }
+  
+  .statValue {
+    font-size: 22px;
+  }
+  
+  .authRequiredState,
+  .emptyDataState {
+    padding: 30px 16px;
+    gap: 16px;
+  }
+  
+  .authRequiredState h3,
+  .emptyDataState h3 {
+    font-size: 20px;
+  }
+  
+  .authRequiredState p,
+  .emptyDataState p {
+    font-size: 14px;
+  }
+  
+  .authHint {
+    padding: 12px 16px;
+    font-size: 13px;
+  }
+  
+  .emptyHints {
+    gap: 8px;
+  }
+  
+  .emptyHint {
+    padding: 10px 12px;
+    font-size: 13px;
   }
 }

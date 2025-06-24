@@ -1,6 +1,6 @@
 "use client";
 
-import Desktop from '@/components/Desktop_modern';
+import Desktop from '@/components/Desktop_modern_refactored';
 import { AppStateProvider } from '@/contexts/AppStateContext';
 import AuthModal from '@/components/AuthModal';
 import { useState } from 'react';
