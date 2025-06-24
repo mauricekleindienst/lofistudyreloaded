@@ -91,7 +91,6 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
     saveSelectedBackground, 
     loadSelectedBackground 
   } = useDataPersistence();
-
   // State management
   const [openWindows, setOpenWindows] = useState<ModernWindow[]>([]);
   const [highestZIndex, setHighestZIndex] = useState(100);
@@ -109,6 +108,9 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
   const [youtubeUrl, setYoutubeUrl] = useState('');
   const [customBackground, setCustomBackground] = useState<Background | null>(null);
   const [showStats, setShowStats] = useState(false);
+  const [videoLoadError, setVideoLoadError] = useState(false);
+  const [retryCount, setRetryCount] = useState(0);
+  const [isVideoLoading, setIsVideoLoading] = useState(true);
   
   // Refs for event handling
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -132,23 +134,54 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
     const timer = setInterval(updateDateTime, 1000);
     return () => clearInterval(timer);
   }, [isClient]);
-
-  // Video loading and error handling
+  // Video loading and error handling with retry mechanism
   const handleVideoLoad = () => {
     if (videoRef.current) {
+      setIsVideoLoading(false);
+      setVideoLoadError(false);
+      setRetryCount(0);
       videoRef.current.play().catch(console.error);
     }
   };
 
   const handleVideoError = () => {
     console.error('Video failed to load:', currentBackground.src);
-    if (currentBackground.id !== DEFAULT_BACKGROUND.id) {
-      setCurrentBackground(DEFAULT_BACKGROUND);
+    setIsVideoLoading(false);
+    setVideoLoadError(true);
+    
+    // Retry mechanism - try up to 3 times
+    if (retryCount < 3 && currentBackground.id !== DEFAULT_BACKGROUND.id) {
+      setTimeout(() => {
+        setRetryCount(prev => prev + 1);
+        setIsVideoLoading(true);
+        if (videoRef.current) {
+          videoRef.current.load(); // Force reload
+        }
+      }, 2000 * (retryCount + 1)); // Exponential backoff
+    } else {
+      // Final fallback to default background
+      if (currentBackground.id !== DEFAULT_BACKGROUND.id) {
+        showNotification({
+          id: Date.now().toString(),
+          message: 'Background video failed to load. Using default background.',
+          type: 'error'
+        });
+        setCurrentBackground(DEFAULT_BACKGROUND);
+      }
     }
   };
 
-  // Background video effect
+  // Enhanced video loading with preload hint
+  const handleVideoLoadStart = () => {
+    setIsVideoLoading(true);
+    setVideoLoadError(false);
+  };
+  // Enhanced background video effect with retry reset
   useEffect(() => {
+    setRetryCount(0); // Reset retry count when background changes
+    setVideoLoadError(false);
+    setIsVideoLoading(true);
+    
     if (videoRef.current) {
       videoRef.current.play().catch(() => {
         // Video autoplay was prevented
@@ -211,6 +244,22 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
       }
     }
   };
+  // Preload background videos for better caching
+  useEffect(() => {
+    if (!isClient) return;
+    
+    // Preload the next few backgrounds for smoother transitions
+    const preloadBackgrounds = backgrounds.slice(0, 5); // Preload first 5
+    
+    preloadBackgrounds.forEach((bg) => {
+      if (bg.src && !bg.src.includes('youtube')) {
+        const video = document.createElement('video');
+        video.preload = 'metadata';
+        video.src = bg.src;
+        // Don't add to DOM, just preload for caching
+      }
+    });
+  }, [isClient]);
 
   // Get responsive size for each app type based on viewport
   const getResponsiveSize = (appId: string) => {
@@ -366,8 +415,7 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
   };
 
   return (
-    <div className={desktopStyles.desktop}>
-      {/* Background Video or YouTube */}
+    <div className={desktopStyles.desktop}>      {/* Background Video or YouTube */}
       {currentBackground.isYoutube ? (
         <iframe
           className={desktopStyles.backgroundVideo}
@@ -377,17 +425,73 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
           allowFullScreen
         />
       ) : (
-        <video
-          ref={videoRef}
-          className={desktopStyles.backgroundVideo}
-          src={currentBackground.src}
-          autoPlay
-          loop
-          muted
-          playsInline
-          onLoadedData={handleVideoLoad}
-          onError={handleVideoError}
-        />
+        <>
+          <video
+            ref={videoRef}
+            className={desktopStyles.backgroundVideo}
+            src={currentBackground.src}
+            autoPlay
+            loop
+            muted
+            playsInline
+            preload="metadata" // Preload metadata for better performance
+            onLoadStart={handleVideoLoadStart}
+            onLoadedData={handleVideoLoad}
+            onError={handleVideoError}
+            style={{ 
+              opacity: isVideoLoading ? 0.5 : 1,
+              transition: 'opacity 0.3s ease'
+            }}
+          />
+          
+          {/* Loading indicator for video */}
+          {isVideoLoading && (
+            <div className={desktopStyles.backgroundOverlay} style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              color: 'white',
+              fontSize: '1.2rem'
+            }}>
+              Loading background...
+            </div>
+          )}
+          
+          {/* Error indicator with retry option */}
+          {videoLoadError && retryCount >= 3 && (
+            <div className={desktopStyles.backgroundOverlay} style={{
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              flexDirection: 'column',
+              color: 'white',
+              fontSize: '1rem',
+              gap: '1rem'
+            }}>
+              <div>Background video failed to load</div>
+              <button 
+                onClick={() => {
+                  setRetryCount(0);
+                  setVideoLoadError(false);
+                  setIsVideoLoading(true);
+                  if (videoRef.current) {
+                    videoRef.current.load();
+                  }
+                }}
+                style={{
+                  padding: '0.5rem 1rem',
+                  backgroundColor: 'var(--accent-color)',
+                  color: 'white',
+                  border: 'none',
+                  borderRadius: '0.5rem',
+                  cursor: 'pointer'
+                }}
+              >
+                Retry
+              </button>
+            </div>
+          )}
+        </>
       )}
 
       {/* Background Overlay */}
