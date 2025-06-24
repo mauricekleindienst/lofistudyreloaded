@@ -29,7 +29,7 @@ export default function ContactPage() {
               {/* Email Contact */}
               <div className={styles.contactSection}>
                 <div className={styles.sectionHeader}>
-                  <Mail className="w-5 h-5 text-blue-400" />
+                  <Mail className={`${styles.iconMedium} ${styles.iconBlue}`} />
                   <h3 className={styles.sectionTitle}>Email Support</h3>
                 </div>
                 <p className={styles.sectionDescription}>
@@ -42,7 +42,7 @@ export default function ContactPage() {
               </div>              {/* Feedback */}
               <div className={styles.contactSection}>
                 <div className={styles.sectionHeader}>
-                  <MessageCircle className="w-5 h-5 text-purple-400" />
+                  <MessageCircle className={`${styles.iconMedium} ${styles.iconPurple}`} />
                   <h3 className={styles.sectionTitle}>Feedback & Suggestions</h3>
                 </div>
                 <p className={styles.sectionDescription}>
@@ -57,7 +57,7 @@ export default function ContactPage() {
               {/* Website */}
               <div className={styles.contactSection}>
                 <div className={styles.sectionHeader}>
-                  <Globe className="w-5 h-5 text-green-400" />
+                  <Globe className={`${styles.iconMedium} ${styles.iconGreen}`} />
                   <h3 className={styles.sectionTitle}>Website</h3>
                 </div>
                 <p className={styles.sectionDescription}>

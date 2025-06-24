@@ -17,9 +17,8 @@ export default function PrivacyPolicyPage() {
 
         {/* Main Content */}
         <div className={styles.mainContent}>
-          <div className={styles.card}>            <div className={styles.titleSection}>
-              <div className={styles.iconWrapper}>
-                <Shield className="w-8 h-8 text-white" />
+          <div className={styles.card}>            <div className={styles.titleSection}>              <div className={styles.iconWrapper}>
+                <Shield className={`${styles.iconLarge} ${styles.iconWhite}`} />
               </div>
               <h1 className={styles.title}>Privacy Policy</h1>
               <p className={styles.subtitle}>
@@ -31,7 +30,7 @@ export default function PrivacyPolicyPage() {
               {/* Overview */}
               <section className={styles.section}>
                 <div className={styles.sectionHeader}>
-                  <Eye className="w-6 h-6 text-blue-400" />
+                  <Eye className={`${styles.iconMedium} ${styles.iconBlue}`} />
                   <h2 className={styles.sectionTitle}>Privacy Overview</h2>
                 </div>
                 <div className={styles.sectionCard}>
@@ -44,13 +43,13 @@ export default function PrivacyPolicyPage() {
 
               {/* Information We Collect */}
               <section className={styles.section}>                <div className={styles.sectionHeader}>
-                  <Database className="w-6 h-6 text-purple-400" />
+                  <Database className={`${styles.iconMedium} ${styles.iconPurple}`} />
                   <h2 className={styles.sectionTitle}>Information We Collect</h2>
                 </div>
                 <div className={styles.sectionCard}>
                   <div className={styles.subsection}>
                     <h3 className={styles.subsectionTitle}>
-                      <UserCheck className="w-5 h-5" />
+                      <UserCheck className={styles.iconSmall} />
                       Account Information
                     </h3>
                     <ul className={styles.dataList}>
@@ -62,7 +61,7 @@ export default function PrivacyPolicyPage() {
                   
                   <div className={styles.subsection}>
                     <h3 className={styles.subsectionTitle}>
-                      <Settings className="w-5 h-5" />
+                      <Settings className={styles.iconSmall} />
                       Usage Data
                     </h3>
                     <ul className={styles.dataList}>
@@ -73,9 +72,8 @@ export default function PrivacyPolicyPage() {
                     </ul>
                   </div>
                   
-                  <div className={styles.subsection}>
-                    <h3 className={styles.subsectionTitle}>
-                      <Database className="w-5 h-5" />
+                  <div className={styles.subsection}>                    <h3 className={styles.subsectionTitle}>
+                      <Database className={styles.iconSmall} />
                       Technical Information
                     </h3>
                     <ul className={styles.dataList}>
@@ -90,13 +88,13 @@ export default function PrivacyPolicyPage() {
               {/* How We Use Information */}
               <section className={styles.section}>
                 <div className={styles.sectionHeader}>
-                  <Settings className="w-6 h-6 text-amber-400" />
+                  <Settings className={`${styles.iconMedium} ${styles.iconAmber}`} />
                   <h2 className={styles.sectionTitle}>How We Use Your Information</h2>
                 </div>
                 <div className={styles.sectionCard}>
                   <div className={styles.subsection}>
                     <h3 className={styles.subsectionTitle}>
-                      <Shield className="w-5 h-5" />
+                      <Shield className={styles.iconSmall} />
                       Service Provision
                     </h3>
                     <ul className={styles.dataList}>
@@ -109,7 +107,7 @@ export default function PrivacyPolicyPage() {
                   
                   <div className={styles.subsection}>
                     <h3 className={styles.subsectionTitle}>
-                      <Eye className="w-5 h-5" />
+                      <Eye className={styles.iconSmall} />
                       Service Improvement
                     </h3>
                     <ul className={styles.dataList}>
@@ -123,13 +121,13 @@ export default function PrivacyPolicyPage() {
               {/* Data Protection */}
               <section className={styles.section}>
                 <div className={styles.sectionHeader}>
-                  <Lock className="w-6 h-6 text-green-400" />
+                  <Lock className={`${styles.iconMedium} ${styles.iconGreen}`} />
                   <h2 className={styles.sectionTitle}>Data Protection & Security</h2>
                 </div>
                 <div className={styles.sectionCard}>
                   <div className={styles.subsection}>
                     <h3 className={styles.subsectionTitle}>
-                      <Lock className="w-5 h-5" />
+                      <Lock className={styles.iconSmall} />
                       Security Measures
                     </h3>
                     <ul className={styles.dataList}>
@@ -140,9 +138,8 @@ export default function PrivacyPolicyPage() {
                     </ul>
                   </div>
                   
-                  <div className={styles.subsection}>
-                    <h3 className={styles.subsectionTitle}>
-                      <Database className="w-5 h-5" />
+                  <div className={styles.subsection}>                    <h3 className={styles.subsectionTitle}>
+                      <Database className={styles.iconSmall} />
                       Data Storage
                     </h3>
                     <p>
@@ -156,7 +153,7 @@ export default function PrivacyPolicyPage() {
               {/* Your Rights */}
               <section className={styles.section}>
                 <div className={styles.sectionHeader}>
-                  <UserCheck className="w-6 h-6 text-cyan-400" />
+                  <UserCheck className={`${styles.iconMedium} ${styles.iconCyan}`} />
                   <h2 className={styles.sectionTitle}>Your Rights</h2>
                 </div>
                 <div className={styles.sectionCard}>
@@ -182,13 +179,13 @@ export default function PrivacyPolicyPage() {
               {/* Third Party Services */}
               <section className={styles.section}>
                 <div className={styles.sectionHeader}>
-                  <AlertTriangle className="w-6 h-6 text-orange-400" />
+                  <AlertTriangle className={`${styles.iconMedium} ${styles.iconOrange}`} />
                   <h2 className={styles.sectionTitle}>Third-Party Services</h2>
                 </div>
                 <div className={styles.sectionCard}>
                   <div className={styles.warning}>
                     <div className={styles.warningTitle}>
-                      <AlertTriangle className="w-5 h-5" />
+                      <AlertTriangle className={styles.iconSmall} />
                       Third-Party Data Sharing
                     </div>
                     <div className={styles.warningText}>
@@ -213,7 +210,7 @@ export default function PrivacyPolicyPage() {
               <section className={styles.section}>
                 <div className={styles.highlight}>
                   <div className={styles.highlightTitle}>
-                    <Shield className="w-5 h-5" />
+                    <Shield className={styles.iconSmall} />
                     Cookies and Local Storage
                   </div>
                   <div className={styles.highlightText}>
@@ -230,9 +227,8 @@ export default function PrivacyPolicyPage() {
                   <h3 className={styles.contactTitle}>Privacy Questions?</h3>
                   <p className={styles.contactText}>
                     If you have any questions about this privacy policy or how we handle your data, please contact us:
-                  </p>
-                  <a href="mailto:privacy@lo-fi.study" className={styles.contactLink}>
-                    <Shield size={16} style={{ display: 'inline', marginRight: '0.5rem' }} />
+                  </p>                  <a href="mailto:privacy@lo-fi.study" className={styles.contactLink}>
+                    <Shield className={styles.iconSmall} />
                     privacy@lo-fi.study
                   </a>
                 </div>

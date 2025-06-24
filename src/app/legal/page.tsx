@@ -17,9 +17,8 @@ export default function LegalNoticePage() {
 
         {/* Main Content */}
         <div className={styles.mainContent}>
-          <div className={styles.card}>            <div className={styles.titleSection}>
-              <div className={styles.iconWrapper}>
-                <FileText className="w-8 h-8 text-white" />
+          <div className={styles.card}>            <div className={styles.titleSection}>              <div className={styles.iconWrapper}>
+                <FileText className={`${styles.iconLarge} ${styles.iconWhite}`} />
               </div>
               <h1 className={styles.title}>Legal Notice</h1>
               <p className={styles.subtitle}>
@@ -31,7 +30,7 @@ export default function LegalNoticePage() {
               {/* Service Provider */}
               <section className={styles.section}>
                 <div className={styles.sectionHeader}>
-                  <Building className="w-6 h-6 text-amber-400" />
+                  <Building className={`${styles.iconMedium} ${styles.iconAmber}`} />
                   <h2 className={styles.sectionTitle}>Service Provider Information</h2>
                 </div>
                 <div className={styles.sectionCard}>
@@ -44,7 +43,7 @@ export default function LegalNoticePage() {
               </section>              {/* Disclaimer */}
               <section className={styles.section}>
                 <div className={styles.sectionHeader}>
-                  <User className="w-6 h-6 text-purple-400" />
+                  <User className={`${styles.iconMedium} ${styles.iconPurple}`} />
                   <h2 className={styles.sectionTitle}>Disclaimer</h2>
                 </div>
                 <div className={styles.sectionCard}>
@@ -73,7 +72,7 @@ export default function LegalNoticePage() {
               </section>              {/* Service Terms */}
               <section className={styles.section}>
                 <div className={styles.sectionHeader}>
-                  <Globe className="w-6 h-6 text-green-400" />
+                  <Globe className={`${styles.iconMedium} ${styles.iconGreen}`} />
                   <h2 className={styles.sectionTitle}>Service Terms</h2>
                 </div>
                 <div className={styles.sectionCard}>
@@ -104,9 +103,8 @@ export default function LegalNoticePage() {
                   <h3 className={styles.contactTitle}>Questions or Concerns?</h3>
                   <p className={styles.contactText}>
                     If you have any questions about this legal notice or our services, please contact us:
-                  </p>
-                  <a href="mailto:hello@lo-fi.study" className={styles.contactLink}>
-                    <User size={16} style={{ display: 'inline', marginRight: '0.5rem' }} />
+                  </p>                  <a href="mailto:hello@lo-fi.study" className={styles.contactLink}>
+                    <User className={styles.iconSmall} />
                     hello@lo-fi.study
                   </a>
                 </div>
