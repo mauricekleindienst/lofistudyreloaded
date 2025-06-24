@@ -1,5 +1,37 @@
 /* Contact Page Styles */
 
+/* Icon sizing utilities */
+.iconLarge {
+  width: 2rem;
+  height: 2rem;
+}
+
+.iconMedium {
+  width: 1.5rem;
+  height: 1.5rem;
+}
+
+.iconSmall {
+  width: 1.25rem;
+  height: 1.25rem;
+}
+
+.iconWhite {
+  color: white;
+}
+
+.iconBlue {
+  color: #60a5fa;
+}
+
+.iconPurple {
+  color: #a855f7;
+}
+
+.iconGreen {
+  color: #34d399;
+}
+
 .container {
   min-height: 100vh;
    background: linear-gradient(145deg, var(--bg-primary), var(--bg-secondary));

@@ -17,9 +17,8 @@ export default function ContactPage() {
 
         {/* Main Content */}
         <div className={styles.mainContent}>
-          <div className={styles.card}>            <div className={styles.titleSection}>
-              <div className={styles.iconWrapper}>
-                <Mail className="w-8 h-8 text-white" />
+          <div className={styles.card}>            <div className={styles.titleSection}>              <div className={styles.iconWrapper}>
+                <Mail className={`${styles.iconLarge} ${styles.iconWhite}`} />
               </div>
               <h1 className={styles.title}>Contact Us</h1>              <p className={styles.subtitle}>
                 We&apos;d love to hear from you! Get in touch with any questions, feedback, or suggestions.

@@ -1,3 +1,5 @@
+
+
 /* SelectionBar-inspired Clean Design System */
 :root {
   /* Core Color System - Orange Accent Theme */
@@ -8,7 +10,7 @@
   --text-secondary: #e2e8f0;
   --text-tertiary: #cbd5e1;
   
-  /* Glass Morphism Backgrounds - Match the styles/globals.css values for consistency */
+  /* Glass Morphism Backgrounds */
   --bg-primary: #1e1e1e;
   --bg-secondary: #2a2a2a;
   --bg-overlay: rgba(0, 0, 0, 0.4);
