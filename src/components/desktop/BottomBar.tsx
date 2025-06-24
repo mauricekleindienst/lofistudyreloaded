@@ -1,6 +1,6 @@
 "use client";
 
-import React from 'react';
+import React, { useEffect, useState } from 'react';
 import { 
   Clock, 
   User, 
@@ -88,20 +88,29 @@ export default function BottomBar({
   onOpenBackgrounds,
   onAccountAction
 }: BottomBarProps) {
+  const [isClient, setIsClient] = useState(false);
+
+  useEffect(() => {
+    setIsClient(true);
+  }, []);
+
+  // Prevent hydration mismatch by not rendering time-sensitive content until client-side
+  const displayTime = isClient ? currentTime : '--:--';
+  const displayDate = isClient ? currentDate : 'Loading...';
+
   return (
     <div className={styles.selectionBar}>
       {/* Time and Date */}
-      <div className={desktopStyles.appBarSection}>
-        <button
+      <div className={desktopStyles.appBarSection}>        <button
           onClick={onOpenCalendar}
           className={styles.timeButton}
           title="Open Calendar"
         >
           <Clock size={20} />
           <div className={styles.timeDisplay}>
-            <div className={styles.timeText}>{currentTime || '--:--'}</div>
+            <div className={styles.timeText}>{displayTime}</div>
             <div className={styles.dateText}>
-              {currentDate || 'Loading...'}
+              {displayDate}
             </div>
           </div>
           <div className={styles.tooltip}>

@@ -14,6 +14,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://lo-fi.study'),
   title: {
     default: "Lo-Fi.Study - Focus & Productivity App",
     template: "%s | Lo-Fi.Study"
@@ -68,11 +69,6 @@ export const metadata: Metadata = {
     images: ["/og-image.jpg"],
     creator: "@lofistudy",
   },
-  viewport: {
-    width: "device-width",
-    initialScale: 1,
-    maximumScale: 1,
-  },
   category: "productivity",
   applicationName: "Lo-Fi.Study",
   referrer: "origin-when-cross-origin",
@@ -81,6 +77,12 @@ export const metadata: Metadata = {
     address: false,
     telephone: false,
   },
+};
+
+export const viewport = {
+  width: "device-width",
+  initialScale: 1,
+  maximumScale: 1,
 };
 
 export default function RootLayout({

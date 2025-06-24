@@ -184,14 +184,14 @@
 }
 
 .timeText {
-  color: var(--text-primary);
+  color: var(--text-primary, #ffffff);
   font-size: 14px;
   font-weight: 600;
   line-height: 1;
 }
 
 .dateText {
-  color: var(--text-secondary);
+  color: var(--text-secondary, #e2e8f0);
   font-size: 12px;
   font-weight: 500;
   line-height: 1;
