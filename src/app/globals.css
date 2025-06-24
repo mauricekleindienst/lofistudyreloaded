@@ -1,5 +1,3 @@
-
-
 /* SelectionBar-inspired Clean Design System */
 :root {
   /* Core Color System - Orange Accent Theme */
@@ -152,6 +150,35 @@ input:not([class*="module"]):focus {
   opacity: 1 !important;
   visibility: visible !important;
   pointer-events: auto !important;
+}
+
+/* Ensure TopBar stays visible and consistent during hydration */
+[class*="Desktop_topRightIcons"] {
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+}
+
+[class*="Desktop_topIcon"] {
+  background: var(--bg-secondary, #2a2a2a) !important;
+  color: var(--text-secondary, #e2e8f0) !important;
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1)) !important;
+}
+
+[class*="Desktop_topIcon"]:hover {
+  background: var(--accent-color, #ff7b00) !important;
+  color: var(--text-primary, #ffffff) !important;
+  border-color: var(--accent-color, #ff7b00) !important;
+}
+
+[class*="Desktop_topIconWarning"] {
+  color: #f59e0b !important;
+}
+
+[class*="Desktop_topIconWarning"]:hover {
+  background: #f59e0b !important;
+  color: #ffffff !important;
+  border-color: #f59e0b !important;
 }
 
 /* Prevent FOUC (Flash of Unstyled Content) */

@@ -29,12 +29,10 @@ export default function TopBar({ user, onToggleStats, onShare }: TopBarProps) {
   
   return (
     <>
-      <div className={desktopStyles.topRightIcons}>
-        {!user && (
+      <div className={desktopStyles.topRightIcons}>        {!user && (
           <button
-            className={desktopStyles.topIcon}
+            className={`${desktopStyles.topIcon} ${desktopStyles.topIconWarning}`}
             title="Sessions won't be saved"
-            style={{ color: '#f59e0b' }}
           >
             <AlertTriangle size={20} />
           </button>
