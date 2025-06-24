@@ -22,6 +22,9 @@ export const backgrounds = [
   { id: 20, src: "https://lofistudy.fra1.cdn.digitaloceanspaces.com/backgrounds/Beachisland.mp4", alt: "Beach Island", note: "Beach Island", createdby: "Lo-Fi.study", priority: false, category: "nature" },
   { id: 21, src: "https://lofistudy.fra1.cdn.digitaloceanspaces.com/backgrounds/NightRoom.mp4", alt: "Night Room", note: "Night Room", createdby: "Lo-Fi.study", priority: false, category: "cozy" },
   { id: 22, src: "https://lofistudy.fra1.cdn.digitaloceanspaces.com/backgrounds/Bedroom.mp4", alt: "Bedroom", note: "Bedroom", createdby: "Lo-Fi.study", priority: false, category: "cozy" },
+  { id: 23, src: "https://lofistudy.fra1.cdn.digitaloceanspaces.com/backgrounds/NeonLoFi.mp4", alt: "Neon Lo-Fi", note: "Neon Lo-Fi", createdby: "Lo-Fi.study", priority: false, category: "urban" },
+  { id: 24, src: "https://lofistudy.fra1.cdn.digitaloceanspaces.com/backgrounds/RainyTrees.mp4", alt: "Rainy Trees", note: "Rainy Trees", createdby: "Lo-Fi.study", priority: false, category: "nature" },
+  { id: 25, src: "https://lofistudy.fra1.cdn.digitaloceanspaces.com/backgrounds/RainyRoofRoom.mp4", alt: "Rainy Roof Room", note: "Rainy Roof Room", createdby: "Lo-Fi.study", priority: false, category: "cozy" },
 ];
 
 export const DEFAULT_BACKGROUND = {
