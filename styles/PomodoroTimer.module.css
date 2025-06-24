@@ -105,22 +105,23 @@
 
 .progressRing {
   position: relative;
-  width: 90px;
-  height: 90px;
+  width: 120px;
+  height: 120px;
+  margin: 0 auto;
 }
 
 /* Responsive progress ring */
 @media (max-width: 768px) {
   .progressRing {
-    width: 80px;
-    height: 80px;
+    width: 100px;
+    height: 100px;
   }
 }
 
 @media (max-width: 480px) {
   .progressRing {
-    width: 70px;
-    height: 70px;
+    width: 90px;
+    height: 90px;
   }
 }
 
@@ -131,13 +132,15 @@
 }
 
 .progressTrack {
-  stroke: rgba(255, 255, 255, 0.1);
+  stroke: rgba(255, 255, 255, 0.08);
   stroke-linecap: round;
+  stroke-width: 3;
 }
 
 .progressFill {
   stroke: var(--accent-color);
   stroke-linecap: round;
+  stroke-width: 3;
   transition: stroke-dashoffset 1s ease;
   filter: drop-shadow(0 0 8px currentColor);
 }
@@ -151,18 +154,21 @@
 }
 
 .timeText {
-  font-size: 1.1rem;
+  font-size: 1.4rem;
   font-weight: 700;
   color: var(--text-primary);
-  margin-bottom: 1px;
+  margin-bottom: 2px;
   font-family: 'JetBrains Mono', monospace;
   line-height: 1.1;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
 .modeLabel {
-  font-size: 9px;
+  font-size: 10px;
   color: var(--text-secondary);
-  font-weight: 500;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
 }
 
 /* Responsive timer display */
@@ -196,18 +202,19 @@
 }
 
 .playButton {
-  width: 36px;
-  height: 36px;
+  width: 44px;
+  height: 44px;
   border: none;
   border-radius: 50%;
-  background: var(--accent-color);
+  background: linear-gradient(135deg, var(--accent-color) 0%, #ff9533 100%);
   color: white;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.2s ease;
-  box-shadow: 0 4px 16px rgba(255, 107, 0, 0.3);
+  transition: all 0.3s ease;
+  box-shadow: 0 6px 20px rgba(255, 107, 0, 0.3);
+  position: relative;
 }
 
 /* Responsive controls */
@@ -235,8 +242,8 @@
 
 
 .playButton:hover {
-  transform: translateY(-1px);
-  box-shadow: 0 8px 28px rgba(255, 107, 0, 0.4);
+  transform: translateY(-2px) scale(1.05);
+  box-shadow: 0 8px 25px rgba(255, 107, 0, 0.4);
 }
 
 .playButton.running {
@@ -246,17 +253,17 @@
 
 .resetButton,
 .settingsButton {
-  width: 28px;
-  height: 28px;
+  width: 32px;
+  height: 32px;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
   background: rgba(255, 255, 255, 0.08);
   color: var(--text-secondary);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
   backdrop-filter: blur(10px);
   border: 1px solid rgba(255, 255, 255, 0.1);
 }
@@ -278,38 +285,69 @@
 .categorySection {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 6px;
+  margin-bottom: 12px;
 }
 
 .categoryLabel {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 600;
-  color: var(--text-primary);
+  color: var(--text-primary, #ffffff);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  opacity: 0.8;
 }
 
 .categorySelector {
   position: relative;
   display: flex;
   align-items: center;
+  gap: 6px;
 }
 
 .categorySelect {
-  width: 100%;
-  padding: 4px 8px;
+  flex: 1;
+  min-width: 120px;
+  padding: 8px 12px;
   background: rgba(255, 255, 255, 0.06);
   border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 6px;
-  color: var(--text-primary);
+  border-radius: 8px;
+  color: var(--text-primary, #ffffff);
   font-size: 12px;
+  font-weight: 500;
   backdrop-filter: blur(10px);
   outline: none;
   appearance: none;
   cursor: pointer;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  
+  /* Custom dropdown arrow */
+  background-image: url("data:image/svg+xml;charset=UTF-8,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%23ffffff' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3e%3cpolyline points='6,9 12,15 18,9'%3e%3c/polyline%3e%3c/svg%3e");
+  background-repeat: no-repeat;
+  background-position: right 12px center;
+  background-size: 14px;
+  padding-right: 36px;
 }
 
 .categorySelect:focus {
-  border-color: var(--accent-color);
-  box-shadow: 0 0 0 2px rgba(255, 107, 0, 0.1);
+  border-color: var(--accent-color, #ff7b00);
+  box-shadow: 0 0 0 2px rgba(255, 123, 0, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+.categorySelect:hover {
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+}
+
+/* Style the dropdown options */
+.categorySelect option {
+  background: var(--bg-primary, #1e1e1e);
+  color: var(--text-primary, #ffffff);
+  padding: 8px 12px;
+  border: none;
+  font-weight: 500;
 }
 
 .categorySelect:disabled {
@@ -318,10 +356,16 @@
 }
 
 .categoryIcon {
-  position: absolute;
-  right: 10px;
-  color: var(--text-secondary);
-  pointer-events: none;
+  min-width: 20px;
+  height: 20px;
+  color: var(--accent-color, #ff7b00);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: color 0.3s ease;
+  background: rgba(255, 123, 0, 0.1);
+  border-radius: 4px;
+  padding: 2px;
 }
 
 /* Statistics */
