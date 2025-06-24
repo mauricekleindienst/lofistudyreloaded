@@ -2,14 +2,15 @@
 :root {
   /* Core Color System - Orange Accent Theme */
   --accent-color: #ff7b00;
+  --accent-hover: #ff9900;
   --primary-color: #ff7b00;
   --text-primary: #ffffff;
   --text-secondary: #e2e8f0;
   --text-tertiary: #cbd5e1;
   
-  /* Glass Morphism Backgrounds */
-  --bg-primary: #1A202C;
-  --bg-secondary: #1A202C;
+  /* Glass Morphism Backgrounds - Match the styles/globals.css values for consistency */
+  --bg-primary: #1e1e1e;
+  --bg-secondary: #2a2a2a;
   --bg-overlay: rgba(0, 0, 0, 0.4);
   
   /* Clean Borders */
@@ -31,8 +32,18 @@ body {
   max-width: 100vw;
   overflow-x: hidden;
   background: #1c1e22;
-  color: var(--text-primary);
+  color: var(--text-primary, #ffffff);
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  /* Ensure CSS variables are available immediately */
+  --accent-color: #ff7b00;
+  --bg-primary: #1e1e1e;
+  --bg-secondary: #2a2a2a;
+  --text-primary: #ffffff;
+  --text-secondary: #e2e8f0;
+  --border-color: rgba(255, 255, 255, 0.1);
+  /* Force consistent rendering */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 /* Custom Scrollbar */
@@ -110,4 +121,68 @@ input:not([class*="module"]) {
 
 input:not([class*="module"]):focus {
   outline: none;
+}
+
+/* Fix for production build CSS inconsistencies */
+/* Force CSS variables to be available during SSR/hydration */
+* {
+  --accent-color: #ff7b00;
+  --bg-primary: #1e1e1e;
+  --bg-secondary: #2a2a2a;
+  --text-primary: #ffffff;
+  --text-secondary: #e2e8f0;
+  --border-color: rgba(255, 255, 255, 0.1);
+}
+
+/* Production build fixes for consistent styling */
+/* Ensure CSS modules work properly in production */
+[class*="SelectionBar_"] {
+  --accent-color: #ff7b00 !important;
+  --bg-primary: #1e1e1e !important;
+  --bg-secondary: #2a2a2a !important;
+  --text-primary: #ffffff !important;
+  --text-secondary: #e2e8f0 !important;
+  --border-color: rgba(255, 255, 255, 0.1) !important;
+}
+
+/* Ensure bottom bar stays visible during hydration */
+[class*="SelectionBar_selectionBar"] {
+  opacity: 1 !important;
+  visibility: visible !important;
+  pointer-events: auto !important;
+}
+
+/* Prevent FOUC (Flash of Unstyled Content) */
+.loading-skeleton {
+  opacity: 0.7;
+  animation: pulse 2s cubic-bezier(0.4, 0, 0.6, 1) infinite;
+}
+
+@keyframes pulse {
+  0%, 100% { opacity: 0.7; }
+  50% { opacity: 1; }
+}
+
+[class*="selectionBar"] {
+  background: linear-gradient(145deg, #1e1e1e, #2a2a2a) !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+  color: #ffffff !important;
+}
+
+[class*="iconButton"] {
+  background: #2a2a2a !important;
+  color: #e2e8f0 !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
+}
+
+[class*="iconButton"]:hover {
+  background: #ff7b00 !important;
+  color: #ffffff !important;
+  border-color: #ff7b00 !important;
+}
+
+[class*="timeButton"] {
+  background: #2a2a2a !important;
+  color: #e2e8f0 !important;
+  border: 1px solid rgba(255, 255, 255, 0.1) !important;
 }
