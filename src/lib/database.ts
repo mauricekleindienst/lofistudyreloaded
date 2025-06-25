@@ -17,6 +17,20 @@ export interface Todo {
   due_date?: string;
 }
 
+export interface ExtendedUserProfile {
+  id: string;
+  email: string;
+  full_name?: string;
+  avatar_url?: string;
+  premium?: boolean;
+  streak_count?: number;
+  total_focus_time?: number;
+  settings?: Record<string, unknown>;
+  last_active?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface Note {
   id?: number;
   user_id?: string;
@@ -71,6 +85,21 @@ export interface UserSettings {
     theme?: string;
   };
   last_active?: string;
+}
+
+export interface Appointment {
+  id?: number;
+  user_id?: string;
+  email?: string;
+  title: string;
+  description?: string;
+  date: string; // YYYY-MM-DD format
+  time?: string; // HH:MM format
+  color?: string;
+  category?: 'personal' | 'work' | 'health' | 'study' | 'other';
+  reminder?: boolean;
+  created_at?: string;
+  updated_at?: string;
 }
 
 // Database service class
@@ -605,6 +634,211 @@ export class DatabaseService {
       return leaderboard;
     } catch (error) {
       console.error('Error fetching leaderboard:', error);
+      return [];
+    }
+  }
+
+  // User profile operations
+  async getUserProfile(userId: string): Promise<ExtendedUserProfile | null> {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('*')
+        .eq('id', userId)
+        .single();
+
+      if (error) {
+        console.error('Error fetching user profile:', error);
+        return null;
+      }
+
+      return data;
+    } catch (error) {
+      console.error('Error in getUserProfile:', error);
+      return null;
+    }
+  }
+
+  async updateUserProfile(userId: string, updates: Partial<ExtendedUserProfile>): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('users')
+        .update({
+          ...updates,
+          updated_at: new Date().toISOString()
+        })
+        .eq('id', userId);
+
+      if (error) {
+        console.error('Error updating user profile:', error);
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error in updateUserProfile:', error);
+      return false;
+    }
+  }
+
+  async createUserProfile(userProfile: Omit<ExtendedUserProfile, 'created_at' | 'updated_at'>): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('users')
+        .insert([{
+          ...userProfile,
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString()
+        }]);
+
+      if (error) {
+        console.error('Error creating user profile:', error);
+        return false;
+      }
+
+      return true;
+    } catch (error) {
+      console.error('Error in createUserProfile:', error);
+      return false;
+    }
+  }
+
+  // Appointment operations
+  async getAppointments(): Promise<Appointment[]> {
+    try {
+      const user = await this.checkAuth();
+      if (!user) {
+        console.log('No authenticated user found for loading appointments');
+        return [];
+      }
+
+      const { data, error } = await supabase
+        .from('appointments')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('date', { ascending: true });
+
+      if (error) {
+        console.error('Database error while loading appointments:', error);
+        throw error;
+      }
+      
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching appointments:', error);
+      return [];
+    }
+  }
+
+  async saveAppointment(appointment: Appointment): Promise<Appointment | null> {
+    try {
+      const user = await this.checkAuth();
+      if (!user) {
+        console.log('No authenticated user found for saving appointment');
+        return null;
+      }
+
+      const appointmentData = {
+        ...appointment,
+        user_id: user.id,
+        email: user.email,
+        created_at: new Date().toISOString(),
+        updated_at: new Date().toISOString()
+      };
+
+      const { data, error } = await supabase
+        .from('appointments')
+        .insert([appointmentData])
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Database error while saving appointment:', error);
+        throw error;
+      }
+      
+      return data;
+    } catch (error) {
+      console.error('Error saving appointment:', error);
+      return null;
+    }
+  }
+
+  async updateAppointment(id: number, updates: Partial<Appointment>): Promise<Appointment | null> {
+    try {
+      const user = await this.checkAuth();
+      if (!user) {
+        console.log('No authenticated user found for updating appointment');
+        return null;
+      }
+
+      const updateData = {
+        ...updates,
+        updated_at: new Date().toISOString()
+      };
+
+      const { data, error } = await supabase
+        .from('appointments')
+        .update(updateData)
+        .eq('id', id)
+        .eq('user_id', user.id)
+        .select()
+        .single();
+
+      if (error) {
+        console.error('Database error while updating appointment:', error);
+        throw error;
+      }
+      
+      return data;
+    } catch (error) {
+      console.error('Error updating appointment:', error);
+      return null;
+    }
+  }
+
+  async deleteAppointment(id: number): Promise<boolean> {
+    try {
+      const user = await this.checkAuth();
+      if (!user) {
+        console.log('No authenticated user found for deleting appointment');
+        return false;
+      }
+
+      const { error } = await supabase
+        .from('appointments')
+        .delete()
+        .eq('id', id)
+        .eq('user_id', user.id);
+
+      if (error) {
+        console.error('Database error while deleting appointment:', error);
+        throw error;
+      }
+      
+      return true;
+    } catch (error) {
+      console.error('Error deleting appointment:', error);
+      return false;
+    }
+  }
+
+  async getAppointmentsByDate(date: string): Promise<Appointment[]> {
+    try {
+      const user = await this.checkAuth();
+      if (!user) return [];
+
+      const { data, error } = await supabase
+        .from('appointments')
+        .select('*')
+        .eq('user_id', user.id)
+        .eq('date', date)
+        .order('time', { ascending: true });
+
+      if (error) throw error;
+      return data || [];
+    } catch (error) {
+      console.error('Error fetching appointments by date:', error);
       return [];
     }
   }

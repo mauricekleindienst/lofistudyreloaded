@@ -1,24 +1,10 @@
 "use client";
-import React, { useState, useRef, useEffect } from 'react';
-import { 
-  Music,
-  Play,
-  Pause,
-  SkipBack,
-  SkipForward,
-  Volume2,
-  VolumeX,
-  Plus,
-  X,
-  ChevronLeft,
-  Shuffle,
-  Repeat,
-  List
-} from 'lucide-react';
-import Image from 'next/image';
+import React, { useState, useEffect, useRef } from 'react';
 import YouTube, { YouTubeEvent } from 'react-youtube';
-import styles from '../../styles/MusicPlayerSidebar.module.css';
+import { ChevronLeft, Music, X, SkipBack, SkipForward, Play, Pause, Volume2, VolumeX, Shuffle, Repeat, List, Plus, Trash2 } from 'lucide-react';
 import { useAppState } from '../contexts/AppStateContext';
+import styles from '../../styles/MusicPlayerSidebar.module.css';
+import Image from 'next/image';
 
 // Type declaration for YouTube iframe API
 declare global {
@@ -33,6 +19,7 @@ interface Track {
   videoId: string;
   channelName: string;
   channelUrl: string;
+  isCustom?: boolean;
 }
 
 // Initial music tracks list
@@ -51,6 +38,7 @@ const initialTracks: Track[] = [
   { id: 12, title: 'Skyrim soundtrack ❄️', videoId: '_Z1VzsE1GVg', channelName: 'Aaronmn7', channelUrl: 'https://www.youtube.com/@AeronN7' },
   { id: 13, title: 'Animal crossing 🌳', videoId: 'V6GUhCxMDLg', channelName: 'RemDaBom', channelUrl: 'https://www.youtube.com/@RemDaBom' },
   { id: 14, title: 'Harry Potter study musik 📚', videoId: 'pQdTu0IeVho', channelName: 'AmbientWorlds', channelUrl: 'https://www.youtube.com/@AmbientWorlds' },
+  { id: 15, title: 'Morning Work Chill Mix ☀️', videoId: 'XXkXvTR7IL8', channelName: 'BLUME', channelUrl: 'https://www.youtube.com/@BLUME_Music' }
 ];
 
 interface MusicPlayerSidebarProps {
@@ -95,19 +83,47 @@ const MusicPlayerSidebar: React.FC<MusicPlayerSidebarProps> = ({ isOpen, onToggl
 
   // Persist music player state in localStorage
   useEffect(() => {
-    const storedTracks = localStorage.getItem('musicSidebar_tracks');
+    const storedTracksJSON = localStorage.getItem('musicSidebar_tracks');
     const storedTrackIndex = localStorage.getItem('musicSidebar_currentTrackIndex');
     const storedVolume = localStorage.getItem('musicSidebar_volume');
     
-    if (storedTracks) {
+    let loadedTracks: Track[] = initialTracks;
+
+    if (storedTracksJSON) {
       try {
-        setTracks(JSON.parse(storedTracks));
+        const storedTracks = JSON.parse(storedTracksJSON) as Track[];
+        const customTracks = storedTracks.filter(t => t.isCustom);
+        
+        const initialVideoIds = new Set(initialTracks.map(t => t.videoId));
+        const uniqueCustomTracks = customTracks.filter(t => !initialVideoIds.has(t.videoId));
+
+        loadedTracks = [...initialTracks, ...uniqueCustomTracks];
       } catch (e) {
         console.error('Error parsing stored tracks:', e);
+        loadedTracks = initialTracks;
       }
     }
-    if (storedTrackIndex) setCurrentTrackIndex(parseInt(storedTrackIndex));
-    if (storedVolume) setVolume(parseInt(storedVolume));
+    
+    // Re-assign IDs to ensure they are unique and sequential
+    const finalTracks = loadedTracks.map((track, index) => ({
+      ...track,
+      id: index + 1,
+    }));
+
+    setTracks(finalTracks);
+
+    if (storedTrackIndex) {
+      const index = parseInt(storedTrackIndex, 10);
+      if (index >= 0 && index < finalTracks.length) {
+        setCurrentTrackIndex(index);
+      }
+    }
+    if (storedVolume) {
+      const volume = parseInt(storedVolume, 10);
+      if (volume >= 0 && volume <= 100) {
+        setVolume(volume);
+      }
+    }
   }, []);
 
   useEffect(() => {
@@ -159,6 +175,38 @@ const MusicPlayerSidebar: React.FC<MusicPlayerSidebarProps> = ({ isOpen, onToggl
   const selectTrack = (index: number) => {
     setCurrentTrackIndex(index);
     setIsLoading(true);
+  };
+
+  const removeTrack = (id: number) => {
+    const trackToRemoveIndex = tracks.findIndex(t => t.id === id);
+    if (trackToRemoveIndex === -1) {
+      return;
+    }
+
+    const isDeletingCurrentTrack = trackToRemoveIndex === currentTrackIndex;
+
+    // Stop player if the current track is being deleted
+    if (isDeletingCurrentTrack) {
+      playerRef.current?.stopVideo();
+      setIsPlaying(false);
+    }
+
+    const newTracks = tracks.filter(track => track.id !== id);
+
+    let newCurrentTrackIndex = currentTrackIndex;
+
+    if (newTracks.length === 0) {
+      newCurrentTrackIndex = 0;
+    } else if (isDeletingCurrentTrack) {
+      // The new current track will be at the same index, unless it was the last track
+      newCurrentTrackIndex = trackToRemoveIndex % newTracks.length;
+    } else if (trackToRemoveIndex < currentTrackIndex) {
+      // A track before the current one was removed
+      newCurrentTrackIndex -= 1;
+    }
+
+    setTracks(newTracks);
+    setCurrentTrackIndex(newCurrentTrackIndex);
   };
 
   const toggleMute = () => {
@@ -215,13 +263,15 @@ const MusicPlayerSidebar: React.FC<MusicPlayerSidebarProps> = ({ isOpen, onToggl
         alert('Invalid YouTube URL');
         return;
       }
-      setTracks([...tracks, { 
-        id: tracks.length + 1, 
-        title, 
-        videoId, 
-        channelName: "Custom", 
-        channelUrl: "" 
-      }]);
+      const newTrack: Track = {
+        id: tracks.length > 0 ? Math.max(...tracks.map(t => t.id)) + 1 : 1,
+        title,
+        videoId,
+        channelName: "Custom",
+        channelUrl: "",
+        isCustom: true,
+      };
+      setTracks([...tracks, newTrack]);
       setNewTrackTitle('');
       setNewTrackUrl('');
       setIsFormVisible(false);
@@ -292,7 +342,6 @@ const MusicPlayerSidebar: React.FC<MusicPlayerSidebarProps> = ({ isOpen, onToggl
           {apiReady && currentTrack && (
             <div style={{ display: 'none' }}>
               <YouTube
-                key={currentTrack.videoId}
                 videoId={currentTrack.videoId}
                 onReady={onReady}
                 onStateChange={onStateChange}
@@ -300,160 +349,113 @@ const MusicPlayerSidebar: React.FC<MusicPlayerSidebarProps> = ({ isOpen, onToggl
                   height: '0',
                   width: '0',
                   playerVars: {
-                    autoplay: 0,
-                    controls: 0,
-                    disablekb: 1,
-                    fs: 0,
-                    modestbranding: 1,
-                    rel: 0,
-                    showinfo: 0,
+                    autoplay: 1,
                   },
                 }}
               />
             </div>
           )}
 
-          {/* Current Track Display */}
+          {/* Now Playing */}
           <div className={styles.nowPlaying}>
-            <div className={styles.trackThumbnail}>
-              <Image 
-                src={getThumbnailUrl(currentTrack.videoId)} 
-                alt="Track thumbnail" 
-                width={60}
-                height={60}
-                className={styles.thumbnail}
-                onError={(e: React.SyntheticEvent<HTMLImageElement>) => {
-                  const target = e.currentTarget;
-                  target.style.display = 'none';
-                  const fallback = target.nextElementSibling as HTMLElement;
-                  if (fallback) {
-                    fallback.style.display = 'flex';
-                  }
-                }}
-              />
-              <div className={styles.thumbnailFallback}>
-                <Music size={24} />
+            {currentTrack ? (
+              <>
+                <div className={styles.trackThumbnail}>
+                  <Image
+                    src={getThumbnailUrl(currentTrack.videoId)}
+                    alt="Track thumbnail"
+                    width={60}
+                    height={60}
+                    className={styles.thumbnail}
+                    onError={(e) => {
+                      const image = e.currentTarget as HTMLImageElement;
+                      image.style.display = 'none';
+                      const fallback = image.nextElementSibling as HTMLElement;
+                      if (fallback) {
+                        fallback.style.display = 'flex';
+                      }
+                    }}
+                  />
+                  <div className={styles.thumbnailFallback}>
+                    <Music size={24} />
+                  </div>
+                </div>
+                <div className={styles.trackInfo}>
+                  <h3 className={styles.trackTitle}>{currentTrack.title}</h3>
+                  <p className={styles.channelName}>{currentTrack.channelName}</p>
+                </div>
+              </>
+            ) : (
+              <div className={styles.trackInfo}>
+                <h3 className={styles.trackTitle}>No track selected</h3>
+                <p className={styles.channelName}>...</p>
               </div>
-            </div>
-            <div className={styles.trackInfo}>
-              <h3 className={styles.trackTitle}>{currentTrack.title}</h3>
-              <p className={styles.channelName}>{currentTrack.channelName}</p>
-            </div>
-            {isLoading && (
+            )}
+            {isLoading && currentTrack && (
               <div className={styles.loadingSpinner}>
                 <div className={styles.spinner}></div>
               </div>
             )}
           </div>
 
-          {/* Main Controls */}
+          {/* Controls */}
           <div className={styles.controls}>
             <button
               className={`${styles.controlButton} ${isShuffled ? styles.active : ''}`}
               onClick={() => setIsShuffled(!isShuffled)}
-              title="Shuffle"
+              title={isShuffled ? "Disable Shuffle" : "Enable Shuffle"}
             >
-              <Shuffle size={16} />
+              <Shuffle size={18} />
             </button>
-            
-            <button
-              className={styles.controlButton}
-              onClick={previousTrack}
-              disabled={isLoading}
-              title="Previous"
-            >
+            <button className={styles.controlButton} onClick={previousTrack} title="Previous Track">
               <SkipBack size={18} />
             </button>
-            
             <button
               className={styles.playButton}
               onClick={playPause}
               disabled={isLoading}
-              title={isPlaying ? 'Pause' : 'Play'}
+              title={isPlaying ? "Pause" : "Play"}
             >
-              {isLoading ? (
-                <div className={styles.buttonSpinner}></div>
-              ) : isPlaying ? (
-                <Pause size={20} />
-              ) : (
-                <Play size={20} />
-              )}
+              {isLoading ? <div className={styles.buttonSpinner}></div> : isPlaying ? <Pause size={20} /> : <Play size={20} />}
             </button>
-            
-            <button
-              className={styles.controlButton}
-              onClick={nextTrack}
-              disabled={isLoading}
-              title="Next"
-            >
+            <button className={styles.controlButton} onClick={nextTrack} title="Next Track">
               <SkipForward size={18} />
             </button>
-            
             <button
               className={`${styles.controlButton} ${isRepeating ? styles.active : ''}`}
               onClick={() => setIsRepeating(!isRepeating)}
-              title="Repeat"
+              title={isRepeating ? "Disable Repeat" : "Enable Repeat"}
             >
-              <Repeat size={16} />
+              <Repeat size={18} />
             </button>
           </div>
 
-          {/* Volume Control */}
+          {/* Volume Section */}
           <div className={styles.volumeSection}>
-            <button onClick={toggleMute} className={styles.volumeButton}>
-              {isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+            <button className={styles.volumeButton} onClick={toggleMute} title={isMuted ? "Unmute" : "Mute"}>
+              {isMuted || volume === 0 ? <VolumeX size={20} /> : <Volume2 size={20} />}
             </button>
             <input
               type="range"
               min="0"
               max="100"
-              value={isMuted ? 0 : volume}
+              value={volume}
               onChange={(e) => setVolume(parseInt(e.target.value))}
               className={styles.volumeSlider}
             />
-            <span className={styles.volumeValue}>{isMuted ? 0 : volume}%</span>
-          </div>          {/* Playlist Header */}
-          <div className={styles.playlistToggle}>
-            <div className={styles.playlistButton}>
-              <List size={16} />
-              <span>Playlist ({tracks.length})</span>
-            </div>
-            <button 
-              className={styles.addTrackButton} 
-              onClick={() => setIsFormVisible(!isFormVisible)}
-              title="Add Track"
-            >
-              <Plus size={16} />
-            </button>
+            <span className={styles.volumeValue}>{volume}%</span>
           </div>
 
-          {/* Playlist - Always Visible */}
-          <div className={styles.playlist}>
-            {tracks.map((track, index) => (
-              <button
-                key={track.id}
-                onClick={() => selectTrack(index)}
-                className={`${styles.track} ${
-                  index === currentTrackIndex ? styles.trackActive : ''
-                }`}
-              >
-                <div className={styles.trackNumber}>
-                  {index === currentTrackIndex && isPlaying ? (
-                    <div className={styles.playingAnimation}>
-                      <span></span>
-                      <span></span>
-                      <span></span>
-                    </div>
-                  ) : (
-                    index + 1
-                  )}
-                </div>
-                <div className={styles.trackMeta}>
-                  <div className={styles.trackName}>{track.title}</div>
-                  <div className={styles.trackArtist}>{track.channelName}</div>
-                </div>
-              </button>
-            ))}
+          {/* Playlist Toggle */}
+          <div className={styles.playlistToggle}>
+            <button className={styles.playlistButton}>
+              <List size={16} />
+              <span>Playlist</span>
+            </button>
+            <button className={styles.addTrackButton} onClick={() => setIsFormVisible(!isFormVisible)}>
+              <Plus size={16} />
+              <span>Add Track</span>
+            </button>
           </div>
 
           {/* Add Track Form */}
@@ -461,39 +463,73 @@ const MusicPlayerSidebar: React.FC<MusicPlayerSidebarProps> = ({ isOpen, onToggl
             <div className={styles.addTrackForm}>
               <div className={styles.formHeader}>
                 <h4>Add New Track</h4>
-                <button 
-                  className={styles.formCloseButton} 
-                  onClick={() => setIsFormVisible(false)}
-                >
+                <button className={styles.formCloseButton} onClick={() => setIsFormVisible(false)}>
                   <X size={16} />
                 </button>
               </div>
               <div className={styles.formInputs}>
                 <input
                   type="text"
-                  placeholder="Track title..."
+                  placeholder="Track Title"
                   value={newTrackTitle}
                   onChange={(e) => setNewTrackTitle(e.target.value)}
                   className={styles.formInput}
                 />
                 <input
                   type="text"
-                  placeholder="YouTube URL..."
+                  placeholder="YouTube URL"
                   value={newTrackUrl}
                   onChange={(e) => setNewTrackUrl(e.target.value)}
                   className={styles.formInput}
                 />
+                <button
+                  className={styles.addButton}
+                  onClick={() => addNewTrack(newTrackTitle, newTrackUrl)}
+                  disabled={!newTrackTitle || !newTrackUrl}
+                >
+                  <Plus size={14} />
+                  Add
+                </button>
               </div>
-              <button 
-                onClick={() => addNewTrack(newTrackTitle, newTrackUrl)}
-                className={styles.addButton}
-                disabled={!newTrackTitle.trim() || !newTrackUrl.trim()}
-              >
-                <Plus size={14} />
-                Add Track
-              </button>
             </div>
           )}
+
+          {/* Playlist - Always Visible */}
+          <div className={styles.playlist}>
+            {tracks.map((track, index) => (
+              <div
+                key={track.id}
+                className={`${styles.track} ${index === currentTrackIndex ? styles.trackActive : ''}`}
+              >
+                <div style={{ flexGrow: 1, cursor: 'pointer', display: 'flex', alignItems: 'center' }} onClick={() => selectTrack(index)}>
+                  <span className={styles.trackNumber}>{index + 1}</span>
+                  <div className={styles.trackMeta}>
+                    <span className={styles.trackName}>{track.title}</span>
+                    <span className={styles.trackArtist}>{track.channelName}</span>
+                  </div>
+                  {index === currentTrackIndex && isPlaying && (
+                    <div className={styles.playingAnimation}>
+                      <span></span>
+                      <span></span>
+                      <span></span>
+                    </div>
+                  )}
+                </div>
+                {track.isCustom && (
+                  <button
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      removeTrack(track.id);
+                    }}
+                    title="Remove track"
+                    style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '0 8px' }}
+                  >
+                    <Trash2 size={14} />
+                  </button>
+                )}
+              </div>
+            ))}
+          </div>
         </div>
       </div>
 
