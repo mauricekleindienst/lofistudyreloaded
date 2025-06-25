@@ -1,7 +1,7 @@
 /* Modern Content Layout */
 .content {
   padding: 12px;
-  color: var(--text-primary);
+  color: var(--text-primary, #ffffff);
   width: 100%;
   height: 100%;
   display: flex;
@@ -9,7 +9,7 @@
   gap: 8px;
   box-sizing: border-box;
   overflow: hidden;
-  background: linear-gradient(135deg, rgba(0, 0, 0, 0.02) 0%, rgba(255, 255, 255, 0.01) 100%);
+  background: linear-gradient(145deg, var(--bg-primary, #1A202C), var(--bg-secondary, #1A202C));
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   min-height: 320px;
 }
@@ -50,7 +50,7 @@
 }
 
 .headerIcon {
-  color: var(--accent-color);
+  color: var(--accent-color, #ff7b00);
   opacity: 0.9;
   flex-shrink: 0;
 }
@@ -59,7 +59,7 @@
   font-size: 16px;
   font-weight: 600;
   margin: 0;
-  color: var(--text-primary);
+  color: var(--text-primary, #ffffff);
   letter-spacing: -0.01em;
   min-width: 0;
   white-space: nowrap;
@@ -72,11 +72,12 @@
   align-items: center;
   gap: 4px;
   padding: 4px 8px;
-  background: rgba(59, 130, 246, 0.1);
-  border: 1px solid rgba(59, 130, 246, 0.2);
+  background: var(--bg-secondary, #1A202C);
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
   border-radius: 8px;
   font-size: 10px;
   flex-shrink: 0;
+  color: var(--text-secondary, #e2e8f0);
 }
 
 /* Responsive header adjustments */
@@ -127,11 +128,11 @@
 
 /* Progress Section */
 .progressSection {
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: var(--bg-secondary, #1A202C);
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
   border-radius: 6px;
   padding: 6px;
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(15px);
 }
 
 .progressInfo {
@@ -143,20 +144,20 @@
 
 .progressText {
   font-size: 10px;
-  color: var(--text-secondary);
+  color: var(--text-secondary, #e2e8f0);
   font-weight: 500;
 }
 
 .progressPercentage {
   font-size: 11px;
   font-weight: 600;
-  color: var(--accent-color);
+  color: var(--accent-color, #ff7b00);
 }
 
 .progressBar {
   width: 100%;
   height: 4px;
-  background: rgba(255, 255, 255, 0.1);
+  background: var(--border-color, rgba(255, 255, 255, 0.1));
   border-radius: 2px;
   overflow: hidden;
   position: relative;
@@ -164,7 +165,7 @@
 
 .progressFill {
   height: 100%;
-  background: linear-gradient(90deg, var(--accent-color), rgba(var(--accent-rgb), 0.8));
+  background: var(--accent-color, #ff7b00);
   border-radius: 2px;
   transition: width 0.3s ease;
   position: relative;
@@ -188,11 +189,11 @@
 
 /* Add Task Section */
 .addSection {
-  background: rgba(255, 255, 255, 0.02);
-  border: 1px solid rgba(255, 255, 255, 0.06);
+  background: var(--bg-secondary, #1A202C);
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
   border-radius: 6px;
   padding: 6px;
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(15px);
 }
 
 .inputGroup {
@@ -204,47 +205,47 @@
 .taskInput {
   flex: 1;
   padding: 6px 8px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--bg-secondary, #1A202C);
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
   border-radius: 6px;
-  color: var(--text-primary);
+  color: var(--text-primary, #ffffff);
   font-size: 11px;
   font-weight: 400;
-  transition: all 0.2s ease;
-  backdrop-filter: blur(10px);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: blur(15px);
 }
 
 .taskInput::placeholder {
-  color: var(--text-secondary);
+  color: var(--text-secondary, #e2e8f0);
   opacity: 0.7;
 }
 
 .taskInput:focus {
   outline: none;
-  border-color: var(--accent-color);
-  background: rgba(255, 255, 255, 0.08);
-  box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.1);
+  border-color: var(--accent-color, #ff7b00);
+  background: var(--bg-secondary, #1A202C);
+  box-shadow: 0 0 0 2px rgba(255, 123, 0, 0.2);
 }
 
 .addButton {
   padding: 6px 8px;
-  background: var(--accent-color);
-  border: none;
+  background: var(--accent-color, #ff7b00);
+  border: 1px solid var(--accent-color, #ff7b00);
   border-radius: 6px;
-  color: white;
+  color: var(--text-primary, #ffffff);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.2s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   min-width: 32px;
   font-size: 11px;
 }
 
 .addButton:hover:not(:disabled) {
-  background: rgba(var(--accent-rgb), 0.8);
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(var(--accent-rgb), 0.3);
+  background: var(--accent-color, #ff7b00);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 123, 0, 0.2);
 }
 
 .addButton:disabled {
@@ -262,20 +263,21 @@
 .prioritySelect {
   flex: 1;
   padding: 6px 8px;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--bg-secondary, #1A202C);
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
   border-radius: 6px;
-  color: var(--text-primary);
+  color: var(--text-primary, #ffffff);
   font-size: 11px;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .categorySelect:focus,
 .prioritySelect:focus {
   outline: none;
-  border-color: var(--accent-color);
-  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--accent-color, #ff7b00);
+  background: var(--bg-secondary, #1A202C);
+  box-shadow: 0 0 0 2px rgba(255, 123, 0, 0.2);
 }
 
 /* Color Picker Container */
@@ -283,10 +285,10 @@
   display: flex;
   gap: 4px;
   padding: 4px 8px;
-  background-color: var(--bg-secondary);
+  background-color: var(--bg-secondary, #1A202C);
   border-radius: 6px;
   margin-left: 8px;
-  border: 1px solid var(--border-color);
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
 }
 
 /* Color Button */
