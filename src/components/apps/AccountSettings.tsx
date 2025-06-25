@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { User, Mail, Calendar, Shield, Save, Edit3, Download, Trash2 } from 'lucide-react';
+import { User, Mail, Calendar, Shield, Save, Edit3, Download, Trash2, LogOut } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { createClient } from '../../utils/supabase/client';
 import styles from '../../../styles/AccountSettings.module.css';
@@ -292,6 +292,15 @@ const AccountSettings: React.FC = () => {
                 >
                   <Download size={16} />
                   {isLoading ? 'Downloading...' : 'Download My Data'}
+                </button>
+                
+                <button 
+                  className={`${styles.actionButton} ${styles.logoutButton}`}
+                  onClick={() => signOut()}
+                  disabled={isLoading}
+                >
+                  <LogOut size={16} />
+                  Sign Out
                 </button>
               </div>
             </div>

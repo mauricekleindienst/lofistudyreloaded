@@ -202,20 +202,26 @@
   padding: 28px;
   overflow-y: auto;
   scrollbar-width: thin;
-  scrollbar-color: rgba(255, 255, 255, 0.2) transparent;
+  scrollbar-color: var(--accent-color, #ff7b00) var(--bg-secondary, #1A202C);
 }
 
 .modalContent::-webkit-scrollbar {
-  width: 6px;
+  width: 8px;
 }
 
 .modalContent::-webkit-scrollbar-track {
-  background: transparent;
+  background: var(--bg-secondary, #1A202C);
+  border-radius: 4px;
 }
 
 .modalContent::-webkit-scrollbar-thumb {
-  background: rgba(255, 255, 255, 0.2);
-  border-radius: 3px;
+  background: var(--accent-color, #ff7b00);
+  border-radius: 4px;
+  border: 1px solid var(--bg-secondary, #1A202C);
+}
+
+.modalContent::-webkit-scrollbar-thumb:hover {
+  background: #ff8c1a;
 }
 
 /* Loading State */
