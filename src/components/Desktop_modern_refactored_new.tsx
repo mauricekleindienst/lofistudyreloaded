@@ -115,8 +115,8 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
   const [videoLoadError, setVideoLoadError] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
   const [isVideoLoading, setIsVideoLoading] = useState(true);
-  const [videoBuffered, setVideoBuffered] = useState(false);
-  const [bufferProgress, setBufferProgress] = useState(0);
+  const [setVideoBuffered] = useState(false);
+  const [setBufferProgress] = useState(0);
   const [preloadedVideos, setPreloadedVideos] = useState<Map<string, HTMLVideoElement>>(new Map());
   const [currentlyBuffering, setCurrentlyBuffering] = useState<string[]>([]);
   const [bufferHealths, setBufferHealths] = useState<Map<string, number>>(new Map());
