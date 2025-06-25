@@ -203,13 +203,8 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
           video.src = background.src;
           video.load();
 
-          // Store the video element immediately to prevent duplicates
-          setPreloadedVideos(prev => {
-            if (prev.has(background.id.toString())) {
-              return prev; // Already exists, don't create new Map
-            }
-            return new Map(prev.set(background.id.toString(), video));
-          });
+          // Store the video element
+          setPreloadedVideos(prev => new Map(prev.set(background.id.toString(), video)));
         });
       };
 
@@ -249,11 +244,13 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
         clearInterval(bufferCheckIntervalRef.current);
       }
       // Clean up all preloaded videos
-      if (preloadManagerRef.current) {
-        preloadManagerRef.current.clearOldBuffers(0); // Clear all
-      }
+      preloadedVideos.forEach(video => {
+        video.pause();
+        video.src = '';
+        video.load();
+      });
     };
-  }, []); // Empty dependency array to run only once
+  }, [preloadedVideos, bufferHealths]);
 
   // Intelligent preloading effect
   useEffect(() => {
@@ -266,16 +263,14 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
         .slice(0, 3); // Preload first 3 video backgrounds
 
       for (const background of priorityBackgrounds) {
-        const backgroundId = background.id.toString();
-        
-        if (!currentlyBuffering.includes(backgroundId) && !preloadedVideos.has(backgroundId)) {
-          setCurrentlyBuffering(prev => [...prev, backgroundId]);
+        if (!currentlyBuffering.includes(background.id.toString())) {
+          setCurrentlyBuffering(prev => [...prev, background.id.toString()]);
           try {
             await preloadManagerRef.current!.preloadVideo(background);
           } catch (error) {
             console.warn(`Failed to preload background ${background.id}:`, error);
           } finally {
-            setCurrentlyBuffering(prev => prev.filter(id => id !== backgroundId));
+            setCurrentlyBuffering(prev => prev.filter(id => id !== background.id.toString()));
           }
         }
       }
@@ -284,7 +279,7 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
     // Start preloading after a short delay to not interfere with initial load
     const timer = setTimeout(preloadPopularBackgrounds, 3000);
     return () => clearTimeout(timer);
-  }, [isClient]); // Remove currentlyBuffering from dependencies to avoid loops
+  }, [isClient, currentlyBuffering]);
 
   // Update time and date every second
   useEffect(() => {
@@ -434,31 +429,22 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
         // Video autoplay was prevented
       });
     }
-  }, [currentBackground]);
-
-  // Separate effect for preloading videos to avoid infinite loops
-  useEffect(() => {
-    if (!preloadManagerRef.current || currentlyBuffering.includes(currentBackground.id.toString())) {
-      return;
+    
+    // Start preloading the next background in the background (if not already buffering)
+    if (preloadManagerRef.current && !currentlyBuffering.includes(currentBackground.id.toString())) {
+      setCurrentlyBuffering(prev => [...prev, currentBackground.id.toString()]);
+      preloadManagerRef.current.preloadVideo(currentBackground)
+        .then(() => {
+          console.log(`Successfully preloaded background ${currentBackground.id}`);
+        })
+        .catch(error => {
+          console.warn(`Failed to preload background ${currentBackground.id}:`, error);
+        })
+        .finally(() => {
+          setCurrentlyBuffering(prev => prev.filter(id => id !== currentBackground.id.toString()));
+        });
     }
-
-    const preloadCurrentBackground = async () => {
-      try {
-        setCurrentlyBuffering(prev => [...prev, currentBackground.id.toString()]);
-        await preloadManagerRef.current!.preloadVideo(currentBackground);
-        console.log(`Successfully preloaded background ${currentBackground.id}`);
-      } catch (error) {
-        console.warn(`Failed to preload background ${currentBackground.id}:`, error);
-      } finally {
-        setCurrentlyBuffering(prev => prev.filter(id => id !== currentBackground.id.toString()));
-      }
-    };
-
-    // Only preload if not already preloaded or buffering
-    if (!preloadedVideos.has(currentBackground.id.toString())) {
-      preloadCurrentBackground();
-    }
-  }, [currentBackground.id, preloadedVideos]);
+  }, [currentBackground, currentlyBuffering]);
 
   // Load saved background when user authenticates
   useEffect(() => {
@@ -741,94 +727,81 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
 
       {/* Desktop UI Components */}
       <TopBar 
+        currentTime={currentTime}
+        currentDate={currentDate}
+        onShowAuth={onShowAuth}
         user={user}
+        isConfigured={isConfigured}
+        onToggleBackgrounds={() => setShowBackgrounds(!showBackgrounds)}
+        onToggleCalendar={() => setShowCalendar(!showCalendar)}
         onToggleStats={() => setShowStats(!showStats)}
-        onShare={() => {}} // Empty function for now
+        onToggleMusicSidebar={() => setIsMusicSidebarOpen(!isMusicSidebarOpen)}
       />
 
       <BottomBar 
-        currentTime={currentTime}
-        currentDate={currentDate}
-        modernApps={modernApps}
+        apps={modernApps}
         openWindows={openWindows}
-        appStates={appStates}
-        user={user}
-        isConfigured={isConfigured}
-        backgroundSaveLoading={backgroundSaveLoading}
-        onOpenCalendar={() => setShowCalendar(true)}
         onOpenApp={openApp}
-        onOpenBackgrounds={() => setShowBackgrounds(true)}
-        onAccountAction={() => {
-          if (!user) {
-            onShowAuth();
-          } else {
-            const accountSettingsApp = modernApps.find(app => app.id === 'account-settings');
-            if (accountSettingsApp) {
-              openApp(accountSettingsApp);
-            }
-          }
-        }}
+        onRestoreWindow={restoreWindow}
       />
 
-      <WindowManager 
-        openWindows={openWindows}
-        onMinimize={minimizeWindow}
+      <WindowManager
+        windows={openWindows}
         onClose={closeWindow}
+        onMinimize={minimizeWindow}
         onBringToFront={bringToFront}
+        onUpdatePosition={updateWindowPosition}
+        onUpdateSize={updateWindowSize}
       />
 
       {/* Background Selector Modal */}
       {showBackgrounds && (
         <BackgroundSelector
-          showBackgrounds={showBackgrounds}
           currentBackground={currentBackground}
-          backgroundsToShow={backgroundsToShow}
-          selectedCategory={selectedCategory}
-          youtubeUrl={youtubeUrl}
-          customBackground={customBackground}
-          onClose={() => {
-            setShowBackgrounds(false);
-            setBackgroundsToShow(8);
-          }}
           onBackgroundChange={handleBackgroundChange}
-          onCategoryChange={setSelectedCategory}
-          onLoadMore={() => setBackgroundsToShow(prev => Math.min(prev + 8, backgrounds.length))}
-          onYoutubeSubmit={() => {
-            // YouTube submission logic would go here
-          }}
-          onYoutubeUrlChange={setYoutubeUrl}
+          onClose={() => setShowBackgrounds(false)}
+          backgroundsToShow={backgroundsToShow}
+          setBackgroundsToShow={setBackgroundsToShow}
+          selectedCategory={selectedCategory}
+          setSelectedCategory={setSelectedCategory}
+          youtubeUrl={youtubeUrl}
+          setYoutubeUrl={setYoutubeUrl}
+          customBackground={customBackground}
+          setCustomBackground={setCustomBackground}
+          isLoading={backgroundSaveLoading}
+          bufferHealths={bufferHealths}
+          currentlyBuffering={currentlyBuffering}
         />
       )}
 
       {/* Calendar Modal */}
       {showCalendar && (
-        <Calendar 
-          isVisible={showCalendar}
-          onClose={() => setShowCalendar(false)}
-        />
+        <div className={desktopStyles.modalOverlay} onClick={() => setShowCalendar(false)}>
+          <div className={desktopStyles.modalContent} onClick={e => e.stopPropagation()}>
+            <Calendar />
+            <button 
+              className={desktopStyles.modalCloseButton}
+              onClick={() => setShowCalendar(false)}
+            >
+              ×
+            </button>
+          </div>
+        </div>
       )}
 
       {/* Stats Modal */}
       {showStats && (
-        <StatsModal 
-          isOpen={showStats}
-          onClose={() => setShowStats(false)} 
-        />
+        <StatsModal onClose={() => setShowStats(false)} />
       )}
 
       {/* Music Player Sidebar */}
       <MusicPlayerSidebar 
         isOpen={isMusicSidebarOpen}
-        onToggle={() => setIsMusicSidebarOpen(!isMusicSidebarOpen)}
+        onClose={() => setIsMusicSidebarOpen(false)}
       />
 
       {/* Notification System */}
-      <NotificationManager 
-        notifications={notifications} 
-        onRemoveNotification={(id: string) => {
-          setNotifications(prev => prev.filter(n => n.id !== id));
-        }}
-      />
+      <NotificationManager notifications={notifications} />
     </div>
   );
 };
