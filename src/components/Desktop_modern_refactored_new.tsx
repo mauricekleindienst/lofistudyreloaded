@@ -683,8 +683,7 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
           <div className={desktopStyles.videoLoadingOverlay}>
             <div className={desktopStyles.bufferIndicator}>
               <div className={desktopStyles.spinner}></div>
-              <p>Loading background... {bufferProgress}%</p>
-              {videoBuffered && <p className={desktopStyles.bufferStatus}>✓ Buffered</p>}
+            
             </div>
           </div>
         )}
