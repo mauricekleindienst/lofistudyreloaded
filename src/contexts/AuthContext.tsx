@@ -3,9 +3,11 @@
 import { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { createClient } from '../utils/supabase/client';
+import { useUserProfile, ExtendedUser } from '../hooks/useUserProfile';
 
 interface AuthContextType {
-  user: User | null;
+  user: ExtendedUser | null;
+  authUser: User | null;
   session: Session | null;
   loading: boolean;
   isConfigured: boolean;
@@ -18,11 +20,40 @@ interface AuthContextType {
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [user, setUser] = useState<User | null>(null);
+  const [authUser, setAuthUser] = useState<User | null>(null);
   const [session, setSession] = useState<Session | null>(null);
   const [loading, setLoading] = useState(true);
   const [isConfigured, setIsConfigured] = useState(false);
   const [supabase] = useState(() => createClient());
+
+  // Use the user profile hook to get extended user data
+  const { getExtendedUser, createProfile, userProfile } = useUserProfile(authUser);
+
+  // Auto-create user profile for new users (especially OAuth users)
+  useEffect(() => {
+    const createUserProfileIfNeeded = async () => {
+      if (authUser && !userProfile && isConfigured) {
+        try {
+          const profileData = {
+            id: authUser.id,
+            email: authUser.email || '',
+            full_name: authUser.user_metadata?.full_name || authUser.user_metadata?.name || '',
+            avatar_url: authUser.user_metadata?.avatar_url || authUser.user_metadata?.picture || '',
+            premium: false,
+            streak_count: 0,
+            total_focus_time: 0,
+            settings: {}
+          };
+
+          await createProfile(profileData);
+        } catch (error) {
+          console.error('Failed to create user profile:', error);
+        }
+      }
+    };
+
+    createUserProfileIfNeeded();
+  }, [authUser, userProfile, createProfile, isConfigured]);
 
   useEffect(() => {
     // Check if Supabase is properly configured
@@ -47,7 +78,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       try {
         const { data: { session } } = await supabase.auth.getSession();
         setSession(session);
-        setUser(session?.user ?? null);
+        setAuthUser(session?.user ?? null);
       } catch (error) {
         console.error('Error getting initial session:', error);
       } finally {
@@ -61,7 +92,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
       async (event, session) => {
         setSession(session);
-        setUser(session?.user ?? null);
+        setAuthUser(session?.user ?? null);
         setLoading(false);
       }
     );
@@ -121,7 +152,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   };
 
   const value = {
-    user,
+    user: getExtendedUser(),
+    authUser,
     session,
     loading,
     isConfigured,

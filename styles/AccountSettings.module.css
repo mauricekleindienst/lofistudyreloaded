@@ -590,7 +590,7 @@
 
 .actionButton.danger {
   background: var(--bg-secondary, #1A202C);
-  border-color: #dc2626;
+  border: 1px solid #dc2626;
   color: #fca5a5;
 }
 
@@ -903,10 +903,7 @@
 
 .securityItem:hover {
   transform: translateY(-3px);
-  box-shadow: 
-    0 12px 32px rgba(34, 197, 94, 0.2),
-    0 4px 16px rgba(0, 0, 0, 0.15),
-    inset 0 1px 0 rgba(255, 255, 255, 0.15);
+ 
   border-color: rgba(34, 197, 94, 0.45);
   background: linear-gradient(135deg, rgba(34, 197, 94, 0.18) 0%, rgba(16, 185, 129, 0.12) 100%);
 }
@@ -927,9 +924,6 @@
 .securityItem:hover > svg {
   transform: scale(1.05);
   background: linear-gradient(135deg, rgba(34, 197, 94, 0.3) 0%, rgba(16, 185, 129, 0.25) 100%);
-  box-shadow: 
-    0 8px 20px rgba(34, 197, 94, 0.3),
-    inset 0 1px 0 rgba(255, 255, 255, 0.25);
 }
 
 .securityItem h4 {
@@ -995,17 +989,13 @@
   left: -100%;
   width: 100%;
   height: 100%;
-  background: linear-gradient(90deg, 
-    transparent 0%, 
-    rgba(255, 255, 255, 0.1) 50%, 
-    transparent 100%);
-  transition: left 0.6s ease;
+
 }
 
 .actionButton:hover {
   background: var(--accent-color, #ff7b00);
   color: var(--text-primary, #ffffff);
-  transform: translateY(-2px);
+ 
   box-shadow: 0 4px 12px rgba(255, 123, 0, 0.2);
   border-color: var(--accent-color, #ff7b00);
 }
@@ -1021,169 +1011,37 @@
 .actionButton:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-  transform: none;
-  background: rgba(255, 255, 255, 0.05);
 }
 
-/* Danger Zone Enhanced */
-.dangerZone {
-  background: linear-gradient(135deg, 
-    rgba(239, 68, 68, 0.18) 0%, 
-    rgba(220, 38, 38, 0.12) 50%,
-    rgba(185, 28, 28, 0.08) 100%);
-  border: 1px solid rgba(239, 68, 68, 0.4);
-  border-radius: 14px;
-  padding: 24px;
-  margin-top: 28px;
-  position: relative;
-  overflow: hidden;
-  backdrop-filter: blur(12px);
-  box-shadow: 
-    0 4px 16px rgba(239, 68, 68, 0.15),
-    0 2px 8px rgba(0, 0, 0, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.1);
-}
-
-.dangerZone::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 3px;
-  background: linear-gradient(90deg, 
-    transparent 0%, 
-    rgba(239, 68, 68, 0.8) 20%, 
-    rgba(220, 38, 38, 0.9) 50%,
-    rgba(239, 68, 68, 0.8) 80%, 
-    transparent 100%);
-}
-
-.warningItem {
+/* Message Styles */
+.message {
   display: flex;
-  align-items: flex-start;
-  gap: 16px;
-  margin-bottom: 24px;
-  padding: 18px;
-  background: linear-gradient(135deg, 
-    rgba(239, 68, 68, 0.15) 0%, 
-    rgba(220, 38, 38, 0.10) 100%);
-  border-radius: 12px;
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  backdrop-filter: blur(8px);
-  box-shadow: 
-    0 4px 12px rgba(239, 68, 68, 0.1),
-    inset 0 1px 0 rgba(255, 255, 255, 0.08);
-}
-
-.warningItem > svg {
-  color: #ef4444;
-  background: linear-gradient(135deg, rgba(239, 68, 68, 0.25) 0%, rgba(220, 38, 38, 0.20) 100%);
-  padding: 10px;
-  border-radius: 10px;
-  flex-shrink: 0;
-  border: 1px solid rgba(239, 68, 68, 0.3);
-  box-shadow: 
-    0 4px 12px rgba(239, 68, 68, 0.2),
-    inset 0 1px 0 rgba(255, 255, 255, 0.15);
-}
-
-.warningItem h4 {
-  margin: 0 0 8px 0;
-  font-size: 16px;
-  font-weight: 700;
-  color: #ef4444;
-  letter-spacing: -0.03em;
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.2);
-}
-
-.warningItem p {
-  margin: 0;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  border-radius: 8px;
   font-size: 14px;
-  color: rgba(255, 255, 255, 0.9);
-  line-height: 1.6;
-  font-weight: 400;
-}
-
-/* Add danger button style */
-.actionButton.danger {
-  background: var(--bg-secondary, #1A202C);
-  border: 1px solid #dc2626;
-  color: #fca5a5;
-}
-
-.actionButton.danger:hover {
-  background: #dc2626;
-  border-color: #dc2626;
-  color: var(--text-primary, #ffffff);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(220, 38, 38, 0.2);
-}
-
-/* Delete Confirmation Enhanced */
-.deleteConfirmation {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.04) 100%);
-  border-radius: 10px;
-  padding: 20px;
-  border: 1px solid rgba(239, 68, 68, 0.25);
-  margin-top: 16px;
+  font-weight: 500;
+  margin-bottom: 16px;
   backdrop-filter: blur(10px);
 }
 
-.deleteConfirmation p {
-  margin: 0 0 16px 0;
-  font-size: 14px;
-  color: rgba(255, 255, 255, 0.9);
-  line-height: 1.5;
+.message.success {
+  background: rgba(34, 197, 94, 0.1);
+  border: 1px solid rgba(34, 197, 94, 0.3);
+  color: #22c55e;
 }
 
-.deleteConfirmation strong {
-  color: #ef4444;
-  font-weight: 700;
+.message.error {
   background: rgba(239, 68, 68, 0.1);
-  padding: 2px 6px;
-  border-radius: 4px;
+  border: 1px solid rgba(239, 68, 68, 0.3);
+  color: #ef4444;
 }
 
-.confirmInput {
-  width: 100%;
-  padding: 12px 16px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(239, 68, 68, 0.4);
-  border-radius: 8px;
-  color: white;
-  font-size: 14px;
-  margin-bottom: 16px;
-  box-sizing: border-box;
-  transition: all 0.3s ease;
-}
-
-.confirmInput:focus {
-  outline: none;
-  border-color: #ef4444;
-  box-shadow: 0 0 0 3px rgba(239, 68, 68, 0.15);
-  background: rgba(255, 255, 255, 0.12);
-}
-
-.confirmButtons {
-  display: flex;
-  gap: 12px;
-  justify-content: flex-end;
-}
-
-.cancelButton {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.25);
-  border-radius: 8px;
-  color: white;
-  padding: 10px 20px;
-  font-size: 13px;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.3s ease;
-}
-
-.cancelButton:hover {
-  background: rgba(255, 255, 255, 0.2);
-  transform: translateY(-1px);
+.errorText {
+  display: block;
+  color: #ef4444;
+  font-size: 12px;
+  margin-top: 4px;
+  font-weight: 400;
 }

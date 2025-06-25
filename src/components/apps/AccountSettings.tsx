@@ -1,37 +1,85 @@
 "use client";
 
-import React, { useState } from 'react';
-import { User, Mail, Calendar, Shield, Save, Edit3, Download, Trash2, LogOut } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { User, Mail, Shield, Save, Edit3, Download, Trash2, LogOut, CheckCircle, AlertCircle } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
+import { useUserProfile } from '../../hooks/useUserProfile';
 import { createClient } from '../../utils/supabase/client';
 import styles from '../../../styles/AccountSettings.module.css';
 
 const AccountSettings: React.FC = () => {
-  const { user, signOut } = useAuth();
+  const { user, authUser, signOut } = useAuth();
+  const { userProfile, updateProfile, loading: profileLoading, error: profileError } = useUserProfile(authUser);
   const [activeTab, setActiveTab] = useState('profile');
   const [isEditing, setIsEditing] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState('');
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
   const supabase = createClient();
   
   const [settings, setSettings] = useState({
-    displayName: user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'User',
-    email: user?.email || '',
+    displayName: '',
+    email: '',
     theme: 'dark',
     notifications: true,
     autoSave: true,
     syncEnabled: true,
     language: 'en'
-  });const tabs = [
+  });
+
+  // Update settings when user profile loads
+  useEffect(() => {
+    if (user && userProfile) {
+      setSettings(prev => ({
+        ...prev,
+        displayName: userProfile.full_name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
+        email: user.email || ''
+      }));
+    } else if (user) {
+      setSettings(prev => ({
+        ...prev,
+        displayName: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
+        email: user.email || ''
+      }));
+    }
+  }, [user, userProfile]);const tabs = [
     { id: 'profile', label: 'Profile', icon: User },
     { id: 'security', label: 'Security', icon: Shield }
   ];
-  const handleSaveSettings = () => {
-    // TODO: Implement settings save to Supabase
-    console.log('Saving settings:', settings);
-    setIsEditing(false);
-    // Show success notification
+  const handleSaveSettings = async () => {
+    if (!authUser) return;
+    
+    setIsLoading(true);
+    setSaveMessage(null);
+    
+    try {
+      // Update the user profile with new display name
+      const success = await updateProfile({
+        full_name: settings.displayName
+      });
+      
+      if (success) {
+        setIsEditing(false);
+        setSaveMessage({ type: 'success', text: 'Profile updated successfully!' });
+        
+        // Clear success message after 3 seconds
+        setTimeout(() => setSaveMessage(null), 3000);
+      } else {
+        throw new Error('Failed to update profile');
+      }
+    } catch (error) {
+      console.error('Error saving settings:', error);
+      setSaveMessage({ 
+        type: 'error', 
+        text: 'Failed to save changes. Please try again.' 
+      });
+      
+      // Clear error message after 5 seconds
+      setTimeout(() => setSaveMessage(null), 5000);
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   // Security Functions
@@ -205,23 +253,49 @@ const AccountSettings: React.FC = () => {
               <div className={styles.sectionHeader}>
                 <h3>Profile Information</h3>
                 <button 
-                  onClick={() => setIsEditing(!isEditing)}
+                  onClick={() => {
+                    if (isEditing) {
+                      // Cancel editing - reset to original values
+                      if (user && userProfile) {
+                        setSettings(prev => ({
+                          ...prev,
+                          displayName: userProfile.full_name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'User'
+                        }));
+                      }
+                      setSaveMessage(null);
+                    }
+                    setIsEditing(!isEditing);
+                  }}
                   className={styles.editButton}
+                  disabled={isLoading || profileLoading}
                 >
                   <Edit3 size={16} />
                   {isEditing ? 'Cancel' : 'Edit'}
                 </button>
               </div>
               
+              {saveMessage && (
+                <div className={`${styles.message} ${styles[saveMessage.type]}`}>
+                  {saveMessage.type === 'success' ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
+                  {saveMessage.text}
+                </div>
+              )}
+
               <div className={styles.formGroup}>
                 <label>Display Name</label>
                 <input
                   type="text"
                   value={settings.displayName}
                   onChange={(e) => setSettings(prev => ({ ...prev, displayName: e.target.value }))}
-                  disabled={!isEditing}
+                  disabled={!isEditing || isLoading || profileLoading}
                   className={styles.input}
+                  placeholder="Enter your display name"
                 />
+                {profileError && (
+                  <small className={styles.errorText}>
+                    Error loading profile: {profileError}
+                  </small>
+                )}
               </div>
 
               <div className={styles.formGroup}>
@@ -237,37 +311,19 @@ const AccountSettings: React.FC = () => {
 
               {isEditing && (
                 <div className={styles.actionButtons}>
-                  <button onClick={handleSaveSettings} className={styles.saveButton}>
+                  <button 
+                    onClick={handleSaveSettings} 
+                    className={styles.saveButton}
+                    disabled={isLoading || profileLoading}
+                  >
                     <Save size={16} />
-                    Save Changes
+                    {isLoading ? 'Saving...' : 'Save Changes'}
                   </button>
                 </div>
               )}
             </div>
 
-            <div className={styles.section}>
-              <h3>Account Statistics</h3>
-              <div className={styles.statsGrid}>
-                <div className={styles.statCard}>
-                  <div className={styles.statIcon}>
-                    <Calendar size={20} />
-                  </div>
-                  <div className={styles.statInfo}>
-                    <span className={styles.statValue}>0</span>
-                    <span className={styles.statLabel}>Tasks Completed</span>
-                  </div>
-                </div>
-                <div className={styles.statCard}>
-                  <div className={styles.statIcon}>
-                    <Shield size={20} />
-                  </div>
-                  <div className={styles.statInfo}>
-                    <span className={styles.statValue}>0</span>
-                    <span className={styles.statLabel}>Focus Sessions</span>
-                  </div>
-                </div>
-              </div>
-            </div>
+           
           </div>        )}        {activeTab === 'security' && (
           <div className={styles.securityTab}>
             <div className={styles.section}>

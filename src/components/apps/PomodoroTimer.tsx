@@ -20,10 +20,6 @@ import {
   Timer,
   Coffee,
   CheckCircle,
-  BookOpen,
-  Code,  PenTool,
-  Briefcase,
-  MoreHorizontal,
   X
 } from "lucide-react";
 import styles from "../../../styles/PomodoroTimer.module.css";
@@ -116,27 +112,11 @@ function reducer(state: PomodoroState, action: PomodoroAction): PomodoroState {
   }
 }
 
-const getCategoryIcon = (category: string) => {
-  switch (category.toLowerCase()) {
-    case 'studying':
-      return <BookOpen size={16} className={styles.categoryIcon} />;
-    case 'coding':
-      return <Code size={16} className={styles.categoryIcon} />;
-    case 'writing':
-      return <PenTool size={16} className={styles.categoryIcon} />;
-    case 'working':
-      return <Briefcase size={16} className={styles.categoryIcon} />;
-    default:
-      return <MoreHorizontal size={16} className={styles.categoryIcon} />;
-  }
-};
-
 export default function PomodoroTimer() {  const [state, dispatch] = useReducer(reducer, initialState);
   const { user } = useAuth();
   const { 
     isAuthenticated, 
     savePomodoroSession, 
-    updatePomodoroStats,
     loadPomodoroSessions 
   } = useDataPersistence();
   const { updatePomodoroState } = useAppState();

@@ -7,9 +7,20 @@ import {
   Image as ImageIcon,
   LogIn
 } from 'lucide-react';
+import { User as SupabaseUser } from '@supabase/supabase-js';
 import styles from '../../../styles/SelectionBar.module.css';
 import desktopStyles from '../../../styles/Desktop.module.css';
 import { type AppStates } from '../../contexts/AppStateContext';
+
+// Extended user type that includes custom users table fields
+interface ExtendedUser extends SupabaseUser {
+  avatar_url?: string;
+  full_name?: string;
+  premium?: boolean;
+  streak_count?: number;
+  total_focus_time?: number;
+  settings?: Record<string, unknown>;
+}
 
 interface ModernApp {
   id: string;
@@ -36,7 +47,7 @@ interface BottomBarProps {
   modernApps: ModernApp[];
   openWindows: ModernWindow[];
   appStates: AppStates;
-  user: any; // eslint-disable-line @typescript-eslint/no-explicit-any
+  user: ExtendedUser | null;
   isConfigured: boolean;
   backgroundSaveLoading: boolean;
   onOpenCalendar: () => void;
@@ -70,6 +81,23 @@ const getAppRuntimeInfo = (app: ModernApp, window: ModernWindow | undefined, app
     }
     return null;
   }
+  
+  return null;
+};
+
+// Helper function to get avatar URL from user object
+const getUserAvatarUrl = (user: ExtendedUser | null): string | null => {
+  if (!user) return null;
+  
+  // Check custom users table avatar_url first
+  if (user.avatar_url) return user.avatar_url;
+  
+  // Check Supabase auth user metadata
+  if (user.user_metadata?.avatar_url) return user.user_metadata.avatar_url;
+  
+  // Check other common OAuth avatar fields
+  if (user.user_metadata?.picture) return user.user_metadata.picture;
+  if (user.user_metadata?.avatar) return user.user_metadata.avatar;
   
   return null;
 };
@@ -181,7 +209,26 @@ export default function BottomBar({
         >
           {user ? (
             <div className={styles.userAvatar}>
-              <User size={18} />
+              {getUserAvatarUrl(user) ? (
+                <img 
+                  src={getUserAvatarUrl(user)!} 
+                  alt="User Avatar"
+                  className={styles.avatarImage}
+                  onError={(e) => {
+                    // Fallback to icon if image fails to load
+                    e.currentTarget.style.display = 'none';
+                    const fallbackIcon = e.currentTarget.nextElementSibling as HTMLElement;
+                    if (fallbackIcon) {
+                      fallbackIcon.style.display = 'flex';
+                    }
+                  }}
+                />
+              ) : null}
+              <User 
+                size={18} 
+                style={{ display: getUserAvatarUrl(user) ? 'none' : 'flex' }}
+                className={styles.fallbackIcon}
+              />
             </div>
           ) : (
             <LogIn size={20} />
@@ -195,7 +242,7 @@ export default function BottomBar({
               {!isConfigured 
                 ? 'Authentication not configured' 
                 : user 
-                  ? `Signed in as ${user.email} • Click for account settings` 
+                  ? `Signed in as ${user.full_name || user.user_metadata?.full_name || user.email} • Click for account settings` 
                   : 'Save your progress & sync data'
               }
             </div>

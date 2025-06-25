@@ -270,7 +270,7 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
 
     const baseSizes: Record<string, { width: number; height: number; minWidth: number; minHeight: number }> = {
       'pomodoro': { width: 300, height: 450, minWidth: 220, minHeight: 280 },
-      'todo': { width: 350, height: 450, minWidth: 300, minHeight: 360 },
+      'todo': { width: 350, height: 650, minWidth: 300, minHeight: 360 },
       'music': { width: 280, height: 220, minWidth: 240, minHeight: 180 },
       'notes': { width: 400, height: 320, minWidth: 350, minHeight: 280 },
       'calculator': { width: 240, height: 350, minWidth: 200, minHeight: 280 },
