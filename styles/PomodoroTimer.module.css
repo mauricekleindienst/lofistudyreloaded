@@ -6,8 +6,8 @@
   flex-direction: column;
   padding: 12px;
   gap: 8px;
-  color: var(--text-primary);
-  background: linear-gradient(135deg, rgba(0, 0, 0, 0.1) 0%, rgba(0, 0, 0, 0.05) 100%);
+  color: var(--text-primary, #ffffff);
+  background: linear-gradient(145deg, var(--bg-primary, #1A202C), var(--bg-secondary, #1A202C));
   overflow: hidden;
   box-sizing: border-box;
   min-height: 280px;
@@ -34,27 +34,27 @@
 .modeSelector {
   display: flex;
   gap: 4px;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--bg-secondary, #1A202C);
   padding: 4px;
-  border-radius: 10px;
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 14px;
+  backdrop-filter: blur(15px);
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
 }
 
 .modeButton {
   flex: 1;
   padding: 6px 8px;
-  border: none;
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
   border-radius: 6px;
-  background: transparent;
-  color: var(--text-secondary);
+  background: var(--bg-secondary, #1A202C);
+  color: var(--text-secondary, #e2e8f0);
   font-size: 11px;
   font-weight: 500;
   display: flex;
   align-items: center;
   justify-content: center;
   gap: 4px;
-  transition: all 0.2s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   cursor: pointer;
   min-height: 26px;
 }
@@ -77,14 +77,18 @@
 }
 
 .modeButton:hover {
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--text-primary);
+  background: var(--accent-color, #ff7b00);
+  color: var(--text-primary, #ffffff);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 123, 0, 0.2);
+  border-color: var(--accent-color, #ff7b00);
 }
 
 .modeButton.active {
-  background: var(--mode-color, var(--accent-color));
-  color: white;
-  box-shadow: 0 4px 16px rgba(255, 107, 0, 0.3);
+  background: var(--mode-color, var(--accent-color, #ff7b00));
+  color: var(--text-primary, #ffffff);
+  border-color: var(--mode-color, var(--accent-color, #ff7b00));
+  box-shadow: 0 4px 12px rgba(255, 123, 0, 0.2);
 }
 
 .modeButton:disabled {
@@ -132,13 +136,13 @@
 }
 
 .progressTrack {
-  stroke: rgba(255, 255, 255, 0.08);
+  stroke: var(--border-color, rgba(255, 255, 255, 0.1));
   stroke-linecap: round;
   stroke-width: 3;
 }
 
 .progressFill {
-  stroke: var(--accent-color);
+  stroke: var(--accent-color, #ff7b00);
   stroke-linecap: round;
   stroke-width: 3;
   transition: stroke-dashoffset 1s ease;
@@ -156,7 +160,7 @@
 .timeText {
   font-size: 1.4rem;
   font-weight: 700;
-  color: var(--text-primary);
+  color: var(--text-primary, #ffffff);
   margin-bottom: 2px;
   font-family: 'JetBrains Mono', monospace;
   line-height: 1.1;
@@ -165,7 +169,7 @@
 
 .modeLabel {
   font-size: 10px;
-  color: var(--text-secondary);
+  color: var(--text-secondary, #e2e8f0);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.5px;
@@ -204,16 +208,16 @@
 .playButton {
   width: 44px;
   height: 44px;
-  border: none;
+  border: 1px solid var(--accent-color, #ff7b00);
   border-radius: 50%;
-  background: linear-gradient(135deg, var(--accent-color) 0%, #ff9533 100%);
-  color: white;
+  background: var(--accent-color, #ff7b00);
+  color: var(--text-primary, #ffffff);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.3s ease;
-  box-shadow: 0 6px 20px rgba(255, 107, 0, 0.3);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 4px 12px rgba(255, 123, 0, 0.2);
   position: relative;
 }
 
@@ -242,37 +246,39 @@
 
 
 .playButton:hover {
-  transform: translateY(-2px) scale(1.05);
-  box-shadow: 0 8px 25px rgba(255, 107, 0, 0.4);
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255, 123, 0, 0.3);
 }
 
 .playButton.running {
-  background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
-  box-shadow: 0 6px 24px rgba(239, 68, 68, 0.3);
+  background: #ef4444;
+  border-color: #ef4444;
+  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2);
 }
 
 .resetButton,
 .settingsButton {
   width: 32px;
   height: 32px;
-  border: none;
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
   border-radius: 8px;
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--text-secondary);
+  background: var(--bg-secondary, #1A202C);
+  color: var(--text-secondary, #e2e8f0);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.3s ease;
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  backdrop-filter: blur(15px);
 }
 
 .resetButton:hover,
 .settingsButton:hover {
-  background: rgba(255, 255, 255, 0.12);
-  color: var(--text-primary);
-  transform: translateY(-1px);
+  background: var(--accent-color, #ff7b00);
+  color: var(--text-primary, #ffffff);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 123, 0, 0.2);
+  border-color: var(--accent-color, #ff7b00);
 }
 
 .resetButton:disabled {
@@ -309,17 +315,17 @@
   flex: 1;
   min-width: 120px;
   padding: 8px 12px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--bg-secondary, #1A202C);
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
   border-radius: 8px;
   color: var(--text-primary, #ffffff);
   font-size: 12px;
   font-weight: 500;
-  backdrop-filter: blur(10px);
+  backdrop-filter: blur(15px);
   outline: none;
   appearance: none;
   cursor: pointer;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  box-shadow: 0 4px 12px rgba(31, 38, 135, 0.2);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   
   /* Custom dropdown arrow */
@@ -333,12 +339,12 @@
 .categorySelect:focus {
   border-color: var(--accent-color, #ff7b00);
   box-shadow: 0 0 0 2px rgba(255, 123, 0, 0.2);
-  background: rgba(255, 255, 255, 0.08);
+  background: var(--bg-secondary, #1A202C);
 }
 
 .categorySelect:hover {
-  border-color: rgba(255, 255, 255, 0.2);
-  background: rgba(255, 255, 255, 0.08);
+  border-color: var(--accent-color, #ff7b00);
+  background: var(--bg-secondary, #1A202C);
 }
 
 /* Style the dropdown options */
@@ -363,9 +369,10 @@
   align-items: center;
   justify-content: center;
   transition: color 0.3s ease;
-  background: rgba(255, 123, 0, 0.1);
+  background: var(--bg-secondary, #1A202C);
   border-radius: 4px;
   padding: 2px;
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
 }
 
 /* Statistics */
@@ -377,21 +384,22 @@
 .statCard {
   flex: 1;
   padding: 8px;
-  background: rgba(255, 255, 255, 0.06);
+  background: var(--bg-secondary, #1A202C);
   border-radius: 8px;
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  backdrop-filter: blur(15px);
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
   display: flex;
   align-items: center;
   gap: 6px;
 }
 
 .statIcon {
-  color: var(--accent-color);
-  background: rgba(255, 107, 0, 0.1);
+  color: var(--accent-color, #ff7b00);
+  background: var(--bg-secondary, #1A202C);
   padding: 4px;
   border-radius: 4px;
   flex-shrink: 0;
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
 }
 
 .statContent {
@@ -402,13 +410,13 @@
 .statValue {
   font-size: 14px;
   font-weight: 700;
-  color: var(--text-primary);
+  color: var(--text-primary, #ffffff);
   line-height: 1;
 }
 
 .statLabel {
   font-size: 9px;
-  color: var(--text-secondary);
+  color: var(--text-secondary, #e2e8f0);
   margin-top: 1px;
 }
 
@@ -430,11 +438,11 @@
 .settingsModal {
   width: 200px;
   max-width: 90vw;
-  background: rgba(30, 30, 30, 0.95);
-  border-radius: 8px;
-  backdrop-filter: blur(20px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.3);
+  background: linear-gradient(145deg, var(--bg-primary, #1A202C), var(--bg-secondary, #1A202C));
+  border-radius: 24px;
+  backdrop-filter: blur(15px);
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+  box-shadow: 0 12px 40px rgba(31, 38, 135, 0.4);
   overflow: hidden;
 }
 
@@ -448,7 +456,7 @@
 
 .settingsHeader h3 {
   margin: 0;
-  color: var(--text-primary);
+  color: var(--text-primary, #ffffff);
   font-size: 14px;
   font-weight: 600;
 }
@@ -456,20 +464,23 @@
 .closeButton {
   width: 24px;
   height: 24px;
-  border: none;
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
   border-radius: 4px;
-  background: rgba(255, 255, 255, 0.08);
-  color: var(--text-secondary);
+  background: var(--bg-secondary, #1A202C);
+  color: var(--text-secondary, #e2e8f0);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .closeButton:hover {
-  background: rgba(255, 255, 255, 0.12);
-  color: var(--text-primary);
+  background: var(--accent-color, #ff7b00);
+  color: var(--text-primary, #ffffff);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(255, 123, 0, 0.2);
+  border-color: var(--accent-color, #ff7b00);
 }
 
 .settingsContent {
@@ -488,7 +499,7 @@
 
 .settingGroup h4 {
   margin: 0 0 6px 0;
-  color: var(--text-primary);
+  color: var(--text-primary, #ffffff);
   font-size: 11px;
   font-weight: 600;
   text-transform: uppercase;
@@ -507,7 +518,7 @@
 }
 
 .settingRow label {
-  color: var(--text-primary);
+  color: var(--text-primary, #ffffff);
   font-size: 11px;
   font-weight: 500;
 }
@@ -515,17 +526,17 @@
 .settingInput {
   width: 45px;
   padding: 4px 6px;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: var(--bg-secondary, #1A202C);
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
   border-radius: 4px;
-  color: var(--text-primary);
+  color: var(--text-primary, #ffffff);
   font-size: 11px;
   outline: none;
 }
 
 .settingInput:focus {
-  border-color: var(--accent-color);
-  box-shadow: 0 0 0 3px rgba(255, 107, 0, 0.1);
+  border-color: var(--accent-color, #ff7b00);
+  box-shadow: 0 0 0 3px rgba(255, 123, 0, 0.1);
 }
 
 .volumeControl {

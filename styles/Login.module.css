@@ -69,7 +69,6 @@
   padding: 2.5rem;
   width: 100%;
   max-width: 420px;
-  box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
   border: 1px solid rgba(255, 255, 255, 0.1);
   color: var(--text-primary);
   position: relative;
@@ -245,7 +244,6 @@
   border-radius: 24px;
   width: 90%;
   max-width: 420px;
-  box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
   border: 1px solid rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(8px);
   animation: slideUp 0.5s ease;
@@ -465,7 +463,6 @@
   border-radius: 24px;
   width: 90%;
   max-width: 420px;
-  box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
   border: 1px solid rgba(255, 255, 255, 0.1);
   animation: slideUp 0.5s ease;
   text-align: center;
@@ -948,7 +945,6 @@
   padding: 2.5rem;
   width: 100%;
   max-width: 420px;
-  box-shadow: 0 8px 32px rgba(31, 38, 135, 0.37);
   border: 1px solid rgba(255, 255, 255, 0.1);
   color: var(--text-primary);
   position: relative;
