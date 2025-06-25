@@ -62,15 +62,23 @@ const useDraggable = (nodeRef: React.RefObject<HTMLElement | null>) => {
     const newX = e.clientX - dragOffset.x;
     const newY = e.clientY - dragOffset.y;
     
-    const maxX = window.innerWidth - nodeRef.current.offsetWidth;
-    const maxY = window.innerHeight - nodeRef.current.offsetHeight;
+    // Get viewport dimensions
+    const viewportWidth = window.innerWidth;
+    const viewportHeight = window.innerHeight;
+    const elementWidth = nodeRef.current.offsetWidth;
+    const elementHeight = nodeRef.current.offsetHeight;
     
+    // Calculate maximum positions to keep window fully within viewport
+    const maxX = viewportWidth - elementWidth;
+    const maxY = viewportHeight - elementHeight;
+    
+    // Constrain position to viewport bounds
     const boundedX = Math.max(0, Math.min(newX, maxX));
     const boundedY = Math.max(0, Math.min(newY, maxY));
     
     nodeRef.current.style.left = `${boundedX}px`;
     nodeRef.current.style.top = `${boundedY}px`;
-  }, [isDragging, dragOffset.x, dragOffset.y, nodeRef]);
+  }, [isDragging, dragOffset.x, dragOffset.y]);
 
   const handleMouseUp = React.useCallback(() => {
     setIsDragging(false);

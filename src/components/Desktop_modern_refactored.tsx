@@ -107,6 +107,7 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
   const [backgroundsToShow, setBackgroundsToShow] = useState(8);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [youtubeUrl, setYoutubeUrl] = useState('');
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [customBackground, setCustomBackground] = useState<Background | null>(null);
   const [showStats, setShowStats] = useState(false);
 
@@ -648,31 +649,12 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
     ));
   }, []);
 
-  const restoreWindow = useCallback((windowId: string) => {
-    setOpenWindows(prev => prev.map(w => 
-      w.id === windowId ? { ...w, isMinimized: false, zIndex: highestZIndex + 1 } : w
-    ));
-    setHighestZIndex(prev => prev + 1);
-  }, [highestZIndex]);
-
   const bringToFront = useCallback((windowId: string) => {
     setOpenWindows(prev => prev.map(w => 
       w.id === windowId ? { ...w, zIndex: highestZIndex + 1 } : w
     ));
     setHighestZIndex(prev => prev + 1);
   }, [highestZIndex]);
-
-  const updateWindowPosition = useCallback((windowId: string, position: { x: number; y: number }) => {
-    setOpenWindows(prev => prev.map(w => 
-      w.id === windowId ? { ...w, position } : w
-    ));
-  }, []);
-
-  const updateWindowSize = useCallback((windowId: string, size: { width: number; height: number }) => {
-    setOpenWindows(prev => prev.map(w => 
-      w.id === windowId ? { ...w, size } : w
-    ));
-  }, []);
 
   // Don't render until client-side hydration is complete
   if (!isClient) {

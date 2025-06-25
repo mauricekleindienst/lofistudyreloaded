@@ -107,6 +107,7 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
   const [backgroundsToShow, setBackgroundsToShow] = useState(8);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [youtubeUrl, setYoutubeUrl] = useState('');
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [customBackground, setCustomBackground] = useState<Background | null>(null);
   const [showStats, setShowStats] = useState(false);
 
@@ -634,31 +635,12 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
     ));
   }, []);
 
-  const restoreWindow = useCallback((windowId: string) => {
-    setOpenWindows(prev => prev.map(w => 
-      w.id === windowId ? { ...w, isMinimized: false, zIndex: highestZIndex + 1 } : w
-    ));
-    setHighestZIndex(prev => prev + 1);
-  }, [highestZIndex]);
-
   const bringToFront = useCallback((windowId: string) => {
     setOpenWindows(prev => prev.map(w => 
       w.id === windowId ? { ...w, zIndex: highestZIndex + 1 } : w
     ));
     setHighestZIndex(prev => prev + 1);
   }, [highestZIndex]);
-
-  const updateWindowPosition = useCallback((windowId: string, position: { x: number; y: number }) => {
-    setOpenWindows(prev => prev.map(w => 
-      w.id === windowId ? { ...w, position } : w
-    ));
-  }, []);
-
-  const updateWindowSize = useCallback((windowId: string, size: { width: number; height: number }) => {
-    setOpenWindows(prev => prev.map(w => 
-      w.id === windowId ? { ...w, size } : w
-    ));
-  }, []);
 
   // Don't render until client-side hydration is complete
   if (!isClient) {
@@ -727,81 +709,94 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
 
       {/* Desktop UI Components */}
       <TopBar 
-        currentTime={currentTime}
-        currentDate={currentDate}
-        onShowAuth={onShowAuth}
         user={user}
-        isConfigured={isConfigured}
-        onToggleBackgrounds={() => setShowBackgrounds(!showBackgrounds)}
-        onToggleCalendar={() => setShowCalendar(!showCalendar)}
         onToggleStats={() => setShowStats(!showStats)}
-        onToggleMusicSidebar={() => setIsMusicSidebarOpen(!isMusicSidebarOpen)}
+        onShare={() => {}} // Empty function for now
       />
 
       <BottomBar 
-        apps={modernApps}
+        currentTime={currentTime}
+        currentDate={currentDate}
+        modernApps={modernApps}
         openWindows={openWindows}
+        appStates={appStates}
+        user={user}
+        isConfigured={isConfigured}
+        backgroundSaveLoading={backgroundSaveLoading}
+        onOpenCalendar={() => setShowCalendar(true)}
         onOpenApp={openApp}
-        onRestoreWindow={restoreWindow}
+        onOpenBackgrounds={() => setShowBackgrounds(true)}
+        onAccountAction={() => {
+          if (!user) {
+            onShowAuth();
+          } else {
+            const accountSettingsApp = modernApps.find(app => app.id === 'account-settings');
+            if (accountSettingsApp) {
+              openApp(accountSettingsApp);
+            }
+          }
+        }}
       />
 
       <WindowManager
-        windows={openWindows}
+        openWindows={openWindows}
         onClose={closeWindow}
         onMinimize={minimizeWindow}
         onBringToFront={bringToFront}
-        onUpdatePosition={updateWindowPosition}
-        onUpdateSize={updateWindowSize}
       />
 
       {/* Background Selector Modal */}
       {showBackgrounds && (
         <BackgroundSelector
+          showBackgrounds={showBackgrounds}
           currentBackground={currentBackground}
-          onBackgroundChange={handleBackgroundChange}
-          onClose={() => setShowBackgrounds(false)}
           backgroundsToShow={backgroundsToShow}
-          setBackgroundsToShow={setBackgroundsToShow}
           selectedCategory={selectedCategory}
-          setSelectedCategory={setSelectedCategory}
           youtubeUrl={youtubeUrl}
-          setYoutubeUrl={setYoutubeUrl}
           customBackground={customBackground}
-          setCustomBackground={setCustomBackground}
-          isLoading={backgroundSaveLoading}
-          bufferHealths={bufferHealths}
-          currentlyBuffering={currentlyBuffering}
+          onClose={() => {
+            setShowBackgrounds(false);
+            setBackgroundsToShow(8);
+          }}
+          onBackgroundChange={handleBackgroundChange}
+          onCategoryChange={setSelectedCategory}
+          onLoadMore={() => setBackgroundsToShow(prev => Math.min(prev + 8, backgrounds.length))}
+          onYoutubeSubmit={() => {
+            // YouTube submission logic would go here
+          }}
+          onYoutubeUrlChange={setYoutubeUrl}
         />
       )}
 
       {/* Calendar Modal */}
       {showCalendar && (
-        <div className={desktopStyles.modalOverlay} onClick={() => setShowCalendar(false)}>
-          <div className={desktopStyles.modalContent} onClick={e => e.stopPropagation()}>
-            <Calendar />
-            <button 
-              className={desktopStyles.modalCloseButton}
-              onClick={() => setShowCalendar(false)}
-            >
-              ×
-            </button>
-          </div>
-        </div>
+        <Calendar 
+          isVisible={showCalendar}
+          onClose={() => setShowCalendar(false)}
+        />
       )}
 
       {/* Stats Modal */}
       {showStats && (
-        <StatsModal onClose={() => setShowStats(false)} />
+        <StatsModal 
+          isOpen={showStats}
+          onClose={() => setShowStats(false)} 
+        />
       )}
 
       {/* Music Player Sidebar */}
       <MusicPlayerSidebar 
         isOpen={isMusicSidebarOpen}
-        onClose={() => setIsMusicSidebarOpen(false)}
+        onToggle={() => setIsMusicSidebarOpen(!isMusicSidebarOpen)}
       />
 
       {/* Notification System */}
-      <NotificationManager notifications={notifications} />
+      <NotificationManager 
+        notifications={notifications} 
+        onRemoveNotification={(id: string) => {
+          setNotifications(prev => prev.filter(n => n.id !== id));
+        }}
+      />
     </div>
   );
 };
