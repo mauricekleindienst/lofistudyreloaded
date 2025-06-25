@@ -343,7 +343,7 @@
 
 /* Style the dropdown options */
 .categorySelect option {
-  background: var(--bg-primary, #1e1e1e);
+  background: var(--bg-primary, #1A202C);
   color: var(--text-primary, #ffffff);
   padding: 8px 12px;
   border: none;

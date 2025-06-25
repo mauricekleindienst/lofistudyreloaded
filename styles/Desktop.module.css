@@ -985,106 +985,60 @@
   color: rgb(59, 130, 246);
 }
 
-/* Top Right Icons */
+/* Top Right Icons - Updated to match BottomBar design system */
 .topRightIcons {
   position: fixed;
   top: 24px;
   right: 24px;
-  z-index: 1000;
+  z-index: 30;
   display: flex;
   gap: 16px;
-  /* Ensure visibility during hydration */
+  /* Ensure proper rendering during hydration */
   opacity: 1;
   visibility: visible;
   transition: opacity 0.3s ease, visibility 0.3s ease;
 }
 
 .topIcon {
+  /* Match BottomBar button styling exactly */
   width: 48px;
   height: 48px;
   border-radius: 14px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--bg-secondary, #2a2a2a);
+  background: var(--bg-secondary, #1A202C);
   color: var(--text-secondary, #e2e8f0);
   cursor: pointer;
-  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
-  backdrop-filter: blur(15px);
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: 0 12px 40px rgba(31, 38, 135, 0.4);
+  position: relative;
+  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+  /* Ensure proper box-sizing */
+  box-sizing: border-box;
 }
 
 .topIcon:hover {
   background: var(--accent-color, #ff7b00);
   color: var(--text-primary, #ffffff);
-  border-color: var(--accent-color, #ff7b00);
   transform: translateY(-2px);
-  box-shadow: 0 16px 48px rgba(31, 38, 135, 0.6);
+  box-shadow: 0 4px 12px rgba(255, 123, 0, 0.2);
+  border-color: var(--accent-color, #ff7b00);
 }
 
-/* Top right icon tooltips */
-.topIcon {
-  position: relative;
+/* Warning style for unauthenticated users */
+.topIcon.warning {
+  color: #f59e0b;
+  background: linear-gradient(145deg, rgba(245, 158, 11, 0.1), rgba(245, 158, 11, 0.05));
+  border-color: rgba(245, 158, 11, 0.2);
 }
 
-.topIcon::before {
-  content: attr(title);
-  position: absolute;
-  bottom: -45px;
-  right: 50%;
-  transform: translateX(50%);
-  background: linear-gradient(135deg, rgba(0, 0, 0, 0.9) 0%, rgba(0, 0, 0, 0.8) 100%);
-  color: white;
-  padding: 8px 12px;
-  border-radius: 8px;
-  font-size: 12px;
-  font-weight: 500;
-  white-space: nowrap;
-  opacity: 0;
-  visibility: hidden;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  z-index: 1000;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.3);
-  pointer-events: none;
+.topIcon.warning:hover {
+  background: rgba(245, 158, 11, 0.2);
+  color: #fbbf24;
+  border-color: #f59e0b;
 }
 
-.topIcon::after {
-  content: '';
-  position: absolute;
-  bottom: -37px;
-  right: 50%;
-  transform: translateX(50%);
-  border: 4px solid transparent;
-  border-bottom-color: rgba(0, 0, 0, 0.9);
-  opacity: 0;
-  visibility: hidden;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  z-index: 1001;
-  pointer-events: none;
-}
 
-.topIcon:hover::before,
-.topIcon:hover::after {
-  opacity: 1;
-  visibility: visible;
-  transform: translateX(50%) translateY(-5px);
-}
-
-/* Alternative tooltip positioning for better mobile experience */
-@media (max-width: 768px) {
-  .topIcon::before {
-    bottom: -50px;
-    font-size: 11px;
-    padding: 6px 10px;
-  }
-  
-  .topIcon::after {
-    bottom: -42px;
-  }
-}
 
 .timeText {
   color: white;
@@ -1314,15 +1268,4 @@
   .backgroundGrid {
     grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   }
-}
-
-/* Warning icon styling for non-authenticated users */
-.topIconWarning {
-  color: #f59e0b !important;
-}
-
-.topIconWarning:hover {
-  background: #f59e0b !important;
-  color: #ffffff !important;
-  border-color: #f59e0b !important;
 }

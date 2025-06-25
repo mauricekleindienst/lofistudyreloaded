@@ -29,10 +29,11 @@ export default function TopBar({ user, onToggleStats, onShare }: TopBarProps) {
   
   return (
     <>
-      <div className={desktopStyles.topRightIcons}>        {!user && (
+      <div className={desktopStyles.topRightIcons}>
+        {!user && (
           <button
-            className={`${desktopStyles.topIcon} ${desktopStyles.topIconWarning}`}
-            title="Sessions won't be saved"
+            className={desktopStyles.topIcon}
+            style={{ color: '#f59e0b' }}
           >
             <AlertTriangle size={20} />
           </button>
@@ -42,7 +43,7 @@ export default function TopBar({ user, onToggleStats, onShare }: TopBarProps) {
           <button
             onClick={onToggleStats}
             className={desktopStyles.topIcon}
-            title="View Statistics"
+            
           >
             <BarChart3 size={20} />
           </button>
@@ -51,7 +52,6 @@ export default function TopBar({ user, onToggleStats, onShare }: TopBarProps) {
         <button
           onClick={() => setShowInfoModal(true)}
           className={desktopStyles.topIcon}
-          title="About Lo-Fi.Study"
         >
           <Info size={20} />
         </button>
@@ -59,7 +59,6 @@ export default function TopBar({ user, onToggleStats, onShare }: TopBarProps) {
         <button
           onClick={handleFullscreen}
           className={desktopStyles.topIcon}
-          title="Toggle Fullscreen"
         >
           <Expand size={20} />
         </button>
@@ -67,7 +66,6 @@ export default function TopBar({ user, onToggleStats, onShare }: TopBarProps) {
         <button
           onClick={onShare}
           className={desktopStyles.topIcon}
-          title="Share"
         >
           <Share size={20} />
         </button>

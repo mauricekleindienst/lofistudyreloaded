@@ -553,7 +553,6 @@ export default function PomodoroTimer() {  const [state, dispatch] = useReducer(
               </option>
             ))}
           </select>
-          {getCategoryIcon(state.category)}
         </div>
       </div>
 

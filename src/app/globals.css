@@ -1,3 +1,5 @@
+
+
 /* SelectionBar-inspired Clean Design System */
 :root {
   /* Core Color System - Orange Accent Theme */
@@ -9,8 +11,8 @@
   --text-tertiary: #cbd5e1;
   
   /* Glass Morphism Backgrounds */
-  --bg-primary: #1e1e1e;
-  --bg-secondary: #2a2a2a;
+  --bg-primary: #1A202C;
+  --bg-secondary: #1A202C;
   --bg-overlay: rgba(0, 0, 0, 0.4);
   
   /* Clean Borders */
@@ -36,8 +38,8 @@ body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   /* Ensure CSS variables are available immediately */
   --accent-color: #ff7b00;
-  --bg-primary: #1e1e1e;
-  --bg-secondary: #2a2a2a;
+  --bg-primary: #1A202C;
+  --bg-secondary: #1A202C;
   --text-primary: #ffffff;
   --text-secondary: #e2e8f0;
   --border-color: rgba(255, 255, 255, 0.1);
@@ -150,35 +152,6 @@ input:not([class*="module"]):focus {
   opacity: 1 !important;
   visibility: visible !important;
   pointer-events: auto !important;
-}
-
-/* Ensure TopBar stays visible and consistent during hydration */
-[class*="Desktop_topRightIcons"] {
-  opacity: 1 !important;
-  visibility: visible !important;
-  pointer-events: auto !important;
-}
-
-[class*="Desktop_topIcon"] {
-  background: var(--bg-secondary, #2a2a2a) !important;
-  color: var(--text-secondary, #e2e8f0) !important;
-  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1)) !important;
-}
-
-[class*="Desktop_topIcon"]:hover {
-  background: var(--accent-color, #ff7b00) !important;
-  color: var(--text-primary, #ffffff) !important;
-  border-color: var(--accent-color, #ff7b00) !important;
-}
-
-[class*="Desktop_topIconWarning"] {
-  color: #f59e0b !important;
-}
-
-[class*="Desktop_topIconWarning"]:hover {
-  background: #f59e0b !important;
-  color: #ffffff !important;
-  border-color: #f59e0b !important;
 }
 
 /* Prevent FOUC (Flash of Unstyled Content) */
