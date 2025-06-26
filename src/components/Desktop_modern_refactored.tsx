@@ -114,9 +114,6 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
   // Enhanced video buffering state
   const [videoLoadError, setVideoLoadError] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
-  const [isVideoLoading, setIsVideoLoading] = useState(true);
-  const [videoBuffered, setVideoBuffered] = useState(false);
-  const [bufferProgress, setBufferProgress] = useState(0);
   const [preloadedVideos, setPreloadedVideos] = useState<Map<string, HTMLVideoElement>>(new Map());
   const [currentlyBuffering, setCurrentlyBuffering] = useState<string[]>([]);
   const [bufferHealths, setBufferHealths] = useState<Map<string, number>>(new Map());
@@ -166,11 +163,9 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
               const duration = video.duration || 0;
               const progress = duration > 0 ? bufferedEnd / duration : 0;
               
-              setBufferProgress(Math.round(progress * 100));
               setBufferHealths(prev => new Map(prev.set(background.id.toString(), progress)));
               
               if (progress >= MIN_BUFFER_HEALTH) {
-                setVideoBuffered(true);
                 if (progressTimer) clearInterval(progressTimer);
                 resolve(video);
               }
@@ -305,10 +300,8 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
   // Enhanced Video loading and error handling with buffering support
   const handleVideoLoad = useCallback(() => {
     if (videoRef.current) {
-      setIsVideoLoading(false);
       setVideoLoadError(false);
       setRetryCount(0);
-      setVideoBuffered(true);
       
       // Start buffer health monitoring
       if (bufferCheckIntervalRef.current) {
@@ -320,7 +313,6 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
           const bufferedEnd = videoRef.current.buffered.end(videoRef.current.buffered.length - 1);
           const duration = videoRef.current.duration || 0;
           const progress = duration > 0 ? bufferedEnd / duration : 0;
-          setBufferProgress(Math.round(progress * 100));
           
           // Update buffer health for current background
           setBufferHealths(prev => new Map(prev.set(currentBackground.id.toString(), progress)));
@@ -333,9 +325,7 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
 
   const handleVideoError = useCallback(() => {
     console.error('Video failed to load:', currentBackground.src);
-    setIsVideoLoading(false);
     setVideoLoadError(true);
-    setVideoBuffered(false);
     
     // Stop buffer monitoring
     if (bufferCheckIntervalRef.current) {
@@ -357,7 +347,6 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
     if (retryCount < 3 && currentBackground.id !== DEFAULT_BACKGROUND.id) {
       setTimeout(() => {
         setRetryCount(prev => prev + 1);
-        setIsVideoLoading(true);
         if (videoRef.current) {
           videoRef.current.load(); // Force reload
         }
@@ -377,10 +366,7 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
 
   // Enhanced video loading with preload hint and buffer management
   const handleVideoLoadStart = useCallback(() => {
-    setIsVideoLoading(true);
     setVideoLoadError(false);
-    setVideoBuffered(false);
-    setBufferProgress(0);
     
     // Check if we have this video preloaded
     if (preloadManagerRef.current) {
@@ -389,8 +375,6 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
       
       if (bufferedVideo && bufferHealth > 0.3) {
         console.log(`Using preloaded video for background ${currentBackground.id} (${Math.round(bufferHealth * 100)}% buffered)`);
-        setVideoBuffered(true);
-        setBufferProgress(Math.round(bufferHealth * 100));
       }
     }
   }, [currentBackground.id]);
@@ -399,8 +383,6 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
   useEffect(() => {
     setRetryCount(0); // Reset retry count when background changes
     setVideoLoadError(false);
-    setIsVideoLoading(true);
-    setVideoBuffered(false);
     
     // Clear any existing buffer monitoring
     if (bufferCheckIntervalRef.current) {
@@ -414,9 +396,6 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
       
       if (bufferedVideo && bufferHealth > 0.3) {
         console.log(`Instantly switching to preloaded background ${currentBackground.id}`);
-        setIsVideoLoading(false);
-        setVideoBuffered(true);
-        setBufferProgress(Math.round(bufferHealth * 100));
         
         if (videoRef.current) {
           videoRef.current.src = bufferedVideo.src;
