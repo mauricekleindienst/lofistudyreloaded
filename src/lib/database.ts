@@ -329,37 +329,27 @@ export class DatabaseService {
     try {
       const user = await this.checkAuth();
       if (!user) {
-        console.log('No authenticated user found for saving Pomodoro session');
+        console.log('❌ No authenticated user found for saving Pomodoro session');
         return null;
       }
 
-      console.log('Saving Pomodoro session for user:', user.email, 'Session data:', session);
+      console.log('🍅 Saving Pomodoro session for user:', user.email);
 
-      // Add created_at timestamp if not provided
-      const now = new Date().toISOString();
+      // Prepare session data - let database auto-generate UUID
       const sessionData = {
-        ...session,
         user_id: user.id,
         email: user.email,
-        created_at: session.created_at || now
+        duration: session.duration || 1500,
+        type: session.type || 'work',
+        completed: session.completed || false,
+        completed_at: session.completed_at || new Date().toISOString(),
+        task_name: session.task_name || 'Pomodoro Session',
+        notes: session.notes || '',
+        category: session.category || 'Other',
+        created_at: session.created_at || new Date().toISOString()
       };
 
-      console.log('Prepared session data for database:', sessionData);
-
-      // Check for existing session with same ID to prevent duplicates
-      if (session.id) {
-        const { data: existingSession } = await supabase
-          .from('pomodoro_sessions')
-          .select('id')
-          .eq('id', session.id)
-          .eq('user_id', user.id)
-          .single();
-
-        if (existingSession) {
-          console.log('Session already exists, skipping duplicate save');
-          return sessionData as PomodoroSession;
-        }
-      }
+      console.log('� Inserting session into database:', sessionData);
 
       const { data, error } = await supabase
         .from('pomodoro_sessions')
@@ -367,22 +357,15 @@ export class DatabaseService {
         .select()
         .single();
 
-      console.log('💾 Insert result - data:', data, 'error:', error);
-
       if (error) {
-        console.error('Database error while saving session:', error);
-        // If it's a duplicate error, return the existing session
-        if (error.code === '23505') { // PostgreSQL unique violation
-          console.log('Session already exists (unique constraint), skipping duplicate save');
-          return sessionData as PomodoroSession;
-        }
+        console.error('❌ Database error while saving session:', error);
         throw error;
       }
       
-      console.log('Pomodoro session saved successfully to database:', data);
+      console.log('✅ Pomodoro session saved successfully:', data);
       return data;
     } catch (error) {
-      console.error('Error saving pomodoro session:', error);
+      console.error('❌ Error saving pomodoro session:', error);
       return null;
     }
   }
@@ -416,41 +399,43 @@ export class DatabaseService {
     try {
       const user = await this.checkAuth();
       if (!user) {
-        console.log('No authenticated user found for updating Pomodoro stats');
+        console.log('❌ No authenticated user found for updating Pomodoro stats');
         return false;
       }
 
-      console.log('Updating Pomodoro stats for user:', user.email, 'Stats data:', stats);
+      console.log('📊 Updating Pomodoro stats for user:', user.email, 'Stats:', stats);
 
       const today = new Date().toISOString().split('T')[0];
+      const category = stats.category || 'Other';
       
-      // First, try to get existing stats for today
+      // First, try to get existing stats for today and category
       const { data: existingStats } = await supabase
         .from('pomodoro_stats')
         .select('*')
         .eq('user_id', user.id)
         .eq('date', today)
-        .eq('category', stats.category || 'general')
+        .eq('category', category)
         .single();
 
       if (existingStats) {
-        console.log('Found existing stats, updating:', existingStats);
+        console.log('📈 Found existing stats, updating:', existingStats);
         // Update existing stats
         const { error } = await supabase
           .from('pomodoro_stats')
           .update({
             sessions_completed: (existingStats.sessions_completed || 0) + (stats.sessions_completed || 1),
-            total_focus_time: (existingStats.total_focus_time || 0) + (stats.total_focus_time || 0)
+            total_focus_time: (existingStats.total_focus_time || 0) + (stats.total_focus_time || 0),
+            updated_at: new Date().toISOString()
           })
           .eq('id', existingStats.id);
 
         if (error) {
-          console.error('Error updating existing stats:', error);
+          console.error('❌ Error updating existing stats:', error);
           throw error;
         }
-        console.log('Successfully updated existing Pomodoro stats');
+        console.log('✅ Successfully updated existing Pomodoro stats');
       } else {
-        console.log('No existing stats found, creating new record');
+        console.log('📝 No existing stats found, creating new record');
         // Create new stats record
         const { error } = await supabase
           .from('pomodoro_stats')
@@ -460,19 +445,21 @@ export class DatabaseService {
             date: today,
             sessions_completed: stats.sessions_completed || 1,
             total_focus_time: stats.total_focus_time || 0,
-            category: stats.category || 'general'
+            category: category,
+            created_at: new Date().toISOString(),
+            updated_at: new Date().toISOString()
           }]);
 
         if (error) {
-          console.error('Error creating new stats:', error);
+          console.error('❌ Error creating new stats:', error);
           throw error;
         }
-        console.log('Successfully created new Pomodoro stats record');
+        console.log('✅ Successfully created new Pomodoro stats record');
       }
 
       return true;
     } catch (error) {
-      console.error('Error updating pomodoro stats:', error);
+      console.error('❌ Error updating pomodoro stats:', error);
       return false;
     }
   }

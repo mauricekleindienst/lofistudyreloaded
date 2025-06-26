@@ -242,57 +242,17 @@ export default function PomodoroTimer() {  const [state, dispatch] = useReducer(
     if (state.timeLeft === 0 && state.isTimerRunning && !completionHandledRef.current) {
       completionHandledRef.current = true;
       
-      const handleCompletion = async () => {
+      const handleCompletion = () => {
         if (state.currentMode === "pomodoro") {
-          // Pomodoro finished - increment count and switch to break
+          // Pomodoro finished - increment count and switch to break IMMEDIATELY
           dispatch({ type: "INCREMENT_POMODORO" });
           const newCount = state.pomodoroCount + 1;
-
-          // Save the completed session
-          if (isAuthenticated) {
-            try {
-              console.log('🍅 Saving completed Pomodoro session:', {
-                category: state.category,
-                duration: state.pomodoroDurations.pomodoro,
-                count: newCount
-              });
-
-              const completedSession = await savePomodoroSession({
-                id: `pomodoro-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
-                type: 'work',
-                duration: state.pomodoroDurations.pomodoro,
-                category: state.category,
-                completed: true,
-                completed_at: new Date().toISOString(),
-                task_name: `${state.category} Session`,
-                notes: `Pomodoro #${newCount} completed`
-              });
-
-              console.log('✅ Session saved successfully:', completedSession);
-              console.log('🔍 Session saved - type:', typeof completedSession, 'value:', completedSession);
-
-              // Update daily stats if session was saved successfully
-              if (completedSession) {
-                console.log('📊 Updating Pomodoro stats...');
-                const statsResult = await updatePomodoroStats({
-                  sessions_completed: 1,
-                  total_focus_time: state.pomodoroDurations.pomodoro, // Keep in seconds to match duration
-                  category: state.category
-                });
-                console.log('📈 Stats update result:', statsResult);
-              } else {
-                console.log('❌ No session returned from save, cannot update stats');
-              }
-            } catch (error) {
-              console.error('❌ Failed to save pomodoro session or stats:', error);
-            }
-          }
           
           // Determine break type: long break after every 4th pomodoro
           const isLongBreak = newCount % 4 === 0;
           const nextMode = isLongBreak ? "longBreak" : "shortBreak";
           
-          // Switch mode and auto-start break timer
+          // Switch mode and auto-start break timer IMMEDIATELY
           dispatch({ type: "SET_MODE", payload: nextMode, autoStart: true });
           showNotification(
             "Pomodoro Complete!", 
@@ -301,8 +261,48 @@ export default function PomodoroTimer() {  const [state, dispatch] = useReducer(
           // Play appropriate sound: long break sound for long break, regular break sound for short break
           playSound(isLongBreak ? soundRefs.longPause : soundRefs.pomodoroEnd);
           
+          // Handle database operations in the background (non-blocking)
+          if (isAuthenticated) {
+            const saveSessionInBackground = async () => {
+              try {
+                console.log('🍅 Saving completed Pomodoro session in background:', {
+                  category: state.category,
+                  duration: state.pomodoroDurations.pomodoro,
+                  count: newCount
+                });
+
+                const completedSession = await savePomodoroSession({
+                  type: 'work',
+                  duration: state.pomodoroDurations.pomodoro,
+                  category: state.category,
+                  completed: true,
+                  completed_at: new Date().toISOString(),
+                  task_name: `${state.category} Session`,
+                  notes: `Pomodoro #${newCount} completed`
+                });
+
+                console.log('✅ Session saved:', !!completedSession);
+
+                // Update daily stats if session was saved successfully
+                if (completedSession) {
+                  const statsResult = await updatePomodoroStats({
+                    sessions_completed: 1,
+                    total_focus_time: state.pomodoroDurations.pomodoro,
+                    category: state.category
+                  });
+                  console.log('📊 Stats updated:', statsResult);
+                }
+              } catch (error) {
+                console.error('❌ Failed to save session or stats:', error);
+              }
+            };
+            
+            // Execute database operations without blocking the UI
+            saveSessionInBackground();
+          }
+          
         } else {
-          // Break finished - switch back to pomodoro and auto-start
+          // Break finished - switch back to pomodoro and auto-start IMMEDIATELY
           dispatch({ type: "SET_MODE", payload: "pomodoro", autoStart: true });
           showNotification("Break Over!", "Ready to focus again? 🚀");
           playSound(soundRefs.pomodoroStart);
@@ -312,7 +312,7 @@ export default function PomodoroTimer() {  const [state, dispatch] = useReducer(
         completionHandledRef.current = false;
       };
 
-      // Execute the async completion handler
+      // Execute the completion handler (now synchronous for immediate mode switching)
       handleCompletion();
     }
   }, [

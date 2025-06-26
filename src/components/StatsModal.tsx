@@ -78,10 +78,7 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
   const [loading, setLoading] = useState(false);
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false);  const loadStats = useCallback(async () => {
-    // Only show loading if we haven't loaded data before or if user changed
-    if (!hasLoadedOnce) {
-      setLoading(true);
-    }
+    setLoading(true);
     
     try {
       // Load user sessions and stats - now works for both authenticated and unauthenticated users
@@ -91,7 +88,7 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
         loadLeaderboard()
       ]);
 
-      console.log('📊 Stats Modal - Loaded sessions:', sessions?.length || 0, sessions);
+      console.log('📊 Stats Modal - Loaded sessions:', sessions?.length || 0);
       console.log('📊 Stats Modal - Processing stats for user:', user?.email || 'guest');
 
       if (!sessions || !Array.isArray(sessions)) {
@@ -118,7 +115,6 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
 
       // Filter sessions safely - only count work sessions for stats
       const completedSessions = sessions.filter(s => s?.completed && s?.type === 'work');
-      console.log('📈 Completed work sessions:', completedSessions.length, completedSessions);
       
       const todaySessions = completedSessions.filter(s => 
         s?.completed_at?.startsWith(today)
@@ -130,21 +126,12 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
         s?.completed_at && new Date(s.completed_at) >= monthAgo
       );
 
-      console.log('📅 Session breakdown:', {
-        total: completedSessions.length,
-        today: todaySessions.length,
-        week: weekSessions.length,
-        month: monthSessions.length
-      });
-
       // Calculate category split
       const categorySplit: Record<string, number> = {};
       completedSessions.forEach(session => {
         const category = session?.category || 'Other';
         categorySplit[category] = (categorySplit[category] || 0) + 1;
       });
-
-      console.log('🏷️ Category breakdown:', categorySplit);
 
       // Calculate daily activity for last 30 days
       const dailyActivity: Array<{ date: string; sessions: number; focusTime: number }> = [];
@@ -192,7 +179,6 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
         dailyActivity
       };
 
-      console.log('📊 Final calculated stats:', finalStatsData);
       setStatsData(finalStatsData);
 
       setLeaderboard(leaderboardData || []);
@@ -215,11 +201,13 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
     } finally {
       setLoading(false);
     }
-  }, [loadPomodoroSessions, loadPomodoroStats, loadLeaderboard, hasLoadedOnce]);  useEffect(() => {
+  }, [loadPomodoroSessions, loadPomodoroStats, loadLeaderboard, user]);
+
+  useEffect(() => {
     if (isOpen && !hasLoadedOnce) {
       loadStats();
     }
-  }, [isOpen, loadStats, hasLoadedOnce]);  // Function to manually refresh stats
+  }, [isOpen, hasLoadedOnce, loadStats]);  // Function to manually refresh stats
   const refreshStats = useCallback(async () => {
     setLoading(true);
     await loadStats();
