@@ -367,6 +367,8 @@ export class DatabaseService {
         .select()
         .single();
 
+      console.log('💾 Insert result - data:', data, 'error:', error);
+
       if (error) {
         console.error('Database error while saving session:', error);
         // If it's a duplicate error, return the existing session

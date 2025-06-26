@@ -78,8 +78,8 @@ function reducer(state: PomodoroState, action: PomodoroAction): PomodoroState {
         ...state,
         currentMode: action.payload,
         timeLeft: state.pomodoroDurations[action.payload],
-        // Only stop timer if not auto-starting
-        isTimerRunning: action.autoStart ? true : false,
+        // Set timer running state based on autoStart flag
+        isTimerRunning: action.autoStart === true,
       };
     case "TOGGLE_TIMER":
       return { ...state, isTimerRunning: !state.isTimerRunning };
@@ -88,7 +88,8 @@ function reducer(state: PomodoroState, action: PomodoroAction): PomodoroState {
         ...state,
         timeLeft: state.pomodoroDurations[state.currentMode],
         isTimerRunning: false,
-      };    case "TICK":
+      };
+    case "TICK":
       return { ...state, timeLeft: Math.max(0, state.timeLeft - 1) };
     case "INCREMENT_POMODORO":
       return { ...state, pomodoroCount: state.pomodoroCount + 1 };
@@ -117,7 +118,8 @@ export default function PomodoroTimer() {  const [state, dispatch] = useReducer(
   const { 
     isAuthenticated, 
     savePomodoroSession, 
-    loadPomodoroSessions 
+    loadPomodoroSessions,
+    updatePomodoroStats 
   } = useDataPersistence();
   const { updatePomodoroState } = useAppState();
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -240,44 +242,78 @@ export default function PomodoroTimer() {  const [state, dispatch] = useReducer(
     if (state.timeLeft === 0 && state.isTimerRunning && !completionHandledRef.current) {
       completionHandledRef.current = true;
       
-      if (state.currentMode === "pomodoro") {
-        // Pomodoro finished - increment count and switch to break
-        dispatch({ type: "INCREMENT_POMODORO" });
-        const newCount = state.pomodoroCount + 1;
+      const handleCompletion = async () => {
+        if (state.currentMode === "pomodoro") {
+          // Pomodoro finished - increment count and switch to break
+          dispatch({ type: "INCREMENT_POMODORO" });
+          const newCount = state.pomodoroCount + 1;
 
-        // Save the completed session
-        if (isAuthenticated) {
-          savePomodoroSession({
-            type: 'work',
-            duration: state.pomodoroDurations.pomodoro,
-            category: state.category,
-          });
+          // Save the completed session
+          if (isAuthenticated) {
+            try {
+              console.log('🍅 Saving completed Pomodoro session:', {
+                category: state.category,
+                duration: state.pomodoroDurations.pomodoro,
+                count: newCount
+              });
+
+              const completedSession = await savePomodoroSession({
+                id: `pomodoro-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+                type: 'work',
+                duration: state.pomodoroDurations.pomodoro,
+                category: state.category,
+                completed: true,
+                completed_at: new Date().toISOString(),
+                task_name: `${state.category} Session`,
+                notes: `Pomodoro #${newCount} completed`
+              });
+
+              console.log('✅ Session saved successfully:', completedSession);
+              console.log('🔍 Session saved - type:', typeof completedSession, 'value:', completedSession);
+
+              // Update daily stats if session was saved successfully
+              if (completedSession) {
+                console.log('📊 Updating Pomodoro stats...');
+                const statsResult = await updatePomodoroStats({
+                  sessions_completed: 1,
+                  total_focus_time: state.pomodoroDurations.pomodoro, // Keep in seconds to match duration
+                  category: state.category
+                });
+                console.log('📈 Stats update result:', statsResult);
+              } else {
+                console.log('❌ No session returned from save, cannot update stats');
+              }
+            } catch (error) {
+              console.error('❌ Failed to save pomodoro session or stats:', error);
+            }
+          }
+          
+          // Determine break type: long break after every 4th pomodoro
+          const isLongBreak = newCount % 4 === 0;
+          const nextMode = isLongBreak ? "longBreak" : "shortBreak";
+          
+          // Switch mode and auto-start break timer
+          dispatch({ type: "SET_MODE", payload: nextMode, autoStart: true });
+          showNotification(
+            "Pomodoro Complete!", 
+            isLongBreak ? "Time for a long break! ☕️" : "Take a short break! ☕️"
+          );
+          // Play appropriate sound: long break sound for long break, regular break sound for short break
+          playSound(isLongBreak ? soundRefs.longPause : soundRefs.pomodoroEnd);
+          
+        } else {
+          // Break finished - switch back to pomodoro and auto-start
+          dispatch({ type: "SET_MODE", payload: "pomodoro", autoStart: true });
+          showNotification("Break Over!", "Ready to focus again? 🚀");
+          playSound(soundRefs.pomodoroStart);
         }
         
-        // Determine break type: long break after every 4th pomodoro
-        const isLongBreak = newCount % 4 === 0;
-        const nextMode = isLongBreak ? "longBreak" : "shortBreak";
-        
-        // Switch mode and auto-start break timer
-        dispatch({ type: "SET_MODE", payload: nextMode, autoStart: true });
-        showNotification(
-          "Pomodoro Complete!", 
-          isLongBreak ? "Time for a long break! ☕️" : "Take a short break! ☕️"
-        );
-        // Play appropriate sound: long break sound for long break, regular break sound for short break
-        playSound(isLongBreak ? soundRefs.longPause : soundRefs.pomodoroEnd);
-        
-      } else {
-        // Break finished - switch back to pomodoro and auto-start
-        dispatch({ type: "SET_MODE", payload: "pomodoro", autoStart: true });
-        showNotification("Break Over!", "Ready to focus again? 🚀");
-        playSound(soundRefs.pomodoroStart);
-      }
-      
-      // Reset completion flag after mode switch is complete
-      setTimeout(() => {
+        // Reset completion flag immediately after handling
         completionHandledRef.current = false;
-      }, 1000);
+      };
+
+      // Execute the async completion handler
+      handleCompletion();
     }
   }, [
     state.timeLeft, 
@@ -288,6 +324,7 @@ export default function PomodoroTimer() {  const [state, dispatch] = useReducer(
     state.category,
     isAuthenticated,
     savePomodoroSession,
+    updatePomodoroStats,
     showNotification, 
     playSound, 
     soundRefs

@@ -91,6 +91,9 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
         loadLeaderboard()
       ]);
 
+      console.log('📊 Stats Modal - Loaded sessions:', sessions?.length || 0, sessions);
+      console.log('📊 Stats Modal - Processing stats for user:', user?.email || 'guest');
+
       if (!sessions || !Array.isArray(sessions)) {
         console.warn('No sessions data available');
         setStatsData({
@@ -113,8 +116,10 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
       const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
       const monthAgo = new Date(now.getFullYear(), now.getMonth(), 1);
 
-      // Filter sessions safely
-      const completedSessions = sessions.filter(s => s?.completed);
+      // Filter sessions safely - only count work sessions for stats
+      const completedSessions = sessions.filter(s => s?.completed && s?.type === 'work');
+      console.log('📈 Completed work sessions:', completedSessions.length, completedSessions);
+      
       const todaySessions = completedSessions.filter(s => 
         s?.completed_at?.startsWith(today)
       );
@@ -125,6 +130,13 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
         s?.completed_at && new Date(s.completed_at) >= monthAgo
       );
 
+      console.log('📅 Session breakdown:', {
+        total: completedSessions.length,
+        today: todaySessions.length,
+        week: weekSessions.length,
+        month: monthSessions.length
+      });
+
       // Calculate category split
       const categorySplit: Record<string, number> = {};
       completedSessions.forEach(session => {
@@ -132,19 +144,21 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
         categorySplit[category] = (categorySplit[category] || 0) + 1;
       });
 
+      console.log('🏷️ Category breakdown:', categorySplit);
+
       // Calculate daily activity for last 30 days
       const dailyActivity: Array<{ date: string; sessions: number; focusTime: number }> = [];
       for (let i = 29; i >= 0; i--) {
         const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
         const dateStr = date.toISOString().split('T')[0];
         const daySessions = completedSessions.filter(s => 
-          s?.completed_at?.startsWith(dateStr)
+          s?.completed_at?.startsWith(dateStr) && s?.type === 'work'
         );
         
         dailyActivity.push({
           date: dateStr,
           sessions: daySessions.length,
-          focusTime: daySessions.reduce((total, s) => total + (s?.duration || 0), 0) / 60 // convert to minutes
+          focusTime: daySessions.reduce((total, s) => total + ((s?.duration || 0) / 60), 0) // Convert seconds to minutes
         });
       }
 
@@ -156,7 +170,7 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
       while (consecutiveDays && streakDays < 365) { // Prevent infinite loop
         const dateStr = checkDate.toISOString().split('T')[0];
         const hasSessions = completedSessions.some(s => 
-          s?.completed_at?.startsWith(dateStr)
+          s?.completed_at?.startsWith(dateStr) && s?.type === 'work'
         );
         
         if (hasSessions) {
@@ -167,16 +181,19 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
         }
       }
 
-      setStatsData({
+      const finalStatsData = {
         totalSessions: completedSessions.length,
-        totalFocusTime: completedSessions.reduce((total, s) => total + (s?.duration || 0), 0) / 60,
+        totalFocusTime: completedSessions.reduce((total, s) => total + ((s?.duration || 0) / 60), 0), // Convert seconds to minutes
         streakDays,
         todaySessions: todaySessions.length,
         weekSessions: weekSessions.length,
         monthSessions: monthSessions.length,
         categorySplit,
         dailyActivity
-      });
+      };
+
+      console.log('📊 Final calculated stats:', finalStatsData);
+      setStatsData(finalStatsData);
 
       setLeaderboard(leaderboardData || []);
       setHasLoadedOnce(true);

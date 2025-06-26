@@ -1266,3 +1266,379 @@
     grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
   }
 }
+
+/* Loading States */
+.loadingState {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+background: linear-gradient(145deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  overflow: hidden;
+}
+
+.loadingState::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: 
+    radial-gradient(circle at 20% 80%, rgba(255, 123, 0, 0.08) 0%, transparent 50%),
+    radial-gradient(circle at 80% 20%, rgba(59, 130, 246, 0.06) 0%, transparent 50%),
+    radial-gradient(circle at 40% 40%, rgba(168, 85, 247, 0.04) 0%, transparent 50%);
+  animation: backgroundPulse 6s ease-in-out infinite;
+}
+
+@keyframes backgroundPulse {
+  0%, 100% { opacity: 0.3; }
+  50% { opacity: 0.7; }
+}
+
+/* Modern Study Loader */
+.bookLoader {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  margin-bottom: 40px;
+  z-index: 2;
+}
+
+.modernSpinner {
+  position: relative;
+  width: 80px;
+  height: 80px;
+}
+
+.spinnerRing {
+  position: absolute;
+  width: 100%;
+  height: 100%;
+  border: 3px solid transparent;
+  border-radius: 50%;
+  animation: spin 2s linear infinite;
+}
+
+.spinnerRing:nth-child(1) {
+  border-top-color: var(--accent-color, #ff7b00);
+  animation-delay: 0s;
+}
+
+.spinnerRing:nth-child(2) {
+  border-right-color: rgba(59, 130, 246, 0.8);
+  animation-delay: -0.5s;
+  width: 70px;
+  height: 70px;
+  top: 5px;
+  left: 5px;
+}
+
+.spinnerRing:nth-child(3) {
+  border-bottom-color: rgba(168, 85, 247, 0.6);
+  animation-delay: -1s;
+  width: 60px;
+  height: 60px;
+  top: 10px;
+  left: 10px;
+}
+
+.spinnerCenter {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  width: 40px;
+  height: 40px;
+  background: linear-gradient(135deg, var(--accent-color, #ff7b00) 0%, #ff9533 100%);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 
+    0 0 20px rgba(255, 123, 0, 0.3),
+    inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  animation: pulse 2s ease-in-out infinite;
+}
+
+.spinnerCenter::before {
+  content: '📖';
+  font-size: 18px;
+  animation: float 3s ease-in-out infinite;
+}
+
+@keyframes spin {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: translate(-50%, -50%) scale(1);
+    box-shadow: 
+      0 0 20px rgba(255, 123, 0, 0.3),
+      inset 0 1px 0 rgba(255, 255, 255, 0.2);
+  }
+  50% {
+    transform: translate(-50%, -50%) scale(1.1);
+    box-shadow: 
+      0 0 30px rgba(255, 123, 0, 0.5),
+      inset 0 1px 0 rgba(255, 255, 255, 0.3);
+  }
+}
+
+@keyframes float {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-2px) rotate(5deg);
+  }
+}
+
+/* Loading Text */
+.loadingText {
+  color: #ffffff;
+  font-size: 24px;
+  font-weight: 700;
+  margin-bottom: 12px;
+  text-align: center;
+  z-index: 2;
+  background: linear-gradient(135deg, #ffffff 0%, rgba(255, 123, 0, 0.9) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+  animation: textShimmer 3s ease-in-out infinite;
+  letter-spacing: 0.5px;
+}
+
+.loadingSubtext {
+  color: rgba(255, 255, 255, 0.6);
+  font-size: 14px;
+  font-weight: 500;
+  text-align: center;
+  z-index: 2;
+  opacity: 0.8;
+  animation: subtextFade 4s ease-in-out infinite;
+  letter-spacing: 0.3px;
+}
+
+@keyframes textShimmer {
+  0%, 100% {
+    background-position: -200% center;
+  }
+  50% {
+    background-position: 200% center;
+  }
+}
+
+@keyframes subtextFade {
+  0%, 100% {
+    opacity: 0.6;
+    transform: translateY(0);
+  }
+  50% {
+    opacity: 1;
+    transform: translateY(-1px);
+  }
+}
+
+/* Minimal decorative elements */
+.loadingDecorations {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  pointer-events: none;
+  z-index: 1;
+}
+
+.floatingDot {
+  position: absolute;
+  width: 4px;
+  height: 4px;
+  background: rgba(255, 123, 0, 0.3);
+  border-radius: 50%;
+  animation: floatDot 8s ease-in-out infinite;
+}
+
+.floatingDot:nth-child(1) {
+  top: 20%;
+  left: 15%;
+  animation-delay: 0s;
+}
+
+.floatingDot:nth-child(2) {
+  top: 30%;
+  right: 20%;
+  animation-delay: 2s;
+  background: rgba(59, 130, 246, 0.3);
+}
+
+.floatingDot:nth-child(3) {
+  bottom: 25%;
+  left: 25%;
+  animation-delay: 4s;
+  background: rgba(168, 85, 247, 0.3);
+}
+
+.floatingDot:nth-child(4) {
+  bottom: 35%;
+  right: 15%;
+  animation-delay: 6s;
+}
+
+@keyframes floatDot {
+  0%, 100% {
+    transform: translateY(0px) scale(1);
+    opacity: 0.3;
+  }
+  50% {
+    transform: translateY(-30px) scale(1.5);
+    opacity: 0.8;
+  }
+}
+
+/* Progress indicator */
+.loadingProgress {
+  position: absolute;
+  bottom: 100px;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 240px;
+  height: 2px;
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 1px;
+  overflow: hidden;
+  z-index: 2;
+}
+
+.progressBar {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-color, #ff7b00) 0%, #ff9533 50%, rgba(59, 130, 246, 0.8) 100%);
+  border-radius: 1px;
+  animation: progressFill 4s ease-in-out infinite;
+  box-shadow: 0 0 10px rgba(255, 123, 0, 0.5);
+}
+
+@keyframes progressFill {
+  0% {
+    width: 0%;
+    opacity: 0.7;
+  }
+  70% {
+    width: 100%;
+    opacity: 1;
+  }
+  100% {
+    width: 100%;
+    opacity: 0.8;
+  }
+}
+
+/* Responsive adjustments for loading screen */
+@media (max-width: 768px) {
+  .bookLoader {
+    width: 60px;
+    height: 60px;
+    margin-bottom: 32px;
+  }
+  
+  .modernSpinner {
+    width: 60px;
+    height: 60px;
+  }
+  
+  .spinnerRing:nth-child(2) {
+    width: 50px;
+    height: 50px;
+    top: 5px;
+    left: 5px;
+  }
+  
+  .spinnerRing:nth-child(3) {
+    width: 40px;
+    height: 40px;
+    top: 10px;
+    left: 10px;
+  }
+  
+  .spinnerCenter {
+    width: 30px;
+    height: 30px;
+  }
+  
+  .spinnerCenter::before {
+    font-size: 14px;
+  }
+  
+  .loadingText {
+    font-size: 20px;
+    margin-bottom: 10px;
+  }
+  
+  .loadingSubtext {
+    font-size: 13px;
+  }
+  
+  .loadingProgress {
+    width: 200px;
+    bottom: 80px;
+  }
+}
+
+@media (max-width: 480px) {
+  .bookLoader {
+    width: 50px;
+    height: 50px;
+    margin-bottom: 28px;
+  }
+  
+  .modernSpinner {
+    width: 50px;
+    height: 50px;
+  }
+  
+  .spinnerRing:nth-child(2) {
+    width: 40px;
+    height: 40px;
+    top: 5px;
+    left: 5px;
+  }
+  
+  .spinnerRing:nth-child(3) {
+    width: 30px;
+    height: 30px;
+    top: 10px;
+    left: 10px;
+  }
+  
+  .spinnerCenter {
+    width: 20px;
+    height: 20px;
+  }
+  
+  .spinnerCenter::before {
+    font-size: 12px;
+  }
+  
+  .loadingText {
+    font-size: 18px;
+    margin-bottom: 8px;
+  }
+  
+  .loadingSubtext {
+    font-size: 12px;
+  }
+  
+  .loadingProgress {
+    width: 180px;
+    bottom: 60px;
+  }
+}

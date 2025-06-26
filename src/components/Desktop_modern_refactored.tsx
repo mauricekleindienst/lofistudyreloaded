@@ -661,8 +661,32 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
     return (
       <div className={desktopStyles.desktop}>
         <div className={desktopStyles.loadingState}>
-          <div className={desktopStyles.spinner}></div>
-          <p>Loading desktop...</p>
+          {/* Minimal decorative floating dots */}
+          <div className={desktopStyles.loadingDecorations}>
+            <div className={desktopStyles.floatingDot}></div>
+            <div className={desktopStyles.floatingDot}></div>
+            <div className={desktopStyles.floatingDot}></div>
+            <div className={desktopStyles.floatingDot}></div>
+          </div>
+          
+          {/* Modern spinner with study icon */}
+          <div className={desktopStyles.bookLoader}>
+            <div className={desktopStyles.modernSpinner}>
+              <div className={desktopStyles.spinnerRing}></div>
+              <div className={desktopStyles.spinnerRing}></div>
+              <div className={desktopStyles.spinnerRing}></div>
+              <div className={desktopStyles.spinnerCenter}></div>
+            </div>
+          </div>
+          
+          {/* Loading text with shimmer effect */}
+          <div className={desktopStyles.loadingText}>LoFi Study</div>
+          <div className={desktopStyles.loadingSubtext}>Preparing your focus environment</div>
+          
+          {/* Smooth progress indicator */}
+          <div className={desktopStyles.loadingProgress}>
+            <div className={desktopStyles.progressBar}></div>
+          </div>
         </div>
       </div>
     );
@@ -692,16 +716,7 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
           />
         )}
         
-        {/* Loading/Buffer indicator */}
-        {(isVideoLoading && !videoLoadError) && (
-          <div className={desktopStyles.videoLoadingOverlay}>
-            <div className={desktopStyles.bufferIndicator}>
-              <div className={desktopStyles.spinner}></div>
-              <p>Loading background... {bufferProgress}%</p>
-              {videoBuffered && <p className={desktopStyles.bufferStatus}>✓ Buffered</p>}
-            </div>
-          </div>
-        )}
+       
 
         {/* Fallback for video errors */}
         {videoLoadError && (
