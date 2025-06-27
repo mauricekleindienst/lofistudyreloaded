@@ -24,6 +24,11 @@ export const backgrounds = [
   { id: 23, src: "https://lofistudy.fra1.cdn.digitaloceanspaces.com/backgrounds/NeonLoFi.mp4", alt: "Neon Lo-Fi", note: "Neon Lo-Fi", createdby: "Lo-Fi.study", priority: false, category: "urban" },
   { id: 24, src: "https://lofistudy.fra1.cdn.digitaloceanspaces.com/backgrounds/RainyTrees.mp4", alt: "Rainy Trees", note: "Rainy Trees", createdby: "Lo-Fi.study", priority: false, category: "nature" },
   { id: 25, src: "https://lofistudy.fra1.cdn.digitaloceanspaces.com/backgrounds/RainyRoofRoom.mp4", alt: "Rainy Roof Room", note: "Rainy Roof Room", createdby: "Lo-Fi.study", priority: false, category: "cozy" },
+  { id: 26, src: "https://lofistudy.fra1.cdn.digitaloceanspaces.com/backgrounds/NightCat.mp4", alt: "Night Cat", note: "Night Cat", createdby: "Lo-Fi.study", priority: false, category: "cozy" },
+  { id: 27, src: "https://lofistudy.fra1.cdn.digitaloceanspaces.com/backgrounds/MinecraftCabin.mp4", alt: "Minecraft Cabin", note: "Minecraft Cabin", createdby: "Mojang", priority: false, category: "gaming" },
+  { id: 28, src: "https://lofistudy.fra1.cdn.digitaloceanspaces.com/backgrounds/JapanSunset.mp4", alt: "Japan Sunset", note: "Japan Sunset", createdby: "Lo-Fi.study", priority: false, category: "nature" },
+  { id: 29, src: "https://lofistudy.fra1.cdn.digitaloceanspaces.com/backgrounds/EveningRain.mp4", alt: "Evening Rain", note: "Evening Rain", createdby: "Lo-Fi.study", priority: false, category: "nature" },
+  { id: 30, src: "https://lofistudy.fra1.cdn.digitaloceanspaces.com/backgrounds/WaterStation.mp4", alt: "Water Station", note: "Water Station", createdby: "Lo-Fi.study", priority: false, category: "urban" }
 ];
 
 export const DEFAULT_BACKGROUND = {
