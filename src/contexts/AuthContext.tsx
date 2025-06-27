@@ -33,6 +33,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     const createUserProfileIfNeeded = async () => {
       if (authUser && !userProfile && isConfigured) {
+        // Add a small delay to ensure the user exists in the database
+        // This helps with OAuth flows where there might be a race condition
+        await new Promise(resolve => setTimeout(resolve, 1000));
+        
         try {
           const profileData = {
             id: authUser.id,
@@ -45,9 +49,43 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             settings: {}
           };
 
-          await createProfile(profileData);
+          console.log('Creating user profile for OAuth user:', authUser.email);
+          const success = await createProfile(profileData);
+          
+          if (!success) {
+            console.warn('Failed to create user profile, will retry later');
+            // Retry after another delay
+            setTimeout(async () => {
+              try {
+                console.log('Retrying user profile creation for:', authUser.email);
+                await createProfile(profileData);
+              } catch (retryError) {
+                console.error('Retry failed to create user profile:', retryError);
+              }
+            }, 3000);
+          }
         } catch (error) {
           console.error('Failed to create user profile:', error);
+          
+          // Retry once more after a longer delay
+          setTimeout(async () => {
+            try {
+              console.log('Final retry for user profile creation:', authUser.email);
+              const profileData = {
+                id: authUser.id,
+                email: authUser.email || '',
+                full_name: authUser.user_metadata?.full_name || authUser.user_metadata?.name || '',
+                avatar_url: authUser.user_metadata?.avatar_url || authUser.user_metadata?.picture || '',
+                premium: false,
+                streak_count: 0,
+                total_focus_time: 0,
+                settings: {}
+              };
+              await createProfile(profileData);
+            } catch (finalError) {
+              console.error('Final retry failed to create user profile:', finalError);
+            }
+          }, 5000);
         }
       }
     };

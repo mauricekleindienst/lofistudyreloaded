@@ -73,6 +73,8 @@ export const useUserProfile = (user: User | null) => {
     setError(null);
 
     try {
+      console.log('Creating user profile for:', user.email);
+      
       const success = await dbService.createUserProfile({
         ...profileData,
         id: user.id,
@@ -80,8 +82,19 @@ export const useUserProfile = (user: User | null) => {
       });
       
       if (success) {
+        // Wait a moment for the database to be consistent
+        await new Promise(resolve => setTimeout(resolve, 500));
+        
         const newProfile = await dbService.getUserProfile(user.id);
         setUserProfile(newProfile);
+        
+        if (newProfile) {
+          console.log('User profile created and loaded successfully');
+        } else {
+          console.warn('Profile creation reported success but could not load profile');
+        }
+      } else {
+        console.warn('Failed to create user profile - will be retried');
       }
       
       return success;
