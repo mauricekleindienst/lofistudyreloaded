@@ -16,7 +16,8 @@ export const useUserProfile = (user: User | null) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const dbService = new DatabaseService();
+  // Create a stable dbService instance
+  const [dbService] = useState(() => new DatabaseService());
 
   // Load user profile when user changes
   useEffect(() => {
