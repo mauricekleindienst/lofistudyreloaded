@@ -433,7 +433,7 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
     if (!preloadedVideos.has(currentBackground.id.toString())) {
       preloadCurrentBackground();
     }
-  }, [currentBackground.id, preloadedVideos, currentlyBuffering]);
+  }, [currentBackground, preloadedVideos, currentlyBuffering]);
 
   // Load saved background when user authenticates
   useEffect(() => {
@@ -454,14 +454,6 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
     };
     loadSavedBackground();
   }, [isAuthenticated, loadSelectedBackground]);
-
-  // Notification management
-  const showNotification = useCallback((notification: ModernNotification) => {
-    setNotifications(prev => [...prev, notification]);
-    setTimeout(() => {
-      setNotifications(prev => prev.filter(n => n.id !== notification.id));
-    }, 5000);
-  }, []);
 
   // Handle background change with database persistence and intelligent preloading
   const handleBackgroundChange = useCallback(async (background: Background) => {
