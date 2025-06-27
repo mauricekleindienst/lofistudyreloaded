@@ -1,231 +1,36 @@
-/* Calculator.module.css - Modern Design */
+/* Calculator App - Compact Design for 240x350px */
+
 .calculatorContainer {
   height: 100%;
   width: 100%;
   display: flex;
   flex-direction: column;
-  padding: clamp(6px, 1.5vw, 12px);
-  gap: clamp(4px, 1vw, 8px);
+  padding: 8px;
+  gap: 8px;
   color: var(--text-primary);
-  background: linear-gradient(135deg, rgba(0, 0, 0, 0.1) 0%, rgba(0, 0, 0, 0.05) 100%);
-  overflow: hidden;
-  min-height: 180px;
+  background: transparent;
   box-sizing: border-box;
+  overflow: hidden;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
 }
 
-/* Main Content Layout */
-.mainContent {
-  display: flex;
-  width: 100%;
-  gap: clamp(4px, 1vw, 8px);
-  flex: 1;
-  min-height: 0;
-}
-
-/* Calculator Section */
-.calculatorSection {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: clamp(4px, 1vw, 8px);
-  min-width: 100px;
-  min-height: 0;
-}
-
-/* Responsive container adjustments */
-@media (max-width: 768px) {
-  .calculatorContainer {
-    padding: 4px;
-    gap: 6px;
-    min-height: 140px;
-  }
-  
-  .mainContent {
-    gap: 6px;
-  }
-  
-  .calculatorSection {
-    gap: 6px;
-    min-width: 80px;
-  }
-}
-
-@media (max-width: 480px) {
-  .calculatorContainer {
-    padding: 4px;
-    gap: 6px;
-    min-height: 140px;
-  }
-  
-  .mainContent {
-    gap: 6px;
-  }
-  
-  .calculatorSection {
-    gap: 6px;
-    min-width: 80px;
-  }
-}
-
-/* Header Section */
-.header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 24px;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.04) 100%);
-  border-radius: 20px;
-  backdrop-filter: blur(15px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
-}
-
-.headerContent {
-  display: flex;
-  align-items: center;
-  gap: 16px;
-}
-
-.headerIcon {
-  color: var(--accent-color);
-  background: linear-gradient(135deg, var(--accent-color) 0%, #ff9533 100%);
-  padding: 12px;
-  border-radius: 14px;
-  background-clip: padding-box;
-  border: 2px solid transparent;
-  position: relative;
-}
-
-.headerIcon::before {
-  content: '';
-  position: absolute;
-  inset: 0;
-  border-radius: 14px;
-  background: linear-gradient(135deg, var(--accent-color) 0%, #ff9533 100%);
-  -webkit-mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  -webkit-mask-composite: exclude;
-  mask: linear-gradient(#fff 0 0) content-box, linear-gradient(#fff 0 0);
-  mask-composite: exclude;
-}
-
-.headerText h2 {
-  margin: 0;
-  font-size: 28px;
-  font-weight: 700;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  -webkit-background-clip: text;
-  -webkit-text-fill-color: transparent;
-  background-clip: text;
-}
-
-.headerText p {
-  margin: 4px 0 0 0;
-  color: rgba(255, 255, 255, 0.7);
-  font-size: 14px;
-}
-
-.headerActions {
-  display: flex;
-  gap: 12px;
-}
-
-.clearHistoryButton {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 10px;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  color: rgba(255, 255, 255, 0.8);
-  cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.clearHistoryButton:hover {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.08) 100%);
-  color: white;
-  transform: scale(1.05);
-  border-color: rgba(255, 255, 255, 0.2);
-}
-
-/* History Section */
-.historyContainer {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.03) 100%);
-  border-radius: 10px;
-  padding: 12px;
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-}
-
-.historyHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 8px;
-}
-
-.historyContainer h3 {
-  margin: 0;
-  font-size: 11px;
-  font-weight: 600;
-  color: rgba(255, 255, 255, 0.8);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.clearHistoryButton {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 6px;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 6px;
-  color: rgba(255, 255, 255, 0.8);
-  cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-.clearHistoryButton:hover {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.08) 100%);
-  color: white;
-  transform: scale(1.05);
-  border-color: rgba(255, 255, 255, 0.2);
-}
-
-.historyList {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  max-height: 60px;
-  overflow-y: auto;
-}
-
-.historyItem {
-  padding: 4px 8px;
-  background: rgba(255, 255, 255, 0.04);
-  border-radius: 5px;
-  font-size: 11px;
-  color: rgba(255, 255, 255, 0.7);
-  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
-}
-
-/* Display Section */
+/* Compact Display Section */
 .display {
-  background: linear-gradient(135deg, rgba(0, 0, 0, 0.4) 0%, rgba(0, 0, 0, 0.2) 100%);
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: linear-gradient(135deg, 
+    rgba(0, 0, 0, 0.7) 0%, 
+    rgba(0, 0, 0, 0.5) 100%);
+  border: 1px solid var(--border-color);
   border-radius: 8px;
-  padding: 8px 12px;
-  backdrop-filter: blur(15px);
+  padding: 12px;
+  backdrop-filter: blur(8px);
+  box-shadow: inset 0 1px 6px rgba(0, 0, 0, 0.3);
+  height: 60px;
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
   position: relative;
   overflow: hidden;
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  justify-content: center;
-  min-height: 40px;
-  box-shadow: inset 0 2px 10px rgba(0, 0, 0, 0.2);
+  flex-shrink: 0;
 }
 
 .display::before {
@@ -235,63 +40,224 @@
   left: 0;
   right: 0;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  background: linear-gradient(90deg, 
+    transparent, 
+    rgba(255, 255, 255, 0.15), 
+    transparent);
 }
 
 .displayText {
-  font-size: 1.2rem !important;
-  font-weight: 600;
-  color: white;
-  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, 'Courier New', monospace;
-  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
+  font-size: 1.8rem;
+  font-weight: 300;
+  color: var(--text-primary);
+  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
+  letter-spacing: 0.5px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  max-width: 100%;
   line-height: 1;
-  word-break: break-all;
-  text-align: right !important;
-  width: 100% !important;
-  direction: ltr !important;
-  display: block !important;
-  margin: 0 !important;
-  padding: 0 !important;
 }
 
 .operationIndicator {
   position: absolute;
-  top: 8px;
-  right: 12px;
-  font-size: 11px;
+  top: 4px;
+  right: 8px;
+  font-size: 0.7rem;
   color: var(--accent-color);
   font-weight: 600;
-  padding: 2px 4px;
-  background: rgba(255, 123, 0, 0.2);
-  border-radius: 4px;
-  border: 1px solid rgba(255, 123, 0, 0.3);
 }
 
-/* Button Grid */
+/* Compact Button Grid */
 .buttonGrid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 6px;
+  gap: 4px;
   flex: 1;
+  min-height: 0;
 }
 
+/* Base Button Styles - Compact */
 .button {
-  height: 36px;
-  border-radius: 8px;
-  font-size: 13px;
-  font-weight: 600;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.08) 0%, rgba(255, 255, 255, 0.04) 100%);
-  color: white;
+  background: var(--glass-bg);
+  backdrop-filter: blur(8px);
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-primary);
+  font-size: 1rem;
+  font-weight: 500;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   align-items: center;
   justify-content: center;
-  backdrop-filter: blur(10px);
+  min-height: 36px;
   position: relative;
   overflow: hidden;
-  box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
+  user-select: none;
+  box-sizing: border-box;
+}
+
+.button::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: linear-gradient(135deg, var(--accent-color), var(--accent-light));
+  opacity: 0;
+  transition: opacity 0.2s ease;
+  border-radius: 5px;
+}
+
+.button:hover::before {
+  opacity: 0.1;
+}
+
+.button:active {
+  transform: scale(0.98);
+}
+
+.button:hover {
+  border-color: var(--accent-color);
+  box-shadow: 0 2px 8px rgba(255, 123, 0, 0.2);
+}
+
+/* Operator Buttons */
+.operatorButton {
+  background: linear-gradient(135deg, 
+    rgba(255, 123, 0, 0.15) 0%, 
+    rgba(255, 123, 0, 0.08) 100%);
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+  font-weight: 600;
+}
+
+.operatorButton:hover {
+  background: linear-gradient(135deg, 
+    rgba(255, 123, 0, 0.25) 0%, 
+    rgba(255, 123, 0, 0.15) 100%);
+  color: var(--text-primary);
+}
+
+.operatorButton.activeOperator {
+  background: var(--accent-color);
+  color: var(--text-primary);
+  box-shadow: 0 2px 8px rgba(255, 123, 0, 0.4);
+}
+
+/* Special Buttons */
+.clearButton {
+  background: linear-gradient(135deg, 
+    rgba(220, 38, 38, 0.15) 0%, 
+    rgba(239, 68, 68, 0.08) 100%);
+  border-color: #dc2626;
+  color: #ef4444;
+  font-weight: 600;
+  grid-column: span 2;
+}
+
+.clearButton:hover {
+  background: linear-gradient(135deg, 
+    rgba(220, 38, 38, 0.25) 0%, 
+    rgba(239, 68, 68, 0.15) 100%);
+  color: var(--text-primary);
+}
+
+.deleteButton {
+  background: linear-gradient(135deg, 
+    rgba(245, 158, 11, 0.15) 0%, 
+    rgba(251, 191, 36, 0.08) 100%);
+  border-color: #f59e0b;
+  color: #fbbf24;
+  font-weight: 600;
+}
+
+.deleteButton:hover {
+  background: linear-gradient(135deg, 
+    rgba(245, 158, 11, 0.25) 0%, 
+    rgba(251, 191, 36, 0.15) 100%);
+  color: var(--text-primary);
+}
+
+.equalsButton {
+  background: linear-gradient(135deg, 
+    rgba(34, 197, 94, 0.15) 0%, 
+    rgba(16, 185, 129, 0.08) 100%);
+  border-color: #22c55e;
+  color: #10b981;
+  font-weight: 700;
+  font-size: 1.2rem;
+  grid-row: span 2;
+}
+
+.equalsButton:hover {
+  background: linear-gradient(135deg, 
+    rgba(34, 197, 94, 0.25) 0%, 
+    rgba(16, 185, 129, 0.15) 100%);
+  color: var(--text-primary);
+}
+
+.zeroButton {
+  grid-column: span 2;
+}
+
+/* Number Buttons */
+.button:not(.operatorButton):not(.clearButton):not(.deleteButton):not(.equalsButton) {
+  font-weight: 500;
+}
+
+.button:not(.operatorButton):not(.clearButton):not(.deleteButton):not(.equalsButton):hover {
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
+}
+
+/* Responsive Adjustments for Very Small Sizes */
+@media (max-width: 280px) {
+  .calculatorContainer {
+    padding: 6px;
+    gap: 6px;
+  }
+  
+  .display {
+    height: 50px;
+    padding: 8px;
+  }
+  
+  .displayText {
+    font-size: 1.5rem;
+  }
+  
+  .button {
+    min-height: 32px;
+    font-size: 0.9rem;
+  }
+  
+  .buttonGrid {
+    gap: 3px;
+  }
+}
+
+@media (max-height: 320px) {
+  .calculatorContainer {
+    padding: 6px;
+    gap: 4px;
+  }
+  
+  .display {
+    height: 45px;
+    padding: 8px;
+  }
+  
+  .displayText {
+    font-size: 1.4rem;
+  }
+  
+  .button {
+    min-height: 28px;
+    font-size: 0.85rem;
+  }
 }
 
 .button::before {
@@ -301,18 +267,20 @@
   left: 0;
   right: 0;
   height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3), transparent);
+  background: linear-gradient(90deg, 
+    transparent, 
+    rgba(255, 255, 255, 0.2), 
+    transparent);
   opacity: 0;
   transition: opacity 0.3s ease;
 }
 
 .button:hover {
   transform: translateY(-2px);
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.15) 0%, rgba(255, 255, 255, 0.08) 100%);
-  border-color: rgba(255, 255, 255, 0.3);
-  box-shadow: 
-    0 10px 25px rgba(0, 0, 0, 0.2),
-    0 4px 12px rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.12);
+  border-color: var(--border-hover);
+  box-shadow: var(--shadow-medium);
+  color: var(--text-primary);
 }
 
 .button:hover::before {
@@ -321,127 +289,111 @@
 
 .button:active {
   transform: translateY(0);
-  box-shadow: 
-    0 5px 15px rgba(0, 0, 0, 0.15),
-    0 2px 8px rgba(255, 255, 255, 0.05);
+  box-shadow: var(--shadow-light);
 }
 
-/* Special Buttons */
+/* Special Button Types */
 .clearButton {
   grid-column: span 2;
-  background: linear-gradient(135deg, rgba(156, 163, 175, 0.3) 0%, rgba(107, 114, 128, 0.2) 100%);
-  border-color: rgba(156, 163, 175, 0.4);
+  background: linear-gradient(135deg, 
+    rgba(156, 163, 175, 0.2) 0%, 
+    rgba(107, 114, 128, 0.1) 100%);
+  border-color: rgba(156, 163, 175, 0.3);
+  color: #d1d5db;
 }
 
 .clearButton:hover {
-  background: linear-gradient(135deg, rgba(156, 163, 175, 0.5) 0%, rgba(107, 114, 128, 0.4) 100%);
-  border-color: rgba(156, 163, 175, 0.6);
+  background: linear-gradient(135deg, 
+    rgba(156, 163, 175, 0.4) 0%, 
+    rgba(107, 114, 128, 0.3) 100%);
+  border-color: rgba(156, 163, 175, 0.5);
+  color: #f3f4f6;
 }
 
 .deleteButton {
-  background: linear-gradient(135deg, rgba(239, 68, 68, 0.3) 0%, rgba(220, 38, 38, 0.2) 100%);
-  border-color: rgba(239, 68, 68, 0.4);
+  background: linear-gradient(135deg, 
+    rgba(239, 68, 68, 0.2) 0%, 
+    rgba(220, 38, 38, 0.1) 100%);
+  border-color: rgba(239, 68, 68, 0.3);
+  color: #fca5a5;
 }
 
 .deleteButton:hover {
-  background: linear-gradient(135deg, rgba(239, 68, 68, 0.5) 0%, rgba(220, 38, 38, 0.4) 100%);
-  border-color: rgba(239, 68, 68, 0.6);
+  background: linear-gradient(135deg, 
+    rgba(239, 68, 68, 0.4) 0%, 
+    rgba(220, 38, 38, 0.3) 100%);
+  border-color: rgba(239, 68, 68, 0.5);
+  color: #fee2e2;
 }
 
 .operatorButton {
-  background: linear-gradient(135deg, rgba(255, 123, 0, 0.3) 0%, rgba(234, 88, 12, 0.2) 100%);
-  border-color: rgba(255, 123, 0, 0.4);
+  background: linear-gradient(135deg, 
+    rgba(255, 123, 0, 0.2) 0%, 
+    rgba(234, 88, 12, 0.1) 100%);
+  border-color: rgba(255, 123, 0, 0.3);
+  color: var(--accent-color);
 }
 
 .operatorButton:hover {
-  background: linear-gradient(135deg, rgba(255, 123, 0, 0.5) 0%, rgba(234, 88, 12, 0.4) 100%);
-  border-color: rgba(255, 123, 0, 0.6);
+  background: linear-gradient(135deg, 
+    rgba(255, 123, 0, 0.4) 0%, 
+    rgba(234, 88, 12, 0.3) 100%);
+  border-color: rgba(255, 123, 0, 0.5);
+  color: var(--accent-light);
 }
 
 .activeOperator {
-  background: linear-gradient(135deg, var(--accent-color) 0%, #ff9533 100%) !important;
+  background: linear-gradient(135deg, 
+    var(--accent-color) 0%, 
+    var(--accent-light) 100%) !important;
   border-color: var(--accent-color) !important;
-  color: white !important;
-  box-shadow: 0 0 0 2px rgba(var(--accent-rgb), 0.3), 0 4px 15px rgba(var(--accent-rgb), 0.4) !important;
+  color: var(--text-primary) !important;
+  box-shadow: 0 0 0 2px rgba(255, 123, 0, 0.3), 
+              var(--shadow-accent) !important;
+  transform: scale(1.05);
 }
 
 .equalsButton {
-  background: linear-gradient(135deg, rgba(34, 197, 94, 0.3) 0%, rgba(22, 163, 74, 0.2) 100%);
-  border-color: rgba(34, 197, 94, 0.4);
+  background: linear-gradient(135deg, 
+    rgba(34, 197, 94, 0.2) 0%, 
+    rgba(22, 163, 74, 0.1) 100%);
+  border-color: rgba(34, 197, 94, 0.3);
+  color: #6ee7b7;
   grid-row: span 2;
 }
 
 .equalsButton:hover {
-  background: linear-gradient(135deg, rgba(34, 197, 94, 0.5) 0%, rgba(22, 163, 74, 0.4) 100%);
-  border-color: rgba(34, 197, 94, 0.6);
+  background: linear-gradient(135deg, 
+    rgba(34, 197, 94, 0.4) 0%, 
+    rgba(22, 163, 74, 0.3) 100%);
+  border-color: rgba(34, 197, 94, 0.5);
+  color: #d1fae5;
 }
 
 .zeroButton {
   grid-column: span 2;
 }
 
-/* Custom Scrollbar */
-.historyList::-webkit-scrollbar {
-  width: 4px;
+/* Number Buttons */
+.numberButton {
+  font-weight: 500;
 }
 
-.historyList::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 4px;
+.numberButton:hover {
+  background: rgba(255, 255, 255, 0.15);
 }
 
-.historyList::-webkit-scrollbar-thumb {
-  background: linear-gradient(135deg, var(--accent-color) 0%, #ff9533 100%);
-  border-radius: 4px;
-}
-
-.historyList::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(135deg, #ff9533 0%, var(--accent-color) 100%);
-}
-
-/* Responsive Design */
-@media (max-width: 480px) {
-  .calculatorContainer {
-    padding: 10px;
-    gap: 8px;
-  }
-
-  .displayText {
-    font-size: 1.3rem;
-  }
-
-  .button {
-    height: 44px;
-    font-size: 14px;
-  }
-
-  .buttonGrid {
-    gap: 8px;
-  }
-
-  .historyContainer {
-    padding: 10px;
-  }
-
-  .display {
-    padding: 10px 14px;
-    min-height: 45px;
-  }
-  .historyList {
-    max-height: 50px;
-  }
-}
-
-/* History Sidebar */
+/* History Sidebar (Optional) */
 .historySidebar {
-  width: 120px;
+  width: 140px;
   display: flex;
   flex-direction: column;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.06) 0%, rgba(255, 255, 255, 0.03) 100%);
+  background: var(--glass-bg);
+  backdrop-filter: blur(12px);
   border-radius: 12px;
-  padding: 12px;
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 16px;
+  border: 1px solid var(--border-color);
+  box-shadow: var(--shadow-light);
   flex-shrink: 0;
 }
 
@@ -449,16 +401,184 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
-  margin-bottom: 8px;
+  margin-bottom: 12px;
   padding-bottom: 8px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  border-bottom: 1px solid var(--border-color);
 }
 
 .sidebarHeader h3 {
   margin: 0;
-  font-size: 11px;
+  font-size: 12px;
   font-weight: 600;
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.5px;
+}
+
+.clearHistoryButton {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px;
+  background: transparent;
+  border: 1px solid var(--border-color);
+  border-radius: 6px;
+  color: var(--text-secondary);
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 12px;
+}
+
+.clearHistoryButton:hover {
+  background: var(--accent-color);
+  color: var(--text-primary);
+  border-color: var(--accent-color);
+  transform: scale(1.05);
+}
+
+.historyList {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  max-height: 200px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.historyItem {
+  padding: 8px 10px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  border: 1px solid transparent;
+}
+
+.historyItem:hover {
+  background: rgba(255, 255, 255, 0.1);
+  color: var(--text-primary);
+  border-color: var(--border-color);
+  transform: translateX(2px);
+}
+
+/* Custom Scrollbar for History */
+.historyList::-webkit-scrollbar {
+  width: 4px;
+}
+
+.historyList::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 2px;
+}
+
+.historyList::-webkit-scrollbar-thumb {
+  background: var(--accent-color);
+  border-radius: 2px;
+  transition: background 0.3s ease;
+}
+
+.historyList::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-light);
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .calculatorContainer {
+    padding: 16px;
+    gap: 12px;
+    min-height: 300px;
+  }
+
+  .display {
+    padding: 16px;
+    min-height: 70px;
+  }
+
+  .displayText {
+    font-size: clamp(1.5rem, 6vw, 2rem);
+  }
+
+  .button {
+    height: 50px;
+    font-size: 16px;
+  }
+
+  .buttonGrid {
+    gap: 10px;
+  }
+
+  .historySidebar {
+    display: none; /* Hide sidebar on mobile */
+  }
+}
+
+@media (max-width: 480px) {
+  .calculatorContainer {
+    padding: 12px;
+    gap: 10px;
+    min-height: 280px;
+  }
+
+  .display {
+    padding: 12px;
+    min-height: 60px;
+  }
+
+  .displayText {
+    font-size: clamp(1.2rem, 5vw, 1.8rem);
+  }
+
+  .button {
+    height: 45px;
+    font-size: 14px;
+    border-radius: 10px;
+  }
+
+  .buttonGrid {
+    gap: 8px;
+  }
+
+  .operationIndicator {
+    top: 8px;
+    right: 12px;
+    font-size: 10px;
+    padding: 2px 6px;
+  }
+}
+
+/* Animation Classes */
+.button-press {
+  animation: buttonPress 0.1s ease-out;
+}
+
+@keyframes buttonPress {
+  0% { transform: scale(1); }
+  50% { transform: scale(0.95); }
+  100% { transform: scale(1); }
+}
+
+.display-update {
+  animation: displayUpdate 0.2s ease-out;
+}
+
+@keyframes displayUpdate {
+  0% { opacity: 0.7; transform: scale(0.98); }
+  100% { opacity: 1; transform: scale(1); }
+}
+
+/* Additional utility classes */
+.hidden {
+  display: none;
+}
+
+.fade-in {
+  animation: fadeIn 0.3s ease-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
 }

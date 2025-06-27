@@ -66,7 +66,6 @@ A beautiful Next.js web application that simulates a desktop environment with vi
 
 - **Next.js 15** - React framework with App Router
 - **TypeScript** - Type-safe development
-- **Tailwind CSS** - Utility-first CSS framework
 - **Supabase** - Optional authentication and database
 - **React Draggable** - Draggable window functionality
 - **Lucide React** - Beautiful icon library

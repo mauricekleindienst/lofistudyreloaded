@@ -557,7 +557,7 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
       'music': { width: 280, height: 220, minWidth: 240, minHeight: 180 },
       'notes': { width: 400, height: 320, minWidth: 350, minHeight: 280 },
       'calculator': { width: 240, height: 350, minWidth: 200, minHeight: 280 },
-      'sound-player': { width: 380, height: 450, minWidth: 320, minHeight: 380 },
+      'sound-player': { width: 350, height: 450, minWidth: 320, minHeight: 380 },
       'account-settings': { width: 360, height: 400, minWidth: 320, minHeight: 360 }
     };
 

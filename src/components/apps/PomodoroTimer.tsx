@@ -446,7 +446,7 @@ export default function PomodoroTimer() {  const [state, dispatch] = useReducer(
         };
       case "longBreak":
         return { 
-          label: "LBreak", 
+          label: "Long", 
           icon: <Coffee size={16} />, 
           color: "#3b82f6" 
         };

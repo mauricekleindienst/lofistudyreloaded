@@ -7,8 +7,8 @@ This is a Next.js application with Supabase authentication and Shadcn/ui compone
 
 - **Framework**: Next.js 15 with App Router
 - **Language**: TypeScript
-- **UI Library**: Modern Clean Dark Themed Tailwind CSS
-- **Styling**: Tailwind CSS
+- **UI Library**: Modern Clean Dark Themed CSS
+- **Styling**: CSS
 - **Language**: English 
 - **Terminal**: Use "pnpm" for running commands & powershell syntax highlighting
 
