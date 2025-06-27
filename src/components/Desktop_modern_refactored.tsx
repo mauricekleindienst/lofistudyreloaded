@@ -248,7 +248,7 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
         preloadManagerRef.current.clearOldBuffers(0); // Clear all
       }
     };
-  }, []); // Empty dependency array to run only once
+  }, [bufferHealths, preloadedVideos]); // Add missing dependencies
 
   // Intelligent preloading effect
   useEffect(() => {
@@ -279,7 +279,7 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
     // Start preloading after a short delay to not interfere with initial load
     const timer = setTimeout(preloadPopularBackgrounds, 3000);
     return () => clearTimeout(timer);
-  }, [isClient]); // Remove currentlyBuffering from dependencies to avoid loops
+  }, [isClient, currentlyBuffering, preloadedVideos]); // Add missing dependencies
 
   // Update time and date every second
   useEffect(() => {
@@ -353,15 +353,11 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
     } else {
       // Final fallback to default background
       if (currentBackground.id !== DEFAULT_BACKGROUND.id) {
-        showNotification({
-          id: Date.now().toString(),
-          message: 'Background video failed to load. Using default background.',
-          type: 'error'
-        });
+        console.error('Background video failed to load. Using default background.');
         setCurrentBackground(DEFAULT_BACKGROUND);
       }
     }
-  }, [currentBackground.src, currentBackground.id, retryCount]);
+  }, [currentBackground.src, currentBackground.id, retryCount]); // Remove showNotification dependency
 
   // Enhanced video loading with preload hint and buffer management
   const handleVideoLoadStart = useCallback(() => {
@@ -437,7 +433,7 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
     if (!preloadedVideos.has(currentBackground.id.toString())) {
       preloadCurrentBackground();
     }
-  }, [currentBackground.id, preloadedVideos]);
+  }, [currentBackground.id, preloadedVideos, currentlyBuffering]);
 
   // Load saved background when user authenticates
   useEffect(() => {
@@ -468,25 +464,18 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
   }, []);
 
   // Handle background change with database persistence and intelligent preloading
-  const handleBackgroundChange = useCallback(async (background: Background, showNotificationParam = true) => {
+  const handleBackgroundChange = useCallback(async (background: Background) => {
     // Check if video is already buffered for instant switching
-    let isInstantSwitch = false;
     if (preloadManagerRef.current) {
       const bufferedVideo = preloadManagerRef.current.getBufferedVideo(background.id.toString());
       const bufferHealth = preloadManagerRef.current.getBufferHealth(background.id.toString());
-      isInstantSwitch = bufferedVideo !== null && bufferHealth > 0.3;
+      const isInstantSwitch = bufferedVideo !== null && bufferHealth > 0.3;
+      console.log(`Background switch - instant: ${isInstantSwitch}`);
     }
     
     setCurrentBackground(background);
     
-    if (showNotificationParam) {
-      const bufferStatus = isInstantSwitch ? ' (instant)' : '';
-      showNotification({
-        id: Date.now().toString(),
-        message: `Background changed to ${background.alt}${bufferStatus}`,
-        type: 'success'
-      });
-    }
+   
 
     // Save to localStorage for non-authenticated users
     try {
@@ -539,7 +528,7 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
         }
       });
     }
-  }, [isAuthenticated, saveSelectedBackground, showNotification, currentlyBuffering, preloadedVideos]);
+  }, [isAuthenticated, saveSelectedBackground, currentlyBuffering, preloadedVideos]);
 
   // Get responsive size for each app type based on viewport
   const getResponsiveSize = useCallback((appId: string) => {
