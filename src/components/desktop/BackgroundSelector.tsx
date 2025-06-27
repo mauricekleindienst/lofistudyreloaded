@@ -1,9 +1,9 @@
 "use client";
 
 import React, { useState, useCallback } from 'react';
-import { X, CheckSquare, Play, Loader2, AlertCircle, Youtube } from 'lucide-react';
+import { X, CheckSquare, Play, Loader2, AlertCircle, Youtube, Image } from 'lucide-react';
 import { backgrounds } from '@/data/backgrounds';
-import desktopStyles from '../../../styles/Desktop.module.css';
+import styles from '../../../styles/BackgroundSelector.module.css';
 
 interface Background {
   id: number;
@@ -19,14 +19,12 @@ interface Background {
 interface BackgroundSelectorProps {
   showBackgrounds: boolean;
   currentBackground: Background;
-  backgroundsToShow: number;
   selectedCategory: string;
   youtubeUrl: string;
   customBackground: Background | null;
   onClose: () => void;
   onBackgroundChange: (background: Background) => void;
   onCategoryChange: (category: string) => void;
-  onLoadMore: () => void;
   onYoutubeSubmit: () => void;
   onYoutubeUrlChange: (url: string) => void;
 }
@@ -42,14 +40,12 @@ const categories = [
 export default function BackgroundSelector({
   showBackgrounds,
   currentBackground,
-  backgroundsToShow,
   selectedCategory,
   youtubeUrl,
   customBackground,
   onClose,
   onBackgroundChange,
   onCategoryChange,
-  onLoadMore,
   onYoutubeSubmit,
   onYoutubeUrlChange
 }: BackgroundSelectorProps) {
@@ -84,7 +80,7 @@ export default function BackgroundSelector({
     if (selectedCategory !== 'all') {
       filtered = backgrounds.filter(bg => bg.category === selectedCategory);
     }
-    return filtered.slice(0, backgroundsToShow);
+    return filtered; // Return all filtered backgrounds without limiting
   };
 
   const validateYoutubeUrl = (url: string): boolean => {
@@ -115,139 +111,145 @@ export default function BackgroundSelector({
   };
 
   return (
-    <div className={desktopStyles.modalOverlay} onClick={onClose}>
+    <div className={styles.modalOverlay} onClick={onClose}>
       <div 
-        className={`${desktopStyles.modalContainer} ${desktopStyles.backgroundModal}`}
+        className={styles.modal}
         onClick={(e) => e.stopPropagation()}
       >
-        <div className={desktopStyles.modalHeader}>
-          <div className={desktopStyles.modalTitleSection}>
-            <div>
-              <h3 className={desktopStyles.modalTitle}>Background Gallery</h3>
-              <p className={desktopStyles.modalSubtitle}>
-                Choose your perfect study ambiance
-              </p>
+        {/* Header */}
+        <div className={styles.header}>
+          <div className={styles.titleSection}>
+            <div className={styles.icon}>
+              <Image size={24} />
+            </div>
+            <div className={styles.titleText}>
+              <h3 className={styles.title}>Background Gallery</h3>
+              <p className={styles.subtitle}>Choose your perfect study ambiance</p>
             </div>
           </div>
           <button
             onClick={onClose}
-            className={desktopStyles.modalCloseButton}
+            className={styles.closeButton}
             aria-label="Close gallery"
           >
             <X size={20} />
           </button>
         </div>
 
-        {/* YouTube URL Input */}
-        <div className={desktopStyles.youtubeSection}>
-          <div className={desktopStyles.youtubeSectionHeader}>
-            <Youtube size={18} />
-            <h4 className={desktopStyles.youtubeSectionTitle}>Add Custom YouTube Background</h4>
-          </div>
-          <div className={desktopStyles.youtubeInputContainer}>
-            <input
-              type="text"
-              value={youtubeUrl}
-              onChange={(e) => {
-                onYoutubeUrlChange(e.target.value);
-                setYoutubeError('');
-              }}
-              placeholder="Paste YouTube URL here (e.g., https://youtube.com/watch?v=...)"
-              className={`${desktopStyles.youtubeInput} ${youtubeError ? desktopStyles.inputError : ''}`}
-              disabled={isSubmittingYoutube}
-            />
-            <button
-              onClick={handleYoutubeSubmit}
-              className={desktopStyles.youtubeSubmitButton}
-              disabled={!youtubeUrl.trim() || isSubmittingYoutube}
-            >
-              {isSubmittingYoutube ? (
-                <Loader2 size={14} className={desktopStyles.spinning} />
-              ) : (
-                'Add'
-              )}
-            </button>
-          </div>
-          {youtubeError && (
-            <div className={desktopStyles.errorMessage}>
-              <AlertCircle size={14} />
-              <span>{youtubeError}</span>
+        {/* Content */}
+        <div className={styles.content}>
+          {/* YouTube Section */}
+          <div className={styles.youtubeSection}>
+            <div className={styles.youtubeSectionHeader}>
+              <div className={styles.youtubeSectionIcon}>
+                <Youtube size={18} />
+              </div>
+              <h4 className={styles.youtubeSectionTitle}>Add Custom YouTube Background</h4>
             </div>
-          )}
-        </div>
-        
-        {/* Categories Filter */}
-        <div className={desktopStyles.categoriesContainer}>
-          {categoryCounts.map(category => (
-            <button
-              key={category.id}
-              onClick={() => onCategoryChange(category.id)}
-              className={`${desktopStyles.categoryButton} ${
-                selectedCategory === category.id ? desktopStyles.activeCategoryButton : ''
-              }`}
-              aria-label={`Filter by ${category.name}`}
-            >
-              <span className={desktopStyles.categoryIcon}>{category.icon}</span>
-              <span className={desktopStyles.categoryName}>{category.name}</span>
-              <span className={desktopStyles.categoryCount}>({category.count})</span>
-            </button>
-          ))}
-        </div>        <div className={desktopStyles.backgroundGrid}>          {/* Custom YouTube background */}
-          {customBackground && (
-            <div
-              key="custom-youtube"
-              className={`${desktopStyles.backgroundItem} ${desktopStyles.youtubeItem} ${
-                currentBackground.id === customBackground.id ? desktopStyles.active : ''
-              }`}
-              onClick={() => {
-                onBackgroundChange(customBackground);
-                onClose();
-              }}
-            >
-              <div className={desktopStyles.backgroundPreview}>
+            <div className={styles.youtubeInputContainer}>
+              <input
+                type="text"
+                value={youtubeUrl}
+                onChange={(e) => {
+                  onYoutubeUrlChange(e.target.value);
+                  setYoutubeError('');
+                }}
+                placeholder="Paste YouTube URL here (e.g., https://youtube.com/watch?v=...)"
+                className={`${styles.youtubeInput} ${youtubeError ? styles.error : ''}`}
+                disabled={isSubmittingYoutube}
+              />
+              <button
+                onClick={handleYoutubeSubmit}
+                className={styles.youtubeSubmitButton}
+                disabled={!youtubeUrl.trim() || isSubmittingYoutube}
+              >
+                {isSubmittingYoutube ? (
+                  <Loader2 size={14} className={styles.spinner} />
+                ) : (
+                  'Add'
+                )}
+              </button>
+            </div>
+            {youtubeError && (
+              <div className={styles.errorMessage}>
+                <AlertCircle size={14} />
+                <span>{youtubeError}</span>
+              </div>
+            )}
+          </div>
+          
+          {/* Categories */}
+          <div className={styles.categories}>
+            {categoryCounts.map(category => (
+              <button
+                key={category.id}
+                onClick={() => onCategoryChange(category.id)}
+                className={`${styles.categoryButton} ${
+                  selectedCategory === category.id ? styles.active : ''
+                }`}
+                aria-label={`Filter by ${category.name}`}
+              >
+                <span className={styles.categoryIcon}>{category.icon}</span>
+                <span>{category.name}</span>
+                <span className={styles.categoryCount}>({category.count})</span>
+              </button>
+            ))}
+          </div>
+
+          {/* Wallpaper Grid */}
+          <div className={styles.wallpaperGrid}>
+            {/* Custom YouTube background */}
+            {customBackground && (
+              <div
+                key="custom-youtube"
+                className={`${styles.wallpaperBox} ${styles.youtube} ${
+                  currentBackground.id === customBackground.id ? styles.selected : ''
+                }`}
+                onClick={() => {
+                  onBackgroundChange(customBackground);
+                  onClose();
+                }}
+              >
                 <iframe
                   src={customBackground.src}
-                  className={desktopStyles.backgroundVideo}
+                  className={styles.wallpaperMedia}
                   frameBorder="0"
                   allow="autoplay; encrypted-media"
                   allowFullScreen
                   title="Custom YouTube Background"
                 />
-                <div className={desktopStyles.backgroundOverlay}>
-                  <div className={desktopStyles.backgroundInfo}>
-                    <div className={desktopStyles.backgroundName}>
-                      <Youtube size={14} />
+                <div className={styles.wallpaperOverlay}>
+                  <div className={styles.wallpaperInfo}>
+                    <div className={styles.wallpaperName}>
+                      <Youtube size={12} />
                       {customBackground.alt}
                     </div>
-                    <div className={desktopStyles.backgroundCategory}>
-                      <span className={desktopStyles.categoryTag}>Custom</span>
-                    </div>
+                    <div className={styles.wallpaperCategory}>Custom</div>
                   </div>
-                  {currentBackground.id === customBackground.id && (
-                    <div className={desktopStyles.selectedIndicator}>
-                      <CheckSquare size={16} />
-                    </div>
-                  )}
                 </div>
+                {currentBackground.id === customBackground.id && (
+                  <div className={styles.selectionIndicator}>
+                    <CheckSquare size={12} />
+                  </div>
+                )}
               </div>
-            </div>
-          )}
+            )}
+
             {/* Regular backgrounds */}
-          {getFilteredBackgrounds().map(bg => (
-            <div
-              key={bg.id}
-              className={`${desktopStyles.backgroundItem} ${
-                currentBackground.id === bg.id ? desktopStyles.active : ''
-              } ${previewingId === bg.id ? desktopStyles.previewing : ''}`}
-              onClick={() => {
-                onBackgroundChange(bg);
-                onClose();
-              }}
-            >
-              <div className={desktopStyles.backgroundPreview}>
+            {getFilteredBackgrounds().map(bg => (
+              <div
+                key={bg.id}
+                className={`${styles.wallpaperBox} ${
+                  currentBackground.id === bg.id ? styles.selected : ''
+                }`}
+                onClick={() => {
+                  onBackgroundChange(bg);
+                  onClose();
+                }}
+              >
                 <video
                   src={bg.src}
-                  className={desktopStyles.backgroundVideo}
+                  className={styles.wallpaperMedia}
                   muted
                   loop
                   preload="metadata"
@@ -259,75 +261,58 @@ export default function BackgroundSelector({
                     setPreviewingId(null);
                     handleVideoPreview(e.currentTarget, false);
                   }}
-                  onLoadStart={() => {
-                    // Handle loading state if needed
-                  }}
                   onError={() => {
                     console.error(`Failed to load video: ${bg.src}`);
                   }}
                 />
-                <div className={desktopStyles.backgroundOverlay}>
-                  <div className={desktopStyles.backgroundInfo}>
-                    <div className={desktopStyles.backgroundName}>{bg.alt}</div>
-                    <div className={desktopStyles.backgroundCategory}>
-                      <span className={desktopStyles.categoryTag}>
-                        {bg.category.charAt(0).toUpperCase() + bg.category.slice(1)}
-                      </span>
+                <div className={styles.wallpaperOverlay}>
+                  <div className={styles.wallpaperInfo}>
+                    <div className={styles.wallpaperName}>{bg.alt}</div>
+                    <div className={styles.wallpaperCategory}>
+                      {bg.category.charAt(0).toUpperCase() + bg.category.slice(1)}
                     </div>
                   </div>
-                  {currentBackground.id === bg.id && (
-                    <div className={desktopStyles.selectedIndicator}>
-                      <CheckSquare size={16} />
-                    </div>
-                  )}
-                  {previewingId === bg.id && (
-                    <div className={desktopStyles.playingIndicator}>
-                      <Play size={16} />
-                    </div>
-                  )}
                 </div>
+                {currentBackground.id === bg.id && (
+                  <div className={styles.selectionIndicator}>
+                    <CheckSquare size={12} />
+                  </div>
+                )}
+                {previewingId === bg.id && (
+                  <div className={styles.playingIndicator}>
+                    <Play size={12} />
+                  </div>
+                )}
               </div>
-            </div>
-          ))}
+            ))}
 
-          {/* Empty state */}
-          {getFilteredBackgrounds().length === 0 && (
-            <div className={desktopStyles.emptyState}>
-              <div className={desktopStyles.emptyStateIcon}>🎨</div>
-              <h4 className={desktopStyles.emptyStateTitle}>No backgrounds found</h4>
-              <p className={desktopStyles.emptyStateMessage}>
-                Try selecting a different category or add a custom YouTube background
-              </p>
-            </div>
-          )}
-        </div>        
-        {/* Load More Button */}
-        {backgroundsToShow < backgrounds.length && selectedCategory === 'all' && (
-          <div className={desktopStyles.loadMoreContainer}>
-            <button
-              onClick={onLoadMore}
-              className={desktopStyles.loadMoreButton}
-            >
-              Show More ({backgrounds.length - backgroundsToShow} remaining)
-            </button>
+            {/* Empty state */}
+            {getFilteredBackgrounds().length === 0 && !customBackground && (
+              <div className={styles.emptyState}>
+                <div className={styles.emptyStateIcon}>🎨</div>
+                <h4 className={styles.emptyStateTitle}>No backgrounds found</h4>
+                <p className={styles.emptyStateMessage}>
+                  Try selecting a different category or add a custom YouTube background
+                </p>
+              </div>
+            )}
           </div>
-        )}
+        </div>
         
-        <div className={desktopStyles.modalFooter}>
-          <div className={desktopStyles.footerInfo}>
+        {/* Footer */}
+        <div className={styles.footer}>
+          <div className={styles.footerInfo}>
             <span>
-              Showing {getFilteredBackgrounds().length} of {
-                selectedCategory === 'all' ? backgrounds.length : 
-                backgrounds.filter(bg => bg.category === selectedCategory).length
-              } backgrounds
+              {getFilteredBackgrounds().length} {
+                selectedCategory === 'all' ? 'total' : selectedCategory
+              } background{getFilteredBackgrounds().length !== 1 ? 's' : ''}
             </span>
             {customBackground && (
-              <span className={desktopStyles.customIndicator}>
+              <span className={styles.customIndicator}>
                 • 1 custom background
               </span>
             )}
           </div>
-        
         </div>
       </div>
     </div>

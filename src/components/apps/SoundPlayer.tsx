@@ -220,37 +220,36 @@ export default function SoundPlayer() {
       ...prev,
       [soundId]: { ...prev[soundId], isMuted: !prev[soundId].isMuted }
     }));
-  }, []);  const getFilteredSounds = () => {
-    return workingSounds;  };
+  }, []);
+
+  const getFilteredSounds = () => {
+    return workingSounds;
+  };
 
   return (
-    <div className={styles.container}>    
-      
-        
-  
-
+    <div className={styles.container}>
+      {/* Master Controls */}
       <div className={styles.masterControls}>
-        <div className={styles.masterVolumeSection}>
-          <button
-            onClick={() => setIsMasterMuted(!isMasterMuted)}
-            className={styles.masterMuteButton}
-          >
-            {isMasterMuted ? <VolumeX size={18} /> : <Volume2 size={18} />}
-          </button>
-          <div className={styles.masterVolumeControl}>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              value={isMasterMuted ? 0 : masterVolume}
-              onChange={(e) => setMasterVolume(parseInt(e.target.value))}
-              className={styles.masterVolumeSlider}
-            />
-            <span className={styles.masterVolumeValue}>
-              {isMasterMuted ? 0 : masterVolume}%
-            </span>
-          </div>
-        </div>      </div>
+        <button
+          onClick={() => setIsMasterMuted(!isMasterMuted)}
+          className={styles.masterMuteButton}
+          title={isMasterMuted ? 'Unmute All' : 'Mute All'}
+        >
+          {isMasterMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+        </button>
+        <input
+          type="range"
+          min="0"
+          max="100"
+          value={isMasterMuted ? 0 : masterVolume}
+          onChange={(e) => setMasterVolume(parseInt(e.target.value))}
+          className={styles.masterVolumeSlider}
+          title={`Master Volume: ${isMasterMuted ? 0 : masterVolume}%`}
+        />
+        <span className={styles.masterVolumeValue}>
+          {isMasterMuted ? 0 : masterVolume}%
+        </span>
+      </div>
 
       {/* Sound Grid */}
       <div className={styles.soundGrid}>
@@ -278,25 +277,20 @@ export default function SoundPlayer() {
                 key={sound.id}
                 className={`${styles.soundCard} ${state.isPlaying ? styles.playing : ''} ${error ? styles.error : ''}`}
                 style={{ '--sound-color': sound.color } as React.CSSProperties}
-              >                <div className={styles.soundHeader}>
-                  <div className={styles.soundInfo}>
-                    <span className={styles.soundIcon}>{sound.icon}</span>
-                    <span className={styles.soundName}>{sound.name}</span>
-                    {error && (
-                      <span className={styles.errorIndicator} title={error}>
-                        ⚠️
-                      </span>
-                    )}
-                  </div>
+              >
+                <div className={styles.soundInfo}>
+                  <span className={styles.soundIcon}>{sound.icon}</span>
+                  <span className={styles.soundName}>{sound.name}</span>
+                  {error && <span className={styles.errorIndicator}>⚠️</span>}
                   
                   {!error && (
-                    <div className={styles.volumeControlInline}>
+                    <div className={styles.soundControls}>
                       <button
                         onClick={() => toggleSoundMute(sound.id)}
                         className={styles.soundMuteButton}
                         title={state.isMuted ? 'Unmute' : 'Mute'}
                       >
-                        {state.isMuted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+                        {state.isMuted ? <VolumeX size={14} /> : <Volume2 size={14} />}
                       </button>
                       
                       <input
@@ -305,11 +299,11 @@ export default function SoundPlayer() {
                         max="100"
                         value={state.isMuted ? 0 : state.volume}
                         onChange={(e) => updateSoundVolume(sound.id, parseInt(e.target.value))}
-                        className={styles.volumeSliderInline}
+                        className={styles.volumeSlider}
                         title={`Volume: ${state.isMuted ? 0 : state.volume}%`}
                       />
                       
-                      <span className={styles.volumeValueInline}>
+                      <span className={styles.volumeValue}>
                         {state.isMuted ? 0 : state.volume}%
                       </span>
                     </div>

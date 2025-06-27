@@ -104,7 +104,6 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
   const [showCalendar, setShowCalendar] = useState(false);
   const [backgroundSaveLoading, setBackgroundSaveLoading] = useState(false);
   const [isMusicSidebarOpen, setIsMusicSidebarOpen] = useState(false);
-  const [backgroundsToShow, setBackgroundsToShow] = useState(8);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [youtubeUrl, setYoutubeUrl] = useState('');
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
@@ -758,17 +757,17 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
         <BackgroundSelector
           showBackgrounds={showBackgrounds}
           currentBackground={currentBackground}
-          backgroundsToShow={backgroundsToShow}
+         
           selectedCategory={selectedCategory}
           youtubeUrl={youtubeUrl}
           customBackground={customBackground}
           onClose={() => {
             setShowBackgrounds(false);
-            setBackgroundsToShow(8);
+            
           }}
           onBackgroundChange={handleBackgroundChange}
           onCategoryChange={setSelectedCategory}
-          onLoadMore={() => setBackgroundsToShow(prev => Math.min(prev + 8, backgrounds.length))}
+         
           onYoutubeSubmit={() => {
             // YouTube submission logic would go here
           }}
