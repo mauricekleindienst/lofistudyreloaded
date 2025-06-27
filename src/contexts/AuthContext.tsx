@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { createClient } from '../utils/supabase/client';
 import { useUserProfile, ExtendedUser } from '../hooks/useUserProfile';
+import { DatabaseService } from '../lib/database';
 
 interface AuthContextType {
   user: ExtendedUser | null;
@@ -30,67 +31,60 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { getExtendedUser, createProfile, userProfile } = useUserProfile(authUser);
 
   // Auto-create user profile for new users (especially OAuth users)
+  // Note: This is now handled by database triggers for better reliability
   useEffect(() => {
-    const createUserProfileIfNeeded = async () => {
+    const ensureUserProfileExists = async () => {
       if (authUser && !userProfile && isConfigured) {
-        // Add a small delay to ensure the user exists in the database
-        // This helps with OAuth flows where there might be a race condition
+        console.log('Checking for user profile for:', authUser.email);
+        
+        // Give the database trigger a moment to work
         await new Promise(resolve => setTimeout(resolve, 1000));
         
         try {
-          const profileData = {
-            id: authUser.id,
-            email: authUser.email || '',
-            full_name: authUser.user_metadata?.full_name || authUser.user_metadata?.name || '',
-            avatar_url: authUser.user_metadata?.avatar_url || authUser.user_metadata?.picture || '',
-            premium: false,
-            streak_count: 0,
-            total_focus_time: 0,
-            settings: {}
-          };
-
-          console.log('Creating user profile for OAuth user:', authUser.email);
-          const success = await createProfile(profileData);
-          
-          if (!success) {
-            console.warn('Failed to create user profile, will retry later');
-            // Retry after another delay
-            setTimeout(async () => {
-              try {
-                console.log('Retrying user profile creation for:', authUser.email);
-                await createProfile(profileData);
-              } catch (retryError) {
-                console.error('Retry failed to create user profile:', retryError);
+          const profile = await new DatabaseService().getUserProfile(authUser.id);
+          if (!profile) {
+            console.log('Profile not found, trying API route as fallback');
+            
+            // Try the API route first
+            try {
+              const response = await fetch('/api/create-profile', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+              });
+              
+              if (response.ok) {
+                console.log('Profile created via API route');
+                // Wait a moment and then the useUserProfile hook will load it
+                await new Promise(resolve => setTimeout(resolve, 500));
+                return;
               }
-            }, 3000);
+            } catch (apiError) {
+              console.warn('API route failed, trying manual creation:', apiError);
+            }
+            
+            // Fallback to manual creation
+            console.log('Creating profile manually as final fallback');
+            const profileData = {
+              id: authUser.id,
+              email: authUser.email || '',
+              full_name: authUser.user_metadata?.full_name || authUser.user_metadata?.name || '',
+              avatar_url: authUser.user_metadata?.avatar_url || authUser.user_metadata?.picture || '',
+              premium: false,
+              streak_count: 0,
+              total_focus_time: 0,
+              settings: {}
+            };
+            await createProfile(profileData);
           }
         } catch (error) {
-          console.error('Failed to create user profile:', error);
-          
-          // Retry once more after a longer delay
-          setTimeout(async () => {
-            try {
-              console.log('Final retry for user profile creation:', authUser.email);
-              const profileData = {
-                id: authUser.id,
-                email: authUser.email || '',
-                full_name: authUser.user_metadata?.full_name || authUser.user_metadata?.name || '',
-                avatar_url: authUser.user_metadata?.avatar_url || authUser.user_metadata?.picture || '',
-                premium: false,
-                streak_count: 0,
-                total_focus_time: 0,
-                settings: {}
-              };
-              await createProfile(profileData);
-            } catch (finalError) {
-              console.error('Final retry failed to create user profile:', finalError);
-            }
-          }, 5000);
+          console.error('Error ensuring user profile exists:', error);
         }
       }
     };
 
-    createUserProfileIfNeeded();
+    ensureUserProfileExists();
   }, [authUser, userProfile, createProfile, isConfigured]);
 
   useEffect(() => {
@@ -178,13 +172,26 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     
     try {
+      console.log(`Initiating OAuth with ${provider}...`);
+      
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`
-        }      });
+          redirectTo: `${window.location.origin}/auth/callback`,
+          queryParams: {
+            access_type: 'offline',
+            prompt: 'consent',
+          }
+        }
+      });
+      
+      if (error) {
+        console.error(`OAuth ${provider} error:`, error);
+      }
+      
       return { error };
-    } catch {
+    } catch (err) {
+      console.error(`Unexpected error during ${provider} OAuth:`, err);
       return { error: { message: 'Authentication service unavailable' } };
     }
   };
