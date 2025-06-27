@@ -44,9 +44,11 @@ export default function TopBar({ user, onToggleStats, onShare }: TopBarProps) {
           <button
             className={desktopStyles.topIcon}
             style={{ color: '#f59e0b' }}
-            title="Sign in to sync your data"
           >
             <AlertTriangle size={20} />
+            <div className={desktopStyles.topIconTooltip}>
+              Sign in to sync your data
+            </div>
           </button>
         )}
         
