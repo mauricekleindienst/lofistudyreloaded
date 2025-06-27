@@ -25,14 +25,31 @@
   --border-hover: rgba(255, 255, 255, 0.2);
   
   /* Glass Morphism */
-  --glass-bg: #1a202c;
+  --glass-bg: rgba(26, 32, 44, 0.8);
   --glass-border: #2d3748;
+  --glass-button: rgba(255, 255, 255, 0.05);
+  
+  /* Blur Effects */
+  --blur-light: 4px;
+  --blur-medium: 8px;
+  --blur-strong: 12px;
   
   /* Shadows */
+  --shadow-small: 0 2px 8px rgba(0, 0, 0, 0.2);
   --shadow-light: 0 4px 16px rgba(0, 0, 0, 0.1);
   --shadow-medium: 0 8px 32px rgba(0, 0, 0, 0.2);
   --shadow-heavy: 0 12px 48px rgba(0, 0, 0, 0.3);
   --shadow-accent: 0 4px 16px rgba(255, 123, 0, 0.3);
+  
+  /* Transitions */
+  --transition-fast: all 0.2s ease;
+  --transition-medium: all 0.3s ease;
+  --transition-slow: all 0.5s ease;
+  
+  /* Status Colors */
+  --success-color: #22c55e;
+  --warning-color: #f59e0b;
+  --danger-color: #ef4444;
   
   /* Color scheme for system preferences */
   color-scheme: dark;

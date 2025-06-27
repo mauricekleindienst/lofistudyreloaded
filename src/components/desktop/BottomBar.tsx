@@ -204,7 +204,7 @@ export default function BottomBar({
 
         <button
           onClick={onAccountAction}
-          className={`${styles.iconButton} ${user ? styles.authenticatedUser : ''}`}
+          className={`${styles.iconButton} ${styles.accountButton} ${user ? styles.authenticatedUser : ''}`}
           disabled={!isConfigured}
         >
           {user ? (
@@ -233,7 +233,11 @@ export default function BottomBar({
           ) : (
             <LogIn size={20} />
           )}
-          {user && <div className={styles.authenticatedIndicator}></div>}
+          {user ? (
+            <div className={styles.authenticatedIndicator}></div>
+          ) : (
+            isConfigured && <div className={styles.unauthenticatedIndicator}></div>
+          )}
           <div className={styles.tooltip}>
             <div className="font-semibold">
               {!isConfigured ? 'Auth Disabled' : user ? 'Account' : 'Sign In'}
@@ -249,24 +253,13 @@ export default function BottomBar({
           </div>
         </button>
 
-        {/* Data Sync Status */}
-        {(backgroundSaveLoading || (!user && isConfigured)) && (
-          <div className={`${styles.statusIndicator} ${backgroundSaveLoading ? styles.syncing : styles.localMode}`}>
-            {backgroundSaveLoading ? (
-              <div className={styles.syncSpinner}></div>
-            ) : (
-              <div className={styles.localModeIcon}>⚡</div>
-            )}
+        {/* Data Sync Status - Only show syncing indicator, not local mode */}
+        {backgroundSaveLoading && (
+          <div className={`${styles.statusIndicator} ${styles.syncing}`}>
+            <div className={styles.syncSpinner}></div>
             <div className={styles.tooltip}>
-              <div className="font-semibold">
-                {backgroundSaveLoading ? 'Syncing...' : 'Local Mode'}
-              </div>
-              <div className={desktopStyles.tooltipDescription}>
-                {backgroundSaveLoading 
-                  ? 'Saving your preferences' 
-                  : 'Sign in to sync across devices'
-                }
-              </div>
+              <div className="font-semibold">Syncing...</div>
+              <div className={desktopStyles.tooltipDescription}>Saving your preferences</div>
             </div>
           </div>
         )}
