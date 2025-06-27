@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useEffect, useState } from 'react';
+import Image from 'next/image';
 import { 
   Clock, 
   User, 
@@ -210,9 +211,11 @@ export default function BottomBar({
           {user ? (
             <div className={styles.userAvatar}>
               {getUserAvatarUrl(user) ? (
-                <img 
+                <Image 
                   src={getUserAvatarUrl(user)!} 
                   alt="User Avatar"
+                  width={32}
+                  height={32}
                   className={styles.avatarImage}
                   onError={(e) => {
                     // Fallback to icon if image fails to load

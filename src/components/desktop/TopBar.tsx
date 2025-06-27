@@ -9,6 +9,7 @@ import {
   Info
 } from 'lucide-react';
 import InfoModal from '../InfoModal';
+import Clock from './Clock';
 import desktopStyles from '../../../styles/Desktop.module.css';
 
 interface TopBarProps {
@@ -19,6 +20,8 @@ interface TopBarProps {
 
 export default function TopBar({ user, onToggleStats, onShare }: TopBarProps) {
   const [showInfoModal, setShowInfoModal] = useState(false);
+  const [showClock, setShowClock] = useState(false);
+  
   const handleFullscreen = () => {
     if (document.fullscreenElement) {
       document.exitFullscreen();
@@ -30,10 +33,18 @@ export default function TopBar({ user, onToggleStats, onShare }: TopBarProps) {
   return (
     <>
       <div className={desktopStyles.topRightIcons}>
+        {/* Clock Component */}
+        <Clock 
+          isExpanded={showClock}
+          onToggle={() => setShowClock(!showClock)}
+          onClose={() => setShowClock(false)}
+        />
+        
         {!user && (
           <button
             className={desktopStyles.topIcon}
             style={{ color: '#f59e0b' }}
+            title="Sign in to sync your data"
           >
             <AlertTriangle size={20} />
           </button>
