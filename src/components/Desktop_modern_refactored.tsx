@@ -207,7 +207,7 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
     } else if (currentBackground.id !== DEFAULT_BACKGROUND.id) {
       // Final fallback to default background
       console.error('Background video failed to load after retries. Using default background.');
-      setCurrentBackground(DEFAULT_BACKGROUND);
+      setCurrentBackground(DEFAULT_BACKGROUND as Background);
     }
   }, [currentBackground.src, currentBackground.id, retryCount]);
 
@@ -228,8 +228,8 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
     // Get intelligent preload suggestions
     const currentBg = backgrounds[currentIndex];
     const suggestions = intelligentPreloader.isNewUser() 
-      ? intelligentPreloader.getPopularBackgrounds(backgrounds)
-      : intelligentPreloader.getPreloadSuggestions(backgrounds, currentBg);
+      ? intelligentPreloader.getPopularBackgrounds(backgrounds as Background[])
+      : intelligentPreloader.getPreloadSuggestions(backgrounds as Background[], currentBg as Background);
     
     console.log(`Preloading ${suggestions.length} intelligently selected videos`);
     
@@ -300,7 +300,7 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
           if (savedBackgroundId) {
             const savedBackground = backgrounds.find(bg => bg.id.toString() === savedBackgroundId);
             if (savedBackground) {
-              setCurrentBackground(savedBackground);
+              setCurrentBackground(savedBackground as Background);
             }
           }
         } catch (error) {
@@ -528,7 +528,7 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
             <div className={desktopStyles.fallbackContent}>
               <p>Background video unavailable</p>
               <button 
-                onClick={() => setCurrentBackground(DEFAULT_BACKGROUND)}
+                onClick={() => setCurrentBackground(DEFAULT_BACKGROUND as Background)}
                 className={desktopStyles.fallbackButton}
               >
                 Use Default Background
