@@ -98,7 +98,7 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
   // State management
   const [openWindows, setOpenWindows] = useState<ModernWindow[]>([]);
   const [highestZIndex, setHighestZIndex] = useState(100);
-  const [currentBackground, setCurrentBackground] = useState<Background>(DEFAULT_BACKGROUND);
+  const [currentBackground, setCurrentBackground] = useState<Background>(DEFAULT_BACKGROUND as Background);
   const [showBackgrounds, setShowBackgrounds] = useState(false);
   const [currentTime, setCurrentTime] = useState('');
   const [currentDate, setCurrentDate] = useState('');
