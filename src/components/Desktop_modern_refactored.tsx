@@ -13,6 +13,7 @@ import desktopStyles from '../../styles/Desktop.module.css';
 import { useAppState } from '../contexts/AppStateContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useDataPersistence } from '../hooks/useDataPersistence';
+import { useVideoManager } from '../hooks/useVideoManager';
 
 // Import individual app components
 import PomodoroTimer from './apps/PomodoroTimer';
@@ -91,6 +92,7 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
     saveSelectedBackground, 
     loadSelectedBackground 
   } = useDataPersistence();
+  const videoManager = useVideoManager();
 
   // State management
   const [openWindows, setOpenWindows] = useState<ModernWindow[]>([]);
@@ -110,176 +112,40 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
   const [customBackground, setCustomBackground] = useState<Background | null>(null);
   const [showStats, setShowStats] = useState(false);
 
-  // Enhanced video buffering state
+  // Enhanced video state management
   const [videoLoadError, setVideoLoadError] = useState(false);
+  const [videoLoading, setVideoLoading] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
-  const [preloadedVideos, setPreloadedVideos] = useState<Map<string, HTMLVideoElement>>(new Map());
-  const [currentlyBuffering, setCurrentlyBuffering] = useState<string[]>([]);
-  const [bufferHealths, setBufferHealths] = useState<Map<string, number>>(new Map());
+  const [videoReady, setVideoReady] = useState(false);
   
-  // Refs for event handling
+  // Refs for event handling and performance optimization
   const videoRef = useRef<HTMLVideoElement>(null);
-  const bufferCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const preloadManagerRef = useRef<{
-    preloadVideo: (background: Background) => Promise<HTMLVideoElement>;
-    getBufferedVideo: (backgroundId: string) => HTMLVideoElement | null;
-    clearOldBuffers: (keepCount?: number) => void;
-    getBufferHealth: (backgroundId: string) => number;
-  } | null>(null);
+  const loadingTimeouts = useRef<Map<string, NodeJS.Timeout>>(new Map());
+  const backgroundChangeTimeout = useRef<NodeJS.Timeout | null>(null);
 
   // Initialize client-side rendering flag
   useEffect(() => {
     setIsClient(true);
   }, []);
 
-  // Advanced Video Buffer Management System
+  // Cleanup effect for component unmount
   useEffect(() => {
-    const createBufferManager = () => {
-      const MAX_BUFFERED_VIDEOS = 5;
-      const MIN_BUFFER_HEALTH = 0.3; // 30% buffered considered healthy
-
-      const preloadVideo = async (background: Background): Promise<HTMLVideoElement> => {
-        return new Promise((resolve, reject) => {
-          if (preloadedVideos.has(background.id.toString())) {
-            const existingVideo = preloadedVideos.get(background.id.toString())!;
-            resolve(existingVideo);
-            return;
-          }
-
-          const video = document.createElement('video');
-          video.preload = 'auto';
-          video.muted = true;
-          video.loop = true;
-          video.playsInline = true;
-          video.crossOrigin = 'anonymous';
-          
-          let progressTimer: NodeJS.Timeout | null = null;
-          let timeoutTimer: NodeJS.Timeout | null = null;
-          
-          const updateProgress = () => {
-            if (video.buffered.length > 0) {
-              const bufferedEnd = video.buffered.end(video.buffered.length - 1);
-              const duration = video.duration || 0;
-              const progress = duration > 0 ? bufferedEnd / duration : 0;
-              
-              setBufferHealths(prev => new Map(prev.set(background.id.toString(), progress)));
-              
-              if (progress >= MIN_BUFFER_HEALTH) {
-                if (progressTimer) clearInterval(progressTimer);
-                resolve(video);
-              }
-            }
-          };
-
-          const onLoadedMetadata = () => {
-            progressTimer = setInterval(updateProgress, 500);
-            timeoutTimer = setTimeout(() => {
-              if (progressTimer) clearInterval(progressTimer);
-              // Accept video even if not fully buffered after timeout
-              resolve(video);
-            }, 10000); // 10 second timeout
-          };
-
-          const onError = () => {
-            if (progressTimer) clearInterval(progressTimer);
-            if (timeoutTimer) clearTimeout(timeoutTimer);
-            reject(new Error(`Failed to preload video: ${background.src}`));
-          };
-
-          const onCanPlay = () => {
-            updateProgress();
-          };
-
-          video.addEventListener('loadedmetadata', onLoadedMetadata);
-          video.addEventListener('error', onError);
-          video.addEventListener('canplay', onCanPlay);
-          video.addEventListener('progress', updateProgress);
-          
-          video.src = background.src;
-          video.load();
-
-          // Store the video element immediately to prevent duplicates
-          setPreloadedVideos(prev => {
-            if (prev.has(background.id.toString())) {
-              return prev; // Already exists, don't create new Map
-            }
-            return new Map(prev.set(background.id.toString(), video));
-          });
-        });
-      };
-
-      const getBufferedVideo = (backgroundId: string): HTMLVideoElement | null => {
-        return preloadedVideos.get(backgroundId) || null;
-      };
-
-      const clearOldBuffers = (keepCount = MAX_BUFFERED_VIDEOS) => {
-        const entries = Array.from(preloadedVideos.entries());
-        if (entries.length > keepCount) {
-          const toRemove = entries.slice(0, entries.length - keepCount);
-          toRemove.forEach(([id, video]) => {
-            video.pause();
-            video.src = '';
-            video.load();
-            setPreloadedVideos(prev => {
-              const newMap = new Map(prev);
-              newMap.delete(id);
-              return newMap;
-            });
-          });
-        }
-      };
-
-      const getBufferHealth = (backgroundId: string): number => {
-        return bufferHealths.get(backgroundId) || 0;
-      };
-
-      return { preloadVideo, getBufferedVideo, clearOldBuffers, getBufferHealth };
-    };
-
-    preloadManagerRef.current = createBufferManager();
-
-    // Cleanup on unmount
     return () => {
-      if (bufferCheckIntervalRef.current) {
-        clearInterval(bufferCheckIntervalRef.current);
-      }
-      // Clean up all preloaded videos
-      if (preloadManagerRef.current) {
-        preloadManagerRef.current.clearOldBuffers(0); // Clear all
-      }
-    };
-  }, [bufferHealths, preloadedVideos]); // Add missing dependencies
-
-  // Intelligent preloading effect
-  useEffect(() => {
-    if (!preloadManagerRef.current || !isClient) return;
-
-    const preloadPopularBackgrounds = async () => {
-      // Preload the most popular/commonly used backgrounds
-      const priorityBackgrounds = backgrounds
-        .filter(bg => bg.src.endsWith('.mp4')) // All backgrounds are videos
-        .slice(0, 3); // Preload first 3 video backgrounds
-
-      for (const background of priorityBackgrounds) {
-        const backgroundId = background.id.toString();
-        
-        if (!currentlyBuffering.includes(backgroundId) && !preloadedVideos.has(backgroundId)) {
-          setCurrentlyBuffering(prev => [...prev, backgroundId]);
-          try {
-            await preloadManagerRef.current!.preloadVideo(background);
-          } catch (error) {
-            console.warn(`Failed to preload background ${background.id}:`, error);
-          } finally {
-            setCurrentlyBuffering(prev => prev.filter(id => id !== backgroundId));
-          }
-        }
+      // Clear all loading timeouts
+      loadingTimeouts.current.forEach((timeout) => {
+        clearTimeout(timeout);
+      });
+      loadingTimeouts.current.clear();
+      
+      // Clear preloaded videos to prevent memory leaks
+      videoManager.clearPreloadedVideos();
+      
+      // Clear background change timeout
+      if (backgroundChangeTimeout.current) {
+        clearTimeout(backgroundChangeTimeout.current);
       }
     };
-
-    // Start preloading after a short delay to not interfere with initial load
-    const timer = setTimeout(preloadPopularBackgrounds, 3000);
-    return () => clearTimeout(timer);
-  }, [isClient, currentlyBuffering, preloadedVideos]); // Add missing dependencies
+  }, [videoManager]);
 
   // Update time and date every second
   useEffect(() => {
@@ -296,27 +162,19 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
     return () => clearInterval(timer);
   }, [isClient]);
 
-  // Enhanced Video loading and error handling with buffering support
+  // Clean video loading handlers
   const handleVideoLoad = useCallback(() => {
     if (videoRef.current) {
       setVideoLoadError(false);
+      setVideoLoading(false);
+      setVideoReady(true);
       setRetryCount(0);
       
-      // Start buffer health monitoring
-      if (bufferCheckIntervalRef.current) {
-        clearInterval(bufferCheckIntervalRef.current);
+      // Clear any existing timeout
+      if (loadingTimeouts.current.has(currentBackground.id.toString())) {
+        clearTimeout(loadingTimeouts.current.get(currentBackground.id.toString()));
+        loadingTimeouts.current.delete(currentBackground.id.toString());
       }
-      
-      bufferCheckIntervalRef.current = setInterval(() => {
-        if (videoRef.current && videoRef.current.buffered.length > 0) {
-          const bufferedEnd = videoRef.current.buffered.end(videoRef.current.buffered.length - 1);
-          const duration = videoRef.current.duration || 0;
-          const progress = duration > 0 ? bufferedEnd / duration : 0;
-          
-          // Update buffer health for current background
-          setBufferHealths(prev => new Map(prev.set(currentBackground.id.toString(), progress)));
-        }
-      }, 1000);
       
       videoRef.current.play().catch(console.error);
     }
@@ -325,115 +183,112 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
   const handleVideoError = useCallback(() => {
     console.error('Video failed to load:', currentBackground.src);
     setVideoLoadError(true);
+    setVideoLoading(false);
+    setVideoReady(false);
     
-    // Stop buffer monitoring
-    if (bufferCheckIntervalRef.current) {
-      clearInterval(bufferCheckIntervalRef.current);
+    // Clear any existing timeout
+    if (loadingTimeouts.current.has(currentBackground.id.toString())) {
+      clearTimeout(loadingTimeouts.current.get(currentBackground.id.toString()));
+      loadingTimeouts.current.delete(currentBackground.id.toString());
     }
     
-    // Try using preloaded version first
-    if (preloadManagerRef.current) {
-      const bufferedVideo = preloadManagerRef.current.getBufferedVideo(currentBackground.id.toString());
-      if (bufferedVideo && videoRef.current) {
-        console.log('Using preloaded video as fallback');
-        videoRef.current.src = bufferedVideo.src;
-        videoRef.current.load();
-        return;
-      }
-    }
-    
-    // Retry mechanism - try up to 3 times
-    if (retryCount < 3 && currentBackground.id !== DEFAULT_BACKGROUND.id) {
-      setTimeout(() => {
+    // Retry mechanism with exponential backoff
+    if (retryCount < 2 && currentBackground.id !== DEFAULT_BACKGROUND.id) {
+      const retryDelay = Math.min(2000 * Math.pow(2, retryCount), 8000); // Max 8 seconds
+      const timeoutId = setTimeout(() => {
         setRetryCount(prev => prev + 1);
         if (videoRef.current) {
-          videoRef.current.load(); // Force reload
+          videoRef.current.load();
         }
-      }, 2000 * (retryCount + 1)); // Exponential backoff
-    } else {
+      }, retryDelay);
+      
+      loadingTimeouts.current.set(currentBackground.id.toString(), timeoutId);
+    } else if (currentBackground.id !== DEFAULT_BACKGROUND.id) {
       // Final fallback to default background
-      if (currentBackground.id !== DEFAULT_BACKGROUND.id) {
-        console.error('Background video failed to load. Using default background.');
-        setCurrentBackground(DEFAULT_BACKGROUND);
-      }
+      console.error('Background video failed to load after retries. Using default background.');
+      setCurrentBackground(DEFAULT_BACKGROUND);
     }
-  }, [currentBackground.src, currentBackground.id, retryCount]); // Remove showNotification dependency
+  }, [currentBackground.src, currentBackground.id, retryCount]);
 
-  // Enhanced video loading with preload hint and buffer management
   const handleVideoLoadStart = useCallback(() => {
     setVideoLoadError(false);
-    
-    // Check if we have this video preloaded
-    if (preloadManagerRef.current) {
-      const bufferedVideo = preloadManagerRef.current.getBufferedVideo(currentBackground.id.toString());
-      const bufferHealth = preloadManagerRef.current.getBufferHealth(currentBackground.id.toString());
-      
-      if (bufferedVideo && bufferHealth > 0.3) {
-        console.log(`Using preloaded video for background ${currentBackground.id} (${Math.round(bufferHealth * 100)}% buffered)`);
-      }
-    }
-  }, [currentBackground.id]);
+    setVideoLoading(true);
+    setVideoReady(false);
+  }, []);
 
-  // Enhanced background video effect with buffer management
-  useEffect(() => {
-    setRetryCount(0); // Reset retry count when background changes
-    setVideoLoadError(false);
+  // Preload management with performance optimization
+  const preloadNearbyVideos = useCallback(async (currentId: number) => {
+    const currentIndex = backgrounds.findIndex(bg => bg.id === currentId);
+    if (currentIndex === -1) return;
     
-    // Clear any existing buffer monitoring
-    if (bufferCheckIntervalRef.current) {
-      clearInterval(bufferCheckIntervalRef.current);
-    }
+    // Preload next and previous videos (max 3 to avoid memory issues)
+    const nearbyIndices = [
+      currentIndex + 1,
+      currentIndex - 1,
+      currentIndex + 2
+    ].filter(i => i >= 0 && i < backgrounds.length);
     
-    // Check if we have this video preloaded and ready
-    if (preloadManagerRef.current) {
-      const bufferedVideo = preloadManagerRef.current.getBufferedVideo(currentBackground.id.toString());
-      const bufferHealth = preloadManagerRef.current.getBufferHealth(currentBackground.id.toString());
+    // Clean up old videos first
+    videoManager.cleanupOldVideos(5);
+    
+    // Preload nearby videos concurrently but limit concurrent loads
+    const preloadPromises = nearbyIndices.slice(0, 2).map(async (index) => {
+      const bg = backgrounds[index];
+      const videoId = bg.id.toString();
       
-      if (bufferedVideo && bufferHealth > 0.3) {
-        console.log(`Instantly switching to preloaded background ${currentBackground.id}`);
-        
-        if (videoRef.current) {
-          videoRef.current.src = bufferedVideo.src;
-          videoRef.current.currentTime = bufferedVideo.currentTime;
-          videoRef.current.play().catch(() => {
-            // Video autoplay was prevented
-          });
+      // Only preload if not already preloaded
+      if (!videoManager.getPreloadedVideo(videoId)) {
+        try {
+          await videoManager.preloadVideo(bg);
+          console.log(`Preloaded nearby background ${bg.id}`);
+        } catch (error) {
+          console.warn(`Failed to preload background ${bg.id}:`, error);
         }
-        return;
       }
+    });
+    
+    // Wait for some preloading to complete, but don't block UI
+    Promise.allSettled(preloadPromises);
+  }, [videoManager]);
+
+  // Background video effect with optimized loading
+  useEffect(() => {
+    setRetryCount(0);
+    setVideoLoadError(false);
+    setVideoLoading(true);
+    setVideoReady(false);
+    
+    // Clear any existing timeout for this background
+    if (loadingTimeouts.current.has(currentBackground.id.toString())) {
+      clearTimeout(loadingTimeouts.current.get(currentBackground.id.toString()));
+      loadingTimeouts.current.delete(currentBackground.id.toString());
     }
     
-    // Fallback to normal loading
-    if (videoRef.current) {
-      videoRef.current.play().catch(() => {
-        // Video autoplay was prevented
-      });
+    // Check if video is preloaded using video manager
+    const preloadedVideo = videoManager.getPreloadedVideo(currentBackground.id.toString());
+    if (preloadedVideo && videoRef.current) {
+      // Use preloaded video for instant switching
+      console.log(`Using preloaded video for background ${currentBackground.id}`);
+      videoRef.current.src = preloadedVideo.src;
+      videoRef.current.currentTime = 0;
+      setVideoLoading(false);
+      setVideoReady(true);
+      videoRef.current.play().catch(console.error);
+    } else if (videoRef.current) {
+      // Load video normally
+      videoRef.current.currentTime = 0;
+      videoRef.current.play().catch(console.error);
     }
-  }, [currentBackground]);
-
-  // Separate effect for preloading videos to avoid infinite loops
-  useEffect(() => {
-    if (!preloadManagerRef.current || currentlyBuffering.includes(currentBackground.id.toString())) {
-      return;
-    }
-
-    const preloadCurrentBackground = async () => {
-      try {
-        setCurrentlyBuffering(prev => [...prev, currentBackground.id.toString()]);
-        await preloadManagerRef.current!.preloadVideo(currentBackground);
-        console.log(`Successfully preloaded background ${currentBackground.id}`);
-      } catch (error) {
-        console.warn(`Failed to preload background ${currentBackground.id}:`, error);
-      } finally {
-        setCurrentlyBuffering(prev => prev.filter(id => id !== currentBackground.id.toString()));
-      }
+    
+    // Preload nearby videos after a short delay to avoid blocking
+    const preloadTimeout = setTimeout(() => {
+      preloadNearbyVideos(currentBackground.id);
+    }, 1000);
+    
+    return () => {
+      clearTimeout(preloadTimeout);
     };
-
-    // Only preload if not already preloaded or buffering
-    if (!preloadedVideos.has(currentBackground.id.toString())) {
-      preloadCurrentBackground();
-    }
-  }, [currentBackground, preloadedVideos, currentlyBuffering]);
+  }, [currentBackground, videoManager, preloadNearbyVideos]);
 
   // Load saved background when user authenticates
   useEffect(() => {
@@ -457,17 +312,13 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
 
   // Handle background change with database persistence and intelligent preloading
   const handleBackgroundChange = useCallback(async (background: Background) => {
-    // Check if video is already buffered for instant switching
-    if (preloadManagerRef.current) {
-      const bufferedVideo = preloadManagerRef.current.getBufferedVideo(background.id.toString());
-      const bufferHealth = preloadManagerRef.current.getBufferHealth(background.id.toString());
-      const isInstantSwitch = bufferedVideo !== null && bufferHealth > 0.3;
-      console.log(`Background switch - instant: ${isInstantSwitch}`);
+    // Check if video is already preloaded for instant switching
+    const preloadedVideo = videoManager.getPreloadedVideo(background.id.toString());
+    if (preloadedVideo) {
+      console.log(`Background switch - using preloaded: ${background.id}`);
     }
     
     setCurrentBackground(background);
-    
-   
 
     // Save to localStorage for non-authenticated users
     try {
@@ -491,36 +342,14 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
       }
     }
     
-    // Clean up old buffers and preload nearby backgrounds
-    if (preloadManagerRef.current) {
-      preloadManagerRef.current.clearOldBuffers(5);
-      
-      // Preload next and previous backgrounds for smooth navigation
-      const currentIndex = backgrounds.findIndex(bg => bg.id === background.id);
-      const nextBackgrounds = [
-        backgrounds[currentIndex + 1],
-        backgrounds[currentIndex - 1],
-        backgrounds[currentIndex + 2]
-      ].filter(Boolean);
-      
-      nextBackgrounds.forEach(nextBg => {
-        if (!currentlyBuffering.includes(nextBg.id.toString()) && 
-            !preloadedVideos.has(nextBg.id.toString())) {
-          setCurrentlyBuffering(prev => [...prev, nextBg.id.toString()]);
-          preloadManagerRef.current!.preloadVideo(nextBg)
-            .then(() => {
-              console.log(`Preloaded nearby background ${nextBg.id}`);
-            })
-            .catch(error => {
-              console.warn(`Failed to preload nearby background ${nextBg.id}:`, error);
-            })
-            .finally(() => {
-              setCurrentlyBuffering(prev => prev.filter(id => id !== nextBg.id.toString()));
-            });
-        }
-      });
-    }
-  }, [isAuthenticated, saveSelectedBackground, currentlyBuffering, preloadedVideos]);
+    // Clean up old preloaded videos to manage memory
+    videoManager.cleanupOldVideos(8);
+    
+    // Trigger preloading of nearby backgrounds after a short delay
+    setTimeout(() => {
+      preloadNearbyVideos(background.id);
+    }, 500);
+  }, [isAuthenticated, saveSelectedBackground, videoManager, preloadNearbyVideos]);
 
   // Get responsive size for each app type based on viewport
   const getResponsiveSize = useCallback((appId: string) => {
@@ -653,7 +482,7 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
 
   return (
     <div className={desktopStyles.desktop}>
-      {/* Background Video with Enhanced Buffering */}
+      {/* Background Video with Enhanced Performance */}
       <div className={desktopStyles.backgroundContainer}>
         {currentBackground?.src && (
           <video
@@ -664,18 +493,30 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
             muted
             loop
             playsInline
-            preload="auto"
+            preload="metadata"
             onLoadStart={handleVideoLoadStart}
             onCanPlay={handleVideoLoad}
             onError={handleVideoError}
             style={{
               opacity: videoLoadError ? 0 : 1,
-              transition: 'opacity 0.3s ease'
+              transition: 'opacity 0.5s ease'
             }}
+            // Performance optimizations
+            crossOrigin="anonymous"
+            disablePictureInPicture
+            controlsList="nodownload noplaybackrate"
+            // Reduce memory usage
+            poster=""
           />
         )}
         
-       
+        {/* Loading indicator */}
+        {videoLoading && !videoLoadError && (
+          <div className={desktopStyles.videoLoadingIndicator}>
+            <div className={desktopStyles.loadingSpinner}></div>
+            <p>Loading background...</p>
+          </div>
+        )}
 
         {/* Fallback for video errors */}
         {videoLoadError && (
