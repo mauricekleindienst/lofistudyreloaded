@@ -117,7 +117,6 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
   const [videoLoadError, setVideoLoadError] = useState(false);
   const [videoLoading, setVideoLoading] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
-  const [videoReady, setVideoReady] = useState(false);
   
   // Refs for event handling and performance optimization
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -168,7 +167,6 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
     if (videoRef.current) {
       setVideoLoadError(false);
       setVideoLoading(false);
-      setVideoReady(true);
       setRetryCount(0);
       
       // Clear any existing timeout
@@ -185,7 +183,6 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
     console.error('Video failed to load:', currentBackground.src);
     setVideoLoadError(true);
     setVideoLoading(false);
-    setVideoReady(false);
     
     // Clear any existing timeout
     if (loadingTimeouts.current.has(currentBackground.id.toString())) {
@@ -214,7 +211,6 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
   const handleVideoLoadStart = useCallback(() => {
     setVideoLoadError(false);
     setVideoLoading(true);
-    setVideoReady(false);
   }, []);
 
   // Intelligent preload management with user behavior analysis
@@ -257,7 +253,6 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
     setRetryCount(0);
     setVideoLoadError(false);
     setVideoLoading(true);
-    setVideoReady(false);
     
     // Clear any existing timeout for this background
     if (loadingTimeouts.current.has(currentBackground.id.toString())) {
@@ -273,7 +268,6 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
       videoRef.current.src = preloadedVideo.src;
       videoRef.current.currentTime = 0;
       setVideoLoading(false);
-      setVideoReady(true);
       videoRef.current.play().catch(console.error);
     } else if (videoRef.current) {
       // Load video normally
