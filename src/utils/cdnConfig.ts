@@ -31,7 +31,7 @@ export const buildOptimizedVideoUrl = (filename: string, options: {
   quality?: 'low' | 'medium' | 'high' | 'auto';
   region?: string;
 } = {}) => {
-  const { preload = false, quality = 'auto', region = 'fra1' } = options;
+  const { preload = false,} = options;
   
   // Use CDN endpoint with optimization parameters
   let url = `${CDN_CONFIG.primary}/backgrounds/${filename}`;
