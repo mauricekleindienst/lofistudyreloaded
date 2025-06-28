@@ -14,6 +14,7 @@ import { useAppState } from '../contexts/AppStateContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useDataPersistence } from '../hooks/useDataPersistence';
 import { useVideoManager } from '../hooks/useVideoManager';
+import { intelligentPreloader } from '../utils/intelligentPreloader';
 
 // Import individual app components
 import PomodoroTimer from './apps/PomodoroTimer';
@@ -216,31 +217,31 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
     setVideoReady(false);
   }, []);
 
-  // Preload management with performance optimization
+  // Intelligent preload management with user behavior analysis
   const preloadNearbyVideos = useCallback(async (currentId: number) => {
     const currentIndex = backgrounds.findIndex(bg => bg.id === currentId);
     if (currentIndex === -1) return;
     
-    // Preload next and previous videos (max 3 to avoid memory issues)
-    const nearbyIndices = [
-      currentIndex + 1,
-      currentIndex - 1,
-      currentIndex + 2
-    ].filter(i => i >= 0 && i < backgrounds.length);
-    
     // Clean up old videos first
     videoManager.cleanupOldVideos(5);
     
-    // Preload nearby videos concurrently but limit concurrent loads
-    const preloadPromises = nearbyIndices.slice(0, 2).map(async (index) => {
-      const bg = backgrounds[index];
+    // Get intelligent preload suggestions
+    const currentBg = backgrounds[currentIndex];
+    const suggestions = intelligentPreloader.isNewUser() 
+      ? intelligentPreloader.getPopularBackgrounds(backgrounds)
+      : intelligentPreloader.getPreloadSuggestions(backgrounds, currentBg);
+    
+    console.log(`Preloading ${suggestions.length} intelligently selected videos`);
+    
+    // Preload suggested videos concurrently but limit concurrent loads
+    const preloadPromises = suggestions.slice(0, 3).map(async (bg) => {
       const videoId = bg.id.toString();
       
       // Only preload if not already preloaded
       if (!videoManager.getPreloadedVideo(videoId)) {
         try {
           await videoManager.preloadVideo(bg);
-          console.log(`Preloaded nearby background ${bg.id}`);
+          console.log(`Intelligently preloaded background ${bg.id} (${bg.alt})`);
         } catch (error) {
           console.warn(`Failed to preload background ${bg.id}:`, error);
         }
@@ -312,6 +313,9 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
 
   // Handle background change with database persistence and intelligent preloading
   const handleBackgroundChange = useCallback(async (background: Background) => {
+    // Track user behavior for intelligent preloading
+    intelligentPreloader.trackBackgroundView(background);
+    
     // Check if video is already preloaded for instant switching
     const preloadedVideo = videoManager.getPreloadedVideo(background.id.toString());
     if (preloadedVideo) {
@@ -345,7 +349,7 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
     // Clean up old preloaded videos to manage memory
     videoManager.cleanupOldVideos(8);
     
-    // Trigger preloading of nearby backgrounds after a short delay
+    // Trigger intelligent preloading of nearby backgrounds after a short delay
     setTimeout(() => {
       preloadNearbyVideos(background.id);
     }, 500);

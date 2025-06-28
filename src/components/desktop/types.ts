@@ -9,6 +9,10 @@ export interface Background {
   priority: boolean;
   category: string;
   isYoutube?: boolean;
+  // CDN optimization properties
+  filename?: string;
+  optimized?: boolean;
+  preloadPriority?: 'high' | 'medium' | 'low';
 }
 
 export interface ModernApp {
