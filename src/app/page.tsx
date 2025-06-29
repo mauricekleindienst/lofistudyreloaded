@@ -3,6 +3,7 @@
 import Desktop from '@/components/Desktop_modern_refactored';
 import { AppStateProvider } from '@/contexts/AppStateContext';
 import AuthModal from '@/components/AuthModal';
+import DatabaseDebugPanel from '@/components/DatabaseDebugPanel';
 import { useState } from 'react';
 import Script from 'next/script';
 
@@ -76,6 +77,7 @@ export default function Home() {
       <AppStateProvider>
         <Desktop onShowAuth={() => setShowAuthModal(true)} />
         <AuthModal isVisible={showAuthModal} onClose={() => setShowAuthModal(false)} />
+        <DatabaseDebugPanel />
       </AppStateProvider>
     </>
   );

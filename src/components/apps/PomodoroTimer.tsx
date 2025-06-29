@@ -9,6 +9,7 @@ import React, {
 } from "react";
 import { useAuth } from '../../contexts/AuthContext';
 import { useDataPersistence } from '../../hooks/useDataPersistence';
+import { useRealtimePomodoroSessions } from '../../hooks/useRealtime';
 import { useAppState } from '../../contexts/AppStateContext';
 import { 
   Play, 
@@ -95,6 +96,8 @@ function reducer(state: PomodoroState, action: PomodoroAction): PomodoroState {
       return { ...state, pomodoroCount: state.pomodoroCount + 1 };
     case "SET_POMODORO_COUNT":
       return { ...state, pomodoroCount: action.payload };
+    case "SET_POMODORO_COUNT":
+      return { ...state, pomodoroCount: action.payload };
     case "TOGGLE_SETTINGS":
       return { ...state, showSettings: !state.showSettings };
     case "SET_CATEGORY":
@@ -113,7 +116,8 @@ function reducer(state: PomodoroState, action: PomodoroAction): PomodoroState {
   }
 }
 
-export default function PomodoroTimer() {  const [state, dispatch] = useReducer(reducer, initialState);
+export default function PomodoroTimer() {
+  const [state, dispatch] = useReducer(reducer, initialState);
   const { user } = useAuth();
   const { 
     isAuthenticated, 
@@ -121,6 +125,10 @@ export default function PomodoroTimer() {  const [state, dispatch] = useReducer(
     loadPomodoroSessions,
     updatePomodoroStats 
   } = useDataPersistence();
+  
+  // Use realtime sessions for live updates
+  const { sessions: realtimeSessions } = useRealtimePomodoroSessions();
+  
   const { updatePomodoroState } = useAppState();
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const completionHandledRef = useRef<boolean>(false);
@@ -189,33 +197,47 @@ export default function PomodoroTimer() {  const [state, dispatch] = useReducer(
   }, [requestNotificationPermission]);
 
   // Load user's pomodoro history to get current count
-  useEffect(() => {
-    const loadPomodoroCount = async () => {
-      if (isAuthenticated && user?.email) {
-        try {
-          const sessions = await loadPomodoroSessions();
-          // Count completed pomodoro sessions for today
-          const today = new Date().toISOString().split('T')[0];
-          const todaySessions = sessions.filter(session => 
-            session.completed && 
-            session.type === 'work' &&
-            session.completed_at?.startsWith(today)
-          );
+  const loadPomodoroCount = useCallback(async () => {
+    if (isAuthenticated && user?.email) {
+      try {
+        // Use realtime sessions when available, fallback to loading
+        const sessions = isAuthenticated && realtimeSessions.length > 0 
+          ? realtimeSessions 
+          : await loadPomodoroSessions();
           
-          // Update local count to match database
-          if (todaySessions.length > 0) {
-            // Set the count to match database without dispatching INCREMENT for each
-            // This is a direct state update to sync with database
-            dispatch({ type: "SET_POMODORO_COUNT", payload: todaySessions.length });
-          }
-        } catch (error) {
-          console.error("Failed to load pomodoro count:", error);
+        // Count completed pomodoro sessions for today
+        const today = new Date().toISOString().split('T')[0];
+        const todaySessions = sessions.filter(session => 
+          session.completed && 
+          session.type === 'work' &&
+          session.completed_at?.startsWith(today)
+        );
+        
+        // Update local count to match database - only if different
+        const newCount = todaySessions.length;
+        if (newCount !== state.pomodoroCount) {
+          dispatch({ type: "SET_POMODORO_COUNT", payload: newCount });
         }
+      } catch (error) {
+        console.error("Failed to load pomodoro count:", error);
       }
-    };
+    }
+  }, [isAuthenticated, user?.email, realtimeSessions, state.pomodoroCount, loadPomodoroSessions]);
 
+  // Load count when key dependencies change (not the function itself)
+  useEffect(() => {
     loadPomodoroCount();
-  }, [isAuthenticated, user?.email, loadPomodoroSessions]);
+  }, [loadPomodoroCount, isAuthenticated, user?.email, realtimeSessions]);
+
+  // Auto-refresh realtime sessions when new session is saved
+  const handleSessionSave = useCallback(async (sessionData: Record<string, unknown>) => {
+    const savedSession = await savePomodoroSession(sessionData);
+    if (savedSession && isAuthenticated) {
+      // The realtime hook will automatically refresh sessions
+      // No need to manually call refreshSessions()
+    }
+    return savedSession;
+  }, [savePomodoroSession, isAuthenticated]);
 
   // Timer effect - handle completion within the tick
   useEffect(() => {
@@ -271,7 +293,7 @@ export default function PomodoroTimer() {  const [state, dispatch] = useReducer(
                   count: newCount
                 });
 
-                const completedSession = await savePomodoroSession({
+                const completedSession = await handleSessionSave({
                   type: 'work',
                   duration: state.pomodoroDurations.pomodoro,
                   category: state.category,
@@ -323,7 +345,7 @@ export default function PomodoroTimer() {  const [state, dispatch] = useReducer(
     state.pomodoroDurations.pomodoro,
     state.category,
     isAuthenticated,
-    savePomodoroSession,
+    handleSessionSave,
     updatePomodoroStats,
     showNotification, 
     playSound, 

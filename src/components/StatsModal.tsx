@@ -22,6 +22,7 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useDataPersistence } from '../hooks/useDataPersistence';
+import { useRealtimePomodoroSessions, useRealtimePomodoroStats } from '../hooks/useRealtime';
 import styles from '../../styles/StatsModal.module.css';
 
 interface StatsData {
@@ -70,9 +71,14 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
   const { user } = useAuth();
   const { 
     loadPomodoroSessions, 
-    loadPomodoroStats,
-    loadLeaderboard 
+    loadLeaderboard,
+    isAuthenticated
   } = useDataPersistence();
+  
+  // Use realtime data when authenticated
+  const { sessions: realtimeSessions } = useRealtimePomodoroSessions();
+  const { stats: realtimeStats } = useRealtimePomodoroStats();
+  
   const [activeTab, setActiveTab] = useState<'overview' | 'analytics' | 'leaderboard'>('overview');
   const [statsData, setStatsData] = useState<StatsData | null>(null);
   const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
@@ -81,14 +87,22 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
     setLoading(true);
     
     try {
-      // Load user sessions and stats - now works for both authenticated and unauthenticated users
-      const [sessions, , leaderboardData] = await Promise.all([
-        loadPomodoroSessions(),
-        loadPomodoroStats(),
-        loadLeaderboard()
-      ]);
+      let sessions;
+      
+      if (isAuthenticated) {
+        // Use realtime data when authenticated
+        sessions = realtimeSessions;
+        console.log('📊 Stats Modal - Using realtime sessions:', sessions?.length || 0);
+      } else {
+        // Load from local storage when not authenticated
+        const localSessions = await loadPomodoroSessions();
+        sessions = localSessions;
+        console.log('📊 Stats Modal - Using local sessions:', sessions?.length || 0);
+      }
 
-      console.log('📊 Stats Modal - Loaded sessions:', sessions?.length || 0);
+      // Load leaderboard (always from database)
+      const leaderboardData = await loadLeaderboard();
+
       console.log('📊 Stats Modal - Processing stats for user:', user?.email || 'guest');
 
       if (!sessions || !Array.isArray(sessions)) {
@@ -201,7 +215,15 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
     } finally {
       setLoading(false);
     }
-  }, [loadPomodoroSessions, loadPomodoroStats, loadLeaderboard, user]);
+  }, [loadPomodoroSessions, loadLeaderboard, user, isAuthenticated, realtimeSessions]);
+
+  // Update stats automatically when realtime data changes
+  useEffect(() => {
+    if (isAuthenticated && realtimeSessions && hasLoadedOnce) {
+      console.log('📊 Stats Modal - Realtime sessions updated, recalculating stats');
+      loadStats();
+    }
+  }, [isAuthenticated, realtimeSessions, realtimeStats, hasLoadedOnce, loadStats]);
 
   useEffect(() => {
     if (isOpen && !hasLoadedOnce) {

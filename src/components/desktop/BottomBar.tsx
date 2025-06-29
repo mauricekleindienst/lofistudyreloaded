@@ -9,6 +9,7 @@ import {
   LogIn
 } from 'lucide-react';
 import { User as SupabaseUser } from '@supabase/supabase-js';
+import RealtimeStatusIndicator from '../RealtimeStatusIndicator';
 import styles from '../../../styles/SelectionBar.module.css';
 import desktopStyles from '../../../styles/Desktop.module.css';
 import { type AppStates } from '../../contexts/AppStateContext';
@@ -259,7 +260,7 @@ export default function BottomBar({
         {/* Data Sync Status - Only show syncing indicator, not local mode */}
         {backgroundSaveLoading && (
           <div className={`${styles.statusIndicator} ${styles.syncing}`}>
-            <div className={styles.syncSpinner}></div>
+          
             <div className={styles.tooltip}>
               <div className="font-semibold">Syncing...</div>
               <div className={desktopStyles.tooltipDescription}>Saving your preferences</div>
@@ -267,6 +268,9 @@ export default function BottomBar({
           </div>
         )}
       </div>
+      
+      {/* Realtime Status Indicator - positioned absolutely within selection bar */}
+      <RealtimeStatusIndicator />
     </div>
   );
 }

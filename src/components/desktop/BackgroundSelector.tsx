@@ -131,7 +131,7 @@ export default function BackgroundSelector({
         <div className={styles.header}>
           <div className={styles.titleSection}>
             <div className={styles.icon}>
-              <Image size={24} />
+              <Image size={24} aria-label="Background gallery icon" />
             </div>
             <div className={styles.titleText}>
               <h3 className={styles.title}>Background Gallery</h3>

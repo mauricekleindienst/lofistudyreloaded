@@ -255,8 +255,26 @@ export default function SoundPlayer() {
       <div className={styles.soundGrid}>
         {isTestingAudio ? (
           <div className={styles.loadingContainer}>
-            <div className={styles.loadingSpinner}></div>
-            <p className={styles.loadingText}>Testing audio files...</p>
+            <div className={styles.loadingContent}>
+              <div className={styles.loadingIcon}>
+                <div className={styles.soundWaves}>
+                  <div className={styles.wave}></div>
+                  <div className={styles.wave}></div>
+                  <div className={styles.wave}></div>
+                  <div className={styles.wave}></div>
+                </div>
+              </div>
+              <div className={styles.loadingText}>
+                <h3>Initializing Audio Engine</h3>
+                <p>Testing audio compatibility and preparing sound files...</p>
+              </div>
+              <div className={styles.loadingProgress}>
+                <div className={styles.progressBar}>
+                  <div className={styles.progressFill}></div>
+                </div>
+                <span className={styles.progressText}>Checking audio files</span>
+              </div>
+            </div>
           </div>
         ) : workingSounds.length === 0 ? (
           <div className={styles.noSoundsContainer}>

@@ -13,6 +13,7 @@ import {
 import todoStyles from '../../../styles/Todo.module.css';
 import { useAppState } from '../../contexts/AppStateContext';
 import { useDataPersistence } from '../../hooks/useDataPersistence';
+import { useRealtimeTodos } from '../../hooks/useRealtime';
 
 interface Todo {
   id: number;
@@ -27,33 +28,34 @@ const TodoList: React.FC = () => {
   const { updateTodoState } = useAppState();
   const { 
     isAuthenticated, 
-    loadTodos, 
     saveTodo, 
     updateTodo, 
     deleteTodo: deleteTodoFromDb 
   } = useDataPersistence();
-    const [todos, setTodos] = useState<Todo[]>([]);
+  
+  // Use realtime todos when authenticated, fallback to local state when not
+  const { todos: realtimeTodos } = useRealtimeTodos();
+  
+  const [todos, setTodos] = useState<Todo[]>([]);
   const [newTodo, setNewTodo] = useState('');
   const [newPriority, setNewPriority] = useState<'low' | 'medium' | 'high'>('medium');
-  const [newCategory, setNewCategory] = useState<'work' | 'personal' | 'study' | 'health'>('work');  const [filter, setFilter] = useState<'all' | 'active' | 'completed'>('all');
+  const [newCategory, setNewCategory] = useState<'work' | 'personal' | 'study' | 'health'>('work');
+  const [filter, setFilter] = useState<'all' | 'active' | 'completed'>('all');
   const [isSaving, setIsSaving] = useState(false);
-  // Load todos when user becomes authenticated
+
+  // Use realtime todos when authenticated, local todos when not
+  const displayTodos = isAuthenticated ? realtimeTodos.map(todo => ({
+    id: todo.id!,
+    text: todo.text,
+    completed: todo.completed,
+    priority: todo.priority || 'medium',
+    category: todo.category || 'work',
+    dueDate: todo.due_date
+  })) : todos;
+  // Load todos when user becomes authenticated (only for local mode)
   useEffect(() => {
     const loadUserTodos = async () => {
-      if (isAuthenticated) {
-        console.log('Loading todos for authenticated user');
-        const userTodos = await loadTodos();
-        const formattedTodos: Todo[] = userTodos.map(todo => ({
-          id: todo.id!,
-          text: todo.text,
-          completed: todo.completed,
-          priority: todo.priority || 'medium',
-          category: todo.category || 'work',
-          dueDate: todo.due_date
-        }));
-        setTodos(formattedTodos);
-        console.log('Loaded', formattedTodos.length, 'todos from database');
-      } else {
+      if (!isAuthenticated) {
         console.log('Loading default todos for offline mode');
         // Load default todos when not authenticated
         setTodos([
@@ -80,16 +82,17 @@ const TodoList: React.FC = () => {
           }
         ]);
       }
+      // Note: When authenticated, realtime hook handles loading from database
     };
 
     loadUserTodos();
-  }, [isAuthenticated, loadTodos]);
+  }, [isAuthenticated]);
 
   // Update context whenever todos change
   useEffect(() => {
-    const pendingCount = todos.filter(todo => !todo.completed).length;
+    const pendingCount = displayTodos.filter(todo => !todo.completed).length;
     updateTodoState({ pendingCount });
-  }, [todos, updateTodoState]);
+  }, [displayTodos, updateTodoState]);
   const addTodo = async () => {
     if (newTodo.trim()) {
       const tempId = Date.now();
@@ -101,93 +104,88 @@ const TodoList: React.FC = () => {
         category: newCategory
       };
 
-      // Optimistically update UI
-      setTodos([...todos, newTodoItem]);
-      setNewTodo('');
-        if (isAuthenticated) {
-        setIsSaving(true);
-        try {
-          console.log('Adding new todo:', newTodoItem);
-          const savedTodo = await saveTodo({
-            text: newTodo,
-            completed: false,
-            priority: newPriority,
-            category: newCategory
-          });
-
-          if (savedTodo) {
-            // Replace temp todo with saved todo
-            setTodos(prev => prev.map(todo => 
-              todo.id === tempId 
-                ? { ...newTodoItem, id: savedTodo.id! }
-                : todo            ));
-            console.log('Todo saved successfully:', savedTodo);
-          } else {
-            throw new Error('Failed to save todo - no data returned');
-          }
-        } catch (error) {
-          // Revert on error
-          setTodos(prev => prev.filter(todo => todo.id !== tempId));          console.error('Failed to save todo:', error);
-        } finally {
-          setIsSaving(false);
-        }
-      } else {
+      // For local mode, optimistically update UI
+      if (!isAuthenticated) {
+        setTodos([...todos, newTodoItem]);
+        setNewTodo('');
         console.log('Todo added to local state (not authenticated)');
+        return;
+      }
+
+      // For authenticated users, save directly and let realtime update UI
+      setIsSaving(true);
+      try {
+        console.log('Adding new todo:', newTodoItem);
+        const savedTodo = await saveTodo({
+          text: newTodo,
+          completed: false,
+          priority: newPriority,
+          category: newCategory
+        });
+
+        if (savedTodo) {
+          console.log('Todo saved successfully:', savedTodo);
+          setNewTodo(''); // Clear input after successful save
+        } else {
+          throw new Error('Failed to save todo - no data returned');
+        }
+      } catch (error) {
+        console.error('Failed to save todo:', error);
+        // Show error to user if needed
+      } finally {
+        setIsSaving(false);
       }
     }
   };
   const toggleTodo = async (id: number) => {
-    const todo = todos.find(t => t.id === id);
+    const todo = displayTodos.find(t => t.id === id);
     if (!todo) return;
 
-    const updatedTodo = { ...todo, completed: !todo.completed };
-    
-    // Optimistically update UI
-    setTodos(todos.map(t => 
-      t.id === id ? updatedTodo : t
-    ));
-
-    if (isAuthenticated) {
-      try {
-        console.log('Toggling todo completion:', id, 'to', !todo.completed);
-        const result = await updateTodo(id, { completed: !todo.completed });
-        if (result) {
-          console.log('Todo completion updated successfully:', result);
-        }
-      } catch (error) {
-        // Revert on error
-        setTodos(todos.map(t => 
-          t.id === id ? todo : t
-        ));
-        console.error('Failed to update todo completion:', error);
-      }
-    } else {
+    if (!isAuthenticated) {
+      // For local mode, update local state
+      const updatedTodo = { ...todo, completed: !todo.completed };
+      setTodos(todos.map(t => 
+        t.id === id ? updatedTodo : t
+      ));
       console.log('Todo completion toggled locally (not authenticated)');
+      return;
+    }
+
+    // For authenticated users, update database and let realtime handle UI update
+    try {
+      console.log('Toggling todo completion:', id, 'to', !todo.completed);
+      const result = await updateTodo(id, { completed: !todo.completed });
+      if (result) {
+        console.log('Todo completion updated successfully:', result);
+      }
+    } catch (error) {
+      console.error('Failed to update todo completion:', error);
+      // Show error to user if needed
     }
   };
   const deleteTodo = async (id: number) => {
-    const todoToDelete = todos.find(t => t.id === id);
+    const todoToDelete = displayTodos.find(t => t.id === id);
     if (!todoToDelete) return;
 
-    // Optimistically update UI
-    setTodos(todos.filter(todo => todo.id !== id));
-
-    if (isAuthenticated) {
-      try {
-        console.log('Deleting todo:', id, todoToDelete.text);
-        const success = await deleteTodoFromDb(id);
-        if (success) {
-          console.log('Todo deleted successfully from database');
-        } else {
-          throw new Error('Failed to delete todo from database');
-        }
-      } catch (error) {
-        // Revert on error
-        setTodos(prev => [...prev, todoToDelete]);
-        console.error('Failed to delete todo:', error);
-      }
-    } else {
+    if (!isAuthenticated) {
+      // For local mode, update local state
+      setTodos(todos.filter(todo => todo.id !== id));
       console.log('Todo deleted locally (not authenticated)');
+      return;
+    }
+
+    // For authenticated users, delete from database and let realtime handle UI update
+    try {
+      console.log('Deleting todo:', id, todoToDelete.text);
+      const success = await deleteTodoFromDb(id);
+      if (success) {
+        console.log('Todo deleted successfully from database');
+      } else {
+        throw new Error('Failed to delete todo from database');
+      }
+    } catch (error) {
+      console.error('Failed to delete todo:', error);
+      // Show error to user if needed
     }
   };
 
@@ -201,26 +199,26 @@ const TodoList: React.FC = () => {
     }
   };
 
-  const filteredTodos = todos.filter(todo => {
+  const filteredTodos = displayTodos.filter(todo => {
     if (filter === 'active') return !todo.completed;
     if (filter === 'completed') return todo.completed;
     return true;
   });
-  const completedCount = todos.filter(t => t.completed).length;
+  const completedCount = displayTodos.filter(t => t.completed).length;
 
   return (
     <div className={todoStyles.content}>
       {/* Progress Bar */}
-      {todos.length > 0 && (
+      {displayTodos.length > 0 && (
         <div className={todoStyles.progressSection}>
           <div className={todoStyles.progressBar}>
             <div 
               className={todoStyles.progressFill}
-              style={{ width: `${todos.length > 0 ? (completedCount / todos.length) * 100 : 0}%` }}
+              style={{ width: `${displayTodos.length > 0 ? (completedCount / displayTodos.length) * 100 : 0}%` }}
             />
           </div>
           <span className={todoStyles.progressText}>
-            {completedCount} of {todos.length} tasks completed ({Math.round(todos.length > 0 ? (completedCount / todos.length) * 100 : 0)}%)
+            {completedCount} of {displayTodos.length} tasks completed ({Math.round(displayTodos.length > 0 ? (completedCount / displayTodos.length) * 100 : 0)}%)
           </span>
         </div>
       )}
@@ -277,13 +275,13 @@ const TodoList: React.FC = () => {
           onClick={() => setFilter('all')}
           className={`${todoStyles.filterTab} ${filter === 'all' ? todoStyles.activeTab : ''}`}
         >
-          All <span className={todoStyles.count}>{todos.length}</span>
+          All <span className={todoStyles.count}>{displayTodos.length}</span>
         </button>
         <button
           onClick={() => setFilter('active')}
           className={`${todoStyles.filterTab} ${filter === 'active' ? todoStyles.activeTab : ''}`}
         >
-          Active <span className={todoStyles.count}>{todos.filter(t => !t.completed).length}</span>
+          Active <span className={todoStyles.count}>{displayTodos.filter(t => !t.completed).length}</span>
         </button>
         <button
           onClick={() => setFilter('completed')}
