@@ -61,6 +61,12 @@
   /* GPU acceleration */
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
+  /* Disable all interactions */
+  pointer-events: none;
+  user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
 }
 
 /* Additional overlay to block any YouTube interactions */
