@@ -409,6 +409,15 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
           </div>
         )}
         
+        {/* Invisible overlay to block YouTube interactions */}
+        {currentBackground?.isYoutube && (
+          <div 
+            className={desktopStyles.youtubeOverlay}
+            onContextMenu={(e) => e.preventDefault()}
+            style={{ pointerEvents: 'none' }}
+          />
+        )}
+        
         <div className={desktopStyles.backgroundOverlay} />
       </div>
 
