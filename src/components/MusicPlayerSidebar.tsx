@@ -305,11 +305,11 @@ const MusicPlayerSidebar: React.FC<MusicPlayerSidebarProps> = ({ isOpen, onToggl
         <button
           className={`${styles.toggleButton} ${isOpen ? styles.open : ''}`}
           onClick={onToggle}
-          title={isOpen ? "Close Music Player" : "Open Music Player"}
+          
         >
           {isOpen ? <ChevronLeft size={20} /> : <Music size={20} />}
           <span className={styles.toggleButtonText}>
-            {isOpen ? 'Close' : 'Music'}
+       
           </span>
         </button>
         {isPlaying && !isOpen && (
