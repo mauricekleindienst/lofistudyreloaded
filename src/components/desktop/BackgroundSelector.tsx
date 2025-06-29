@@ -29,6 +29,7 @@ interface BackgroundSelectorProps {
   onCategoryChange: (category: string) => void;
   onYoutubeSubmit: (background: Background) => void;
   onYoutubeUrlChange: (url: string) => void;
+  onClearCustomBackground?: () => void;
 }
 
 const categories = [
@@ -49,7 +50,8 @@ export default function BackgroundSelector({
   onBackgroundChange,
   onCategoryChange,
   onYoutubeSubmit,
-  onYoutubeUrlChange
+  onYoutubeUrlChange,
+  onClearCustomBackground
 }: BackgroundSelectorProps) {
   const [previewingId, setPreviewingId] = useState<number | null>(null);
   const [youtubeError, setYoutubeError] = useState<string>('');
@@ -235,6 +237,25 @@ export default function BackgroundSelector({
                     </div>
                     <div className={styles.wallpaperCategory}>Custom</div>
                   </div>
+                  <button
+                    className={styles.removeCustomButton}
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      // Remove the custom background
+                      if (currentBackground.id === customBackground.id) {
+                        // Switch to default background if current is being removed
+                        onBackgroundChange(backgrounds[0]);
+                      }
+                      // Clear the custom background
+                      if (onClearCustomBackground) {
+                        onClearCustomBackground();
+                      }
+                      onYoutubeUrlChange('');
+                    }}
+                    title="Remove custom background"
+                  >
+                    <X size={10} />
+                  </button>
                 </div>
                 {currentBackground.id === customBackground.id && (
                   <div className={styles.selectionIndicator}>

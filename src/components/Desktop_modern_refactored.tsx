@@ -230,6 +230,11 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
     await handleBackgroundChange(youtubeBackground);
   }, [handleBackgroundChange]);
 
+  // Handle clearing custom background
+  const handleClearCustomBackground = useCallback(() => {
+    setCustomBackground(null);
+  }, []);
+
   // Get responsive size for each app type based on viewport
   const getResponsiveSize = useCallback((appId: string) => {
     if (!isClient) return { width: 350, height: 300, minWidth: 300, minHeight: 250 };
@@ -455,6 +460,7 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
           onCategoryChange={setSelectedCategory}
           onYoutubeSubmit={handleYoutubeSubmit}
           onYoutubeUrlChange={setYoutubeUrl}
+          onClearCustomBackground={handleClearCustomBackground}
         />
       )}
 
