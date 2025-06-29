@@ -1,7 +1,23 @@
 import React from 'react';
 import { Shield, ArrowLeft, Eye, Lock, Database, UserCheck, Settings, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
+import { Metadata } from 'next';
 import styles from '../../../styles/Privacy.module.css';
+
+export const metadata: Metadata = {
+  title: 'Privacy Policy',
+  description: 'Learn how Lo-Fi.Study collects, uses, and protects your personal information. Our commitment to your privacy and data security.',
+  keywords: ['privacy policy', 'data protection', 'security', 'lo-fi study', 'user privacy'],
+  openGraph: {
+    title: 'Privacy Policy | Lo-Fi.Study',
+    description: 'Learn how Lo-Fi.Study collects, uses, and protects your personal information. Our commitment to your privacy and data security.',
+    url: '/privacy',
+  },
+  twitter: {
+    title: 'Privacy Policy | Lo-Fi.Study',
+    description: 'Learn how Lo-Fi.Study collects, uses, and protects your personal information.',
+  },
+};
 
 export default function PrivacyPolicyPage() {
   return (

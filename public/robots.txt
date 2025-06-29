@@ -1,0 +1,27 @@
+User-agent: *
+Allow: /
+
+# Allow all major search engine bots
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+User-agent: Slurp
+Allow: /
+
+User-agent: DuckDuckBot
+Allow: /
+
+# Disallow API routes from indexing
+Disallow: /api/
+
+# Disallow authentication routes
+Disallow: /auth/
+
+# Allow sitemap
+Sitemap: https://lo-fi.study/sitemap.xml
+
+# Crawl delay for respectful crawling
+Crawl-delay: 1

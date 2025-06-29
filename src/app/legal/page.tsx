@@ -1,7 +1,23 @@
 import React from 'react';
 import { FileText, ArrowLeft, Building, User, Globe } from 'lucide-react';
 import Link from 'next/link';
+import { Metadata } from 'next';
 import styles from '../../../styles/Legal.module.css';
+
+export const metadata: Metadata = {
+  title: 'Legal Notice',
+  description: 'Legal information, terms of service, and regulatory compliance details for Lo-Fi.Study productivity app.',
+  keywords: ['legal notice', 'terms of service', 'compliance', 'lo-fi study', 'legal information'],
+  openGraph: {
+    title: 'Legal Notice | Lo-Fi.Study',
+    description: 'Legal information, terms of service, and regulatory compliance details for Lo-Fi.Study productivity app.',
+    url: '/legal',
+  },
+  twitter: {
+    title: 'Legal Notice | Lo-Fi.Study',
+    description: 'Legal information, terms of service, and regulatory compliance details for Lo-Fi.Study.',
+  },
+};
 
 export default function LegalNoticePage() {
   return (

@@ -1,6 +1,9 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import { AuthProvider } from "@/contexts/AuthContext";
+import { WebVitals } from "@/components/WebVitals";
+import { GoogleAnalytics } from "@/components/Analytics";
+import Script from 'next/script';
 import "./globals.css";
 
 const geistSans = Geist({
@@ -55,10 +58,11 @@ export const metadata: Metadata = {
     description: "Boost your productivity with Lo-Fi.Study - the ultimate focus companion featuring Pomodoro timer, ambient sounds, and progress tracking.",
     images: [
       {
-        url: "/og-image.jpg",
+        url: "/og-image.svg",
         width: 1200,
         height: 630,
         alt: "Lo-Fi.Study - Focus & Productivity App",
+        type: "image/svg+xml",
       },
     ],
   },
@@ -66,7 +70,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Lo-Fi.Study - Focus & Productivity App",
     description: "Boost your productivity with Lo-Fi.Study - the ultimate focus companion featuring Pomodoro timer, ambient sounds, and progress tracking.",
-    images: ["/og-image.jpg"],
+    images: ["/og-image.svg"],
     creator: "@lofistudy",
   },
   category: "productivity",
@@ -98,6 +102,31 @@ export default function RootLayout({
         <AuthProvider>
           {children}
         </AuthProvider>
+        <WebVitals />
+        {process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID && (
+          <GoogleAnalytics gaId={process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID} />
+        )}
+        {/* Structured Data for Organization */}
+        <Script
+          id="organization-structured-data"
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{
+            __html: JSON.stringify({
+              "@context": "https://schema.org",
+              "@type": "Organization",
+              "name": "Lo-Fi.Study",
+              "url": "https://lo-fi.study",
+              "logo": "https://lo-fi.study/icon?size=512",
+              "description": "Boost your productivity with Lo-Fi.Study - the ultimate focus companion featuring Pomodoro timer, ambient sounds, and progress tracking.",
+              "sameAs": ["https://twitter.com/lofistudy"],
+              "contactPoint": {
+                "@type": "ContactPoint",
+                "contactType": "customer service",
+                "url": "https://lo-fi.study/contact"
+              }
+            }),
+          }}
+        />
       </body>
     </html>
   );

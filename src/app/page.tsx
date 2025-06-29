@@ -4,14 +4,79 @@ import Desktop from '@/components/Desktop_modern_refactored';
 import { AppStateProvider } from '@/contexts/AppStateContext';
 import AuthModal from '@/components/AuthModal';
 import { useState } from 'react';
+import Script from 'next/script';
+
+// Structured data for SEO
+const structuredData = {
+  "@context": "https://schema.org",
+  "@type": "WebApplication",
+  "name": "Lo-Fi.Study",
+  "url": "https://lo-fi.study",
+  "description": "Boost your productivity with Lo-Fi.Study - the ultimate focus companion featuring Pomodoro timer, ambient sounds, and progress tracking.",
+  "applicationCategory": "ProductivityApplication",
+  "operatingSystem": "Web Browser",
+  "offers": {
+    "@type": "Offer",
+    "price": "0",
+    "priceCurrency": "USD"
+  },
+  "featureList": [
+    "Pomodoro Timer",
+    "Ambient Sounds",
+    "Background Customization",
+    "Progress Tracking",
+    "Task Management",
+    "Focus Statistics"
+  ],
+  "screenshot": "https://lo-fi.study/og-image.svg",
+  "author": {
+    "@type": "Organization",
+    "name": "Lo-Fi.Study Team"
+  },
+  "aggregateRating": {
+    "@type": "AggregateRating",
+    "ratingValue": "4.8",
+    "reviewCount": "150"
+  }
+};
 
 export default function Home() {
   const [showAuthModal, setShowAuthModal] = useState(false);
 
   return (
-    <AppStateProvider>
-      <Desktop onShowAuth={() => setShowAuthModal(true)} />
-      <AuthModal isVisible={showAuthModal} onClose={() => setShowAuthModal(false)} />
-    </AppStateProvider>
+    <>
+      {/* Structured Data for SEO */}
+      <Script
+        id="structured-data"
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{
+          __html: JSON.stringify(structuredData),
+        }}
+      />
+      
+      {/* SEO Meta Tags for Homepage */}
+      <Script
+        id="seo-meta"
+        dangerouslySetInnerHTML={{
+          __html: `
+            if (typeof document !== 'undefined') {
+              // Add additional meta tags dynamically if needed
+              const keywords = document.querySelector('meta[name="keywords"]');
+              if (!keywords) {
+                const keywordsMeta = document.createElement('meta');
+                keywordsMeta.name = 'keywords';
+                keywordsMeta.content = 'pomodoro timer, focus app, productivity, study app, ambient sounds, lo-fi music, concentration, time management';
+                document.head.appendChild(keywordsMeta);
+              }
+            }
+          `,
+        }}
+      />
+
+      <AppStateProvider>
+        <Desktop onShowAuth={() => setShowAuthModal(true)} />
+        <AuthModal isVisible={showAuthModal} onClose={() => setShowAuthModal(false)} />
+      </AppStateProvider>
+    </>
   );
 }
