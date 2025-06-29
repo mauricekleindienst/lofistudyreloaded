@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect, useRef } from 'react';
 import YouTube, { YouTubeEvent } from 'react-youtube';
-import { ChevronLeft, Music, X, SkipBack, SkipForward, Play, Pause, Volume2, VolumeX, Shuffle, Repeat, List, Plus, Trash2 } from 'lucide-react';
+import { Music, X, SkipBack, SkipForward, Play, Pause, Volume2, VolumeX, Shuffle, Repeat, List, Plus, Trash2 } from 'lucide-react';
 import { useAppState } from '../contexts/AppStateContext';
 import styles from '../../styles/MusicPlayerSidebar.module.css';
 import Image from 'next/image';
@@ -300,18 +300,14 @@ const MusicPlayerSidebar: React.FC<MusicPlayerSidebarProps> = ({ isOpen, onToggl
   return (
     <>
       {/* Backdrop Overlay */}
-      <div className={`${styles.backdrop} ${isOpen ? styles.backdropOpen : ''}`} onClick={onToggle} />      {/* Sidebar Toggle Button */}
-      <div className={styles.toggleButtonWrapper}>
-        <button
-          className={`${styles.toggleButton} ${isOpen ? styles.open : ''}`}
-          onClick={onToggle}
-          
-        >
-          {isOpen ? <ChevronLeft size={20} /> : <Music size={20} />}
-          <span className={styles.toggleButtonText}>
-       
-          </span>
-        </button>
+      <div className={`${styles.backdrop} ${isOpen ? styles.backdropOpen : ''}`} onClick={onToggle} />
+      
+      {/* Floating Toggle Button (when sidebar is closed) */}
+      <button
+        className={`${styles.floatingToggle} ${isOpen ? styles.hidden : ''}`}
+        onClick={onToggle}
+      >
+        <Music size={20} />
         {isPlaying && !isOpen && (
           <div className={styles.playingIndicator}>
             <span></span>
@@ -319,13 +315,14 @@ const MusicPlayerSidebar: React.FC<MusicPlayerSidebarProps> = ({ isOpen, onToggl
             <span></span>
           </div>
         )}
-      </div>
-
+      </button>
+      
       {/* Sidebar */}
       <div className={`${styles.sidebar} ${isOpen ? styles.sidebarOpen : ''}`}>
         <div className={styles.sidebarContent}>
           {/* Header */}
           <div className={styles.header}>
+           
             <div className={styles.headerTitle}>
               <Music size={20} />
               <span>Music Player</span>
@@ -533,9 +530,6 @@ const MusicPlayerSidebar: React.FC<MusicPlayerSidebarProps> = ({ isOpen, onToggl
           </div>
         </div>
       </div>
-
-      {/* Backdrop */}
-      {isOpen && <div className={styles.backdrop} onClick={onToggle} />}
     </>
   );
 };
