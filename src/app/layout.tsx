@@ -116,7 +116,7 @@ export default function RootLayout({
               "@type": "Organization",
               "name": "Lo-Fi.Study",
               "url": "https://lo-fi.study",
-              "logo": "https://lo-fi.study/icon?size=512",
+              "logo": "https://lo-fi.study/favicon.ico",
               "description": "Boost your productivity with Lo-Fi.Study - the ultimate focus companion featuring Pomodoro timer, ambient sounds, and progress tracking.",
               "sameAs": ["https://twitter.com/lofistudy"],
               "contactPoint": {
