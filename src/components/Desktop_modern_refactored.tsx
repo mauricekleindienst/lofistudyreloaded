@@ -106,7 +106,7 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
   const [isMusicSidebarOpen, setIsMusicSidebarOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [youtubeUrl, setYoutubeUrl] = useState('');
-  const [customBackground] = useState<Background | null>(null);
+  const [customBackground, setCustomBackground] = useState<Background | null>(null);
   const [showStats, setShowStats] = useState(false);
 
   // Simple video state management
@@ -223,6 +223,13 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
     }
   }, [isAuthenticated, saveSelectedBackground]);
 
+  // Handle YouTube background submission
+  const handleYoutubeSubmit = useCallback(async (youtubeBackground: Background) => {
+    setCustomBackground(youtubeBackground);
+    // Automatically set it as the current background
+    await handleBackgroundChange(youtubeBackground);
+  }, [handleBackgroundChange]);
+
   // Get responsive size for each app type based on viewport
   const getResponsiveSize = useCallback((appId: string) => {
     if (!isClient) return { width: 350, height: 300, minWidth: 300, minHeight: 250 };
@@ -333,25 +340,48 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
       {/* Simple Background Video */}
       <div className={desktopStyles.backgroundContainer}>
         {currentBackground?.src && (
-          <video
-            ref={videoRef}
-            className={desktopStyles.backgroundVideo}
-            src={currentBackground.src}
-            autoPlay
-            muted
-            loop
-            playsInline
-            preload="metadata"
-            onCanPlay={handleVideoLoad}
-            onError={handleVideoError}
-            style={{
-              opacity: videoLoadError ? 0 : 1,
-              transition: 'opacity 0.5s ease'
-            }}
-            crossOrigin="anonymous"
-            disablePictureInPicture
-            controlsList="nodownload noplaybackrate"
-          />
+          <>
+            {currentBackground.isYoutube ? (
+              // YouTube iframe for YouTube backgrounds
+              <iframe
+                className={desktopStyles.backgroundVideo}
+                src={currentBackground.src}
+                frameBorder="0"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                style={{
+                  opacity: videoLoadError ? 0 : 1,
+                  transition: 'opacity 0.5s ease'
+                }}
+                onError={() => handleVideoError()}
+                onLoad={() => {
+                  setVideoLoadError(false);
+                  setRetryCount(0);
+                }}
+              />
+            ) : (
+              // Regular video element for MP4 backgrounds
+              <video
+                ref={videoRef}
+                className={desktopStyles.backgroundVideo}
+                src={currentBackground.src}
+                autoPlay
+                muted
+                loop
+                playsInline
+                preload="metadata"
+                onCanPlay={handleVideoLoad}
+                onError={handleVideoError}
+                style={{
+                  opacity: videoLoadError ? 0 : 1,
+                  transition: 'opacity 0.5s ease'
+                }}
+                crossOrigin="anonymous"
+                disablePictureInPicture
+                controlsList="nodownload noplaybackrate"
+              />
+            )}
+          </>
         )}
 
         {/* Fallback for video errors */}
@@ -423,9 +453,7 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
           }}
           onBackgroundChange={handleBackgroundChange}
           onCategoryChange={setSelectedCategory}
-          onYoutubeSubmit={() => {
-            // YouTube submission logic would go here
-          }}
+          onYoutubeSubmit={handleYoutubeSubmit}
           onYoutubeUrlChange={setYoutubeUrl}
         />
       )}

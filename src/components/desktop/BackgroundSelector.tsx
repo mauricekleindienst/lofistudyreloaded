@@ -3,6 +3,7 @@
 import React, { useState, useCallback } from 'react';
 import { X, CheckSquare, Play, Loader2, AlertCircle, Youtube, Image } from 'lucide-react';
 import { backgrounds } from '@/data/backgrounds';
+import { processYouTubeUrl, isValidYouTubeUrl } from '@/utils/youtube';
 import styles from '../../../styles/BackgroundSelector.module.css';
 
 interface Background {
@@ -14,6 +15,7 @@ interface Background {
   priority: boolean;
   category: string;
   isYoutube?: boolean;
+  videoId?: string;
 }
 
 interface BackgroundSelectorProps {
@@ -25,7 +27,7 @@ interface BackgroundSelectorProps {
   onClose: () => void;
   onBackgroundChange: (background: Background) => void;
   onCategoryChange: (category: string) => void;
-  onYoutubeSubmit: () => void;
+  onYoutubeSubmit: (background: Background) => void;
   onYoutubeUrlChange: (url: string) => void;
 }
 
@@ -84,8 +86,7 @@ export default function BackgroundSelector({
   };
 
   const validateYoutubeUrl = (url: string): boolean => {
-    const youtubeRegex = /^(https?:\/\/)?(www\.)?(youtube\.com\/(watch\?v=|embed\/)|youtu\.be\/)([a-zA-Z0-9_-]{11})/;
-    return youtubeRegex.test(url);
+    return isValidYouTubeUrl(url);
   };
 
   const handleYoutubeSubmit = async () => {
@@ -101,9 +102,17 @@ export default function BackgroundSelector({
 
     setIsSubmittingYoutube(true);
     setYoutubeError('');
-      try {
-      await onYoutubeSubmit();
-    } catch {
+    
+    try {
+      const youtubeBackground = processYouTubeUrl(youtubeUrl);
+      if (youtubeBackground) {
+        await onYoutubeSubmit(youtubeBackground);
+        onYoutubeUrlChange(''); // Clear the input after successful submission
+      } else {
+        setYoutubeError('Failed to process YouTube URL');
+      }
+    } catch (error) {
+      console.error('YouTube submission error:', error);
       setYoutubeError('Failed to add YouTube background');
     } finally {
       setIsSubmittingYoutube(false);
