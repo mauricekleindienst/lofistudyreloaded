@@ -31,6 +31,24 @@
   -webkit-backface-visibility: hidden;
   /* Smooth transitions */
   transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+  /* Ensure no borders or controls for iframes */
+  border: none;
+  outline: none;
+  /* Scale iframe to cover properly like object-fit: cover */
+  transform-origin: center center;
+}
+
+/* Specific styles for YouTube iframe backgrounds */
+.backgroundVideo[src*="youtube"] {
+  pointer-events: none !important;
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  -moz-user-select: none !important;
+  -ms-user-select: none !important;
+  border: none !important;
+  outline: none !important;
+  /* Hide any YouTube UI elements */
+  filter: none;
 }
 
 .backgroundContainer {
@@ -43,6 +61,18 @@
   /* GPU acceleration */
   transform: translateZ(0);
   -webkit-transform: translateZ(0);
+}
+
+/* Additional overlay to block any YouTube interactions */
+.youtubeOverlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100vw;
+  height: 100vh;
+  z-index: 5;
+  pointer-events: none;
+  background: transparent;
 }
 
 /* Background overlay */
@@ -574,7 +604,7 @@
   justify-content: center;
   box-shadow: 
     0 4px 12px rgba(255, 123, 0, 0.5),
-    0 0 0 2px rgba(255, 255, 255, 0.2);
+    0 0 0 2px rgba(255, 255, 255, 0.3);
   border: 2px solid rgba(255, 255, 255, 0.3);
 }
 

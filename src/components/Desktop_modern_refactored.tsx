@@ -352,17 +352,22 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
                 className={desktopStyles.backgroundVideo}
                 src={currentBackground.src}
                 frameBorder="0"
-                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
-                allowFullScreen
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
+                allowFullScreen={false}
                 style={{
                   opacity: videoLoadError ? 0 : 1,
-                  transition: 'opacity 0.5s ease'
+                  transition: 'opacity 0.5s ease',
+                  pointerEvents: 'none', // Disable all interactions
+                  border: 'none',
+                  outline: 'none'
                 }}
                 onError={() => handleVideoError()}
                 onLoad={() => {
                   setVideoLoadError(false);
                   setRetryCount(0);
                 }}
+                tabIndex={-1}
+                aria-hidden="true"
               />
             ) : (
               // Regular video element for MP4 backgrounds

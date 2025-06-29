@@ -55,13 +55,19 @@ export function createYouTubeEmbedUrl(videoId: string, options: {
   if (options.controls === false) params.set('controls', '0');
   if (options.showinfo === false) params.set('showinfo', '0');
   
-  // Additional parameters for better background video experience
+  // Additional parameters for clean background video experience
   params.set('rel', '0'); // Don't show related videos
   params.set('modestbranding', '1'); // Minimal YouTube branding
   params.set('iv_load_policy', '3'); // Hide annotations
   params.set('disablekb', '1'); // Disable keyboard controls
+  params.set('fs', '0'); // Disable fullscreen button
+  params.set('cc_load_policy', '0'); // Hide closed captions
+  params.set('playsinline', '1'); // Play inline on mobile
+  params.set('widget_referrer', '0'); // Hide referrer info
+  params.set('enablejsapi', '0'); // Disable JavaScript API
+  params.set('origin', typeof window !== 'undefined' ? window.location.origin : '');
   
-  return `https://www.youtube.com/embed/${videoId}?${params.toString()}`;
+  return `https://www.youtube-nocookie.com/embed/${videoId}?${params.toString()}`;
 }
 
 /**
