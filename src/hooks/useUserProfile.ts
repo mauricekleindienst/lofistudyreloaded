@@ -42,7 +42,7 @@ export const useUserProfile = (user: User | null) => {
     };
 
     loadUserProfile();
-  }, [user]);
+  }, [user, dbService]);
 
   // Update user profile
   const updateProfile = async (updates: Partial<ExtendedUserProfile>): Promise<boolean> => {

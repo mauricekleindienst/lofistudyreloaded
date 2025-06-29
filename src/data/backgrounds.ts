@@ -1,8 +1,7 @@
-// Shared backgrounds data with enhanced category information and CDN optimization
-import { buildOptimizedVideoUrl, PRELOAD_PRIORITY } from '../utils/cdnConfig';
+// Simplified backgrounds data
 import { Background } from '../components/desktop/types';
 
-// Helper function to create optimized background object
+// Helper function to create background object
 const createBackground = (
   id: number, 
   filename: string, 
@@ -12,25 +11,15 @@ const createBackground = (
   priority: boolean, 
   category: string
 ): Background => {
-  const preloadPriority: 'high' | 'medium' | 'low' = PRELOAD_PRIORITY.HIGH.includes(filename) ? 'high' : 
-                         PRELOAD_PRIORITY.MEDIUM.includes(filename) ? 'medium' : 'low';
-  
   return {
     id,
-    src: buildOptimizedVideoUrl(filename, { 
-      preload: PRELOAD_PRIORITY.HIGH.includes(filename) || priority,
-      quality: priority ? 'high' : 'auto'
-    }),
-    // Store original filename for fallback purposes
+    src: `https://lofistudy.fra1.cdn.digitaloceanspaces.com/backgrounds/${filename}`,
     filename,
     alt,
     note,
     createdby,
     priority,
-    category,
-    // Add CDN optimization metadata
-    optimized: true,
-    preloadPriority
+    category
   };
 };
 

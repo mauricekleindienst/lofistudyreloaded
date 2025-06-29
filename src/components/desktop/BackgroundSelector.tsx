@@ -253,6 +253,8 @@ export default function BackgroundSelector({
                   muted
                   loop
                   preload="metadata"
+                  aria-label={`Background video: ${bg.alt}`}
+                  title={bg.alt}
                   onMouseEnter={(e) => {
                     setPreviewingId(bg.id);
                     handleVideoPreview(e.currentTarget, true);

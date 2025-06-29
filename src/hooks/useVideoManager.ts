@@ -58,12 +58,12 @@ export const useVideoManager = (): VideoManager => {
 
         const onError = () => {
           cleanup();
-          console.warn(`Failed to load video from: ${videoUrl}`);
+          console.warn(`Failed to load video from: ${videoUrl} (attempt ${currentFallbackIndex + 1})`);
           
-          // Try fallback URL if available
+          // Try fallback URL if available and we haven't exceeded max attempts
           if (background.filename && currentFallbackIndex < 2) {
             const fallbackUrl = getFallbackUrl(background.filename, currentFallbackIndex);
-            if (fallbackUrl) {
+            if (fallbackUrl && fallbackUrl !== videoUrl) { // Prevent infinite loops
               currentFallbackIndex++;
               console.log(`Trying fallback ${currentFallbackIndex}: ${fallbackUrl}`);
               video.src = '';
@@ -72,9 +72,11 @@ export const useVideoManager = (): VideoManager => {
             }
           }
           
-          // No more fallbacks available
+          // No more fallbacks available or all fallbacks failed
+          console.error(`All video sources failed for ${background.alt}`);
           video.src = '';
           video.remove();
+          loadingPromises.current.delete(videoId);
           reject(new Error(`Failed to preload video with all fallbacks: ${background.src}`));
         };
 
@@ -94,11 +96,17 @@ export const useVideoManager = (): VideoManager => {
       // Start with primary CDN URL
       tryLoadVideo(background.src);
 
-      // Timeout after 45 seconds (increased for large video files)
-      setTimeout(() => {
+      // Timeout after 30 seconds with proper cleanup
+      const timeoutId = setTimeout(() => {
+        console.warn(`Video preload timeout for ${background.alt} after 30 seconds`);
         loadingPromises.current.delete(videoId);
         reject(new Error(`Video preload timeout: ${background.src}`));
-      }, 45000);
+      }, 30000);
+      
+      // Clear timeout when promise resolves or rejects
+      loadingPromise.finally(() => {
+        clearTimeout(timeoutId);
+      });
     });
 
     loadingPromises.current.set(videoId, loadingPromise);
@@ -110,13 +118,23 @@ export const useVideoManager = (): VideoManager => {
   }, []);
 
   const clearPreloadedVideos = useCallback(() => {
-    console.log(`Clearing ${preloadedVideos.current.size} preloaded videos`);
-    preloadedVideos.current.forEach((video) => {
+    const count = preloadedVideos.current.size;
+    console.log(`Clearing ${count} preloaded videos`);
+    
+    if (count === 0) {
+      console.log('No preloaded videos to clear');
+      return;
+    }
+    
+    preloadedVideos.current.forEach((video, id) => {
+      console.log(`Clearing preloaded video: ${id}`);
       video.src = '';
       video.remove();
     });
     preloadedVideos.current.clear();
     loadingPromises.current.clear();
+    
+    console.log('All preloaded videos cleared successfully');
   }, []);
 
   const cleanupOldVideos = useCallback((maxCount: number) => {

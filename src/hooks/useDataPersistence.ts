@@ -16,7 +16,7 @@ export function useDataPersistence() {
   const isAuthenticated = authContext?.user !== null && authContext?.isConfigured;
 
   // Helper to handle async operations with loading and error states
-  const withLoadingAndError = async <T>(operation: () => Promise<T>): Promise<T | null> => {
+  const withLoadingAndError = useCallback(async <T>(operation: () => Promise<T>): Promise<T | null> => {
     if (!isAuthenticated) {
       return null;
     }
@@ -35,39 +35,45 @@ export function useDataPersistence() {
     } finally {
       setIsLoading(false);
     }
-  };  // Todo operations
+  }, [isAuthenticated]);
+
+  // Todo operations
   const loadTodos = useCallback(async (): Promise<Todo[]> => {
     if (!isAuthenticated) return [];
     return await withLoadingAndError(() => db.getTodos()) || [];
-  }, [isAuthenticated]);
+  }, [isAuthenticated, withLoadingAndError]);
 
   const saveTodo = useCallback(async (todo: Todo): Promise<Todo | null> => {
     return await withLoadingAndError(() => db.saveTodo(todo));
-  }, []);
+  }, [withLoadingAndError]);
 
   const updateTodo = useCallback(async (id: number, updates: Partial<Todo>): Promise<Todo | null> => {
     return await withLoadingAndError(() => db.updateTodo(id, updates));
-  }, []);
+  }, [withLoadingAndError]);
 
   const deleteTodo = useCallback(async (id: number): Promise<boolean> => {
     return await withLoadingAndError(() => db.deleteTodo(id)) || false;
-  }, []);  // Note operations
+  }, [withLoadingAndError]);
+
+  // Note operations
   const loadNotes = useCallback(async (): Promise<Note[]> => {
     if (!isAuthenticated) return [];
     return await withLoadingAndError(() => db.getNotes()) || [];
-  }, [isAuthenticated]);
+  }, [isAuthenticated, withLoadingAndError]);
 
   const saveNote = useCallback(async (note: Note): Promise<Note | null> => {
     return await withLoadingAndError(() => db.saveNote(note));
-  }, []);
+  }, [withLoadingAndError]);
 
   const updateNote = useCallback(async (id: number, updates: Partial<Note>): Promise<Note | null> => {
     return await withLoadingAndError(() => db.updateNote(id, updates));
-  }, []);
+  }, [withLoadingAndError]);
 
   const deleteNote = useCallback(async (id: number): Promise<boolean> => {
     return await withLoadingAndError(() => db.deleteNote(id)) || false;
-  }, []);  // Pomodoro operations - Enhanced with local caching
+  }, [withLoadingAndError]);
+
+  // Pomodoro operations - Enhanced with local caching
   const savePomodoroSession = useCallback(async (session: PomodoroSession): Promise<PomodoroSession | null> => {
     if (isAuthenticated) {
       // Save to database for authenticated users
@@ -87,7 +93,7 @@ export function useDataPersistence() {
       const result = await localCache.savePomodoroSession(localSession);
       return result ? session : null;
     }
-  }, [isAuthenticated, localCache]);
+  }, [isAuthenticated, localCache, withLoadingAndError]);
   
   const loadPomodoroSessions = useCallback(async (limit?: number): Promise<PomodoroSession[]> => {
     if (isAuthenticated && authContext.user?.email) {
@@ -108,7 +114,7 @@ export function useDataPersistence() {
         created_at: session.created_at
       }));
     }
-  }, [isAuthenticated, authContext.user?.email, localCache]);
+  }, [isAuthenticated, authContext.user?.email, localCache, withLoadingAndError]);
 
   const updatePomodoroStats = useCallback(async (stats: PomodoroStats): Promise<boolean> => {
     if (isAuthenticated) {
@@ -118,8 +124,9 @@ export function useDataPersistence() {
       // For unauthenticated users, stats are calculated dynamically
       return true;
     }
-  }, [isAuthenticated]);
-    const loadPomodoroStats = useCallback(async (days?: number): Promise<PomodoroStats[]> => {
+  }, [isAuthenticated, withLoadingAndError]);
+
+  const loadPomodoroStats = useCallback(async (days?: number): Promise<PomodoroStats[]> => {
     if (isAuthenticated && authContext.user?.email) {
       return await withLoadingAndError(() => db.getPomodoroStats(authContext.user!.email!, days)) || [];
     } else {
@@ -134,7 +141,8 @@ export function useDataPersistence() {
         category: 'mixed'
       }];
     }
-  }, [isAuthenticated, authContext.user?.email, localCache]);
+  }, [isAuthenticated, authContext.user?.email, localCache, withLoadingAndError]);
+
   // Get combined stats for both authenticated and unauthenticated users
   const getCombinedPomodoroStats = useCallback(() => {
     if (isAuthenticated) {
@@ -145,29 +153,32 @@ export function useDataPersistence() {
       return localCache.getPomodoroStats();
     }
   }, [isAuthenticated, localCache]);
+
   // User settings operations
   const loadUserSettings = useCallback(async (): Promise<UserSettings | null> => {
     if (!isAuthenticated) return null;
     return await withLoadingAndError(() => db.getUserSettings());
-  }, [isAuthenticated]);
+  }, [isAuthenticated, withLoadingAndError]);
 
   const saveUserSettings = useCallback(async (settings: Partial<UserSettings>): Promise<boolean> => {
     return await withLoadingAndError(() => db.saveUserSettings(settings)) || false;
-  }, []);
+  }, [withLoadingAndError]);
+
   // Background operations
   const saveSelectedBackground = useCallback(async (backgroundId: string): Promise<boolean> => {
     return await withLoadingAndError(() => db.saveSelectedBackground(backgroundId)) || false;
-  }, []);
+  }, [withLoadingAndError]);
+
   const loadSelectedBackground = useCallback(async (): Promise<string | null> => {
     if (!isAuthenticated) return null;
     return await withLoadingAndError(() => db.getSelectedBackground());
-  }, [isAuthenticated]);
+  }, [isAuthenticated, withLoadingAndError]);
 
   // Leaderboard operations
   const loadLeaderboard = useCallback(async () => {
     if (!isAuthenticated) return [];
     return await withLoadingAndError(() => db.getLeaderboard()) || [];
-  }, [isAuthenticated]);
+  }, [isAuthenticated, withLoadingAndError]);
 
   // Auto-sync operations when user logs in/out
   useEffect(() => {
@@ -175,7 +186,9 @@ export function useDataPersistence() {
       // Optional: Trigger initial data sync when user becomes authenticated
       console.log('User authenticated, data persistence enabled');
     }
-  }, [isAuthenticated]);  return {
+  }, [isAuthenticated]);
+
+  return {
     isAuthenticated,
     isLoading,
     error,
@@ -195,13 +208,13 @@ export function useDataPersistence() {
     updatePomodoroStats,
     loadPomodoroStats,
     getCombinedPomodoroStats,
-    // User settings operations
+    // User settings
     loadUserSettings,
     saveUserSettings,
     // Background operations
     saveSelectedBackground,
     loadSelectedBackground,
-    // Leaderboard operations
+    // Leaderboard
     loadLeaderboard,
   };
 }

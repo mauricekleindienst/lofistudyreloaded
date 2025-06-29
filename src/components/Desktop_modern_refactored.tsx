@@ -13,8 +13,6 @@ import desktopStyles from '../../styles/Desktop.module.css';
 import { useAppState } from '../contexts/AppStateContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useDataPersistence } from '../hooks/useDataPersistence';
-import { useVideoManager } from '../hooks/useVideoManager';
-import { intelligentPreloader } from '../utils/intelligentPreloader';
 
 // Import individual app components
 import PomodoroTimer from './apps/PomodoroTimer';
@@ -93,7 +91,6 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
     saveSelectedBackground, 
     loadSelectedBackground 
   } = useDataPersistence();
-  const videoManager = useVideoManager();
 
   // State management
   const [openWindows, setOpenWindows] = useState<ModernWindow[]>([]);
@@ -109,43 +106,20 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
   const [isMusicSidebarOpen, setIsMusicSidebarOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [youtubeUrl, setYoutubeUrl] = useState('');
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [customBackground, setCustomBackground] = useState<Background | null>(null);
+  const [customBackground] = useState<Background | null>(null);
   const [showStats, setShowStats] = useState(false);
 
-  // Enhanced video state management
+  // Simple video state management
   const [videoLoadError, setVideoLoadError] = useState(false);
-  const [videoLoading, setVideoLoading] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
   
-  // Refs for event handling and performance optimization
+  // Refs for video handling
   const videoRef = useRef<HTMLVideoElement>(null);
-  const loadingTimeouts = useRef<Map<string, NodeJS.Timeout>>(new Map());
-  const backgroundChangeTimeout = useRef<NodeJS.Timeout | null>(null);
 
   // Initialize client-side rendering flag
   useEffect(() => {
     setIsClient(true);
   }, []);
-
-  // Cleanup effect for component unmount
-  useEffect(() => {
-    return () => {
-      // Clear all loading timeouts
-      loadingTimeouts.current.forEach((timeout) => {
-        clearTimeout(timeout);
-      });
-      loadingTimeouts.current.clear();
-      
-      // Clear preloaded videos to prevent memory leaks
-      videoManager.clearPreloadedVideos();
-      
-      // Clear background change timeout
-      if (backgroundChangeTimeout.current) {
-        clearTimeout(backgroundChangeTimeout.current);
-      }
-    };
-  }, [videoManager]);
 
   // Update time and date every second
   useEffect(() => {
@@ -162,45 +136,28 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
     return () => clearInterval(timer);
   }, [isClient]);
 
-  // Clean video loading handlers
+  // Simple video loading handlers
   const handleVideoLoad = useCallback(() => {
     if (videoRef.current) {
       setVideoLoadError(false);
-      setVideoLoading(false);
       setRetryCount(0);
-      
-      // Clear any existing timeout
-      if (loadingTimeouts.current.has(currentBackground.id.toString())) {
-        clearTimeout(loadingTimeouts.current.get(currentBackground.id.toString()));
-        loadingTimeouts.current.delete(currentBackground.id.toString());
-      }
-      
       videoRef.current.play().catch(console.error);
     }
-  }, [currentBackground.id]);
+  }, []);
 
   const handleVideoError = useCallback(() => {
     console.error('Video failed to load:', currentBackground.src);
     setVideoLoadError(true);
-    setVideoLoading(false);
     
-    // Clear any existing timeout
-    if (loadingTimeouts.current.has(currentBackground.id.toString())) {
-      clearTimeout(loadingTimeouts.current.get(currentBackground.id.toString()));
-      loadingTimeouts.current.delete(currentBackground.id.toString());
-    }
-    
-    // Retry mechanism with exponential backoff
+    // Simple retry mechanism
     if (retryCount < 2 && currentBackground.id !== DEFAULT_BACKGROUND.id) {
-      const retryDelay = Math.min(2000 * Math.pow(2, retryCount), 8000); // Max 8 seconds
-      const timeoutId = setTimeout(() => {
+      const retryDelay = Math.min(2000 * Math.pow(2, retryCount), 8000);
+      setTimeout(() => {
         setRetryCount(prev => prev + 1);
         if (videoRef.current) {
           videoRef.current.load();
         }
       }, retryDelay);
-      
-      loadingTimeouts.current.set(currentBackground.id.toString(), timeoutId);
     } else if (currentBackground.id !== DEFAULT_BACKGROUND.id) {
       // Final fallback to default background
       console.error('Background video failed to load after retries. Using default background.');
@@ -208,82 +165,16 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
     }
   }, [currentBackground.src, currentBackground.id, retryCount]);
 
-  const handleVideoLoadStart = useCallback(() => {
-    setVideoLoadError(false);
-    setVideoLoading(true);
-  }, []);
-
-  // Intelligent preload management with user behavior analysis
-  const preloadNearbyVideos = useCallback(async (currentId: number) => {
-    const currentIndex = backgrounds.findIndex(bg => bg.id === currentId);
-    if (currentIndex === -1) return;
-    
-    // Clean up old videos first
-    videoManager.cleanupOldVideos(5);
-    
-    // Get intelligent preload suggestions
-    const currentBg = backgrounds[currentIndex];
-    const suggestions = intelligentPreloader.isNewUser() 
-      ? intelligentPreloader.getPopularBackgrounds(backgrounds as Background[])
-      : intelligentPreloader.getPreloadSuggestions(backgrounds as Background[], currentBg as Background);
-    
-    console.log(`Preloading ${suggestions.length} intelligently selected videos`);
-    
-    // Preload suggested videos concurrently but limit concurrent loads
-    const preloadPromises = suggestions.slice(0, 3).map(async (bg) => {
-      const videoId = bg.id.toString();
-      
-      // Only preload if not already preloaded
-      if (!videoManager.getPreloadedVideo(videoId)) {
-        try {
-          await videoManager.preloadVideo(bg);
-          console.log(`Intelligently preloaded background ${bg.id} (${bg.alt})`);
-        } catch (error) {
-          console.warn(`Failed to preload background ${bg.id}:`, error);
-        }
-      }
-    });
-    
-    // Wait for some preloading to complete, but don't block UI
-    Promise.allSettled(preloadPromises);
-  }, [videoManager]);
-
-  // Background video effect with optimized loading
+  // Simple background video effect
   useEffect(() => {
     setRetryCount(0);
     setVideoLoadError(false);
-    setVideoLoading(true);
     
-    // Clear any existing timeout for this background
-    if (loadingTimeouts.current.has(currentBackground.id.toString())) {
-      clearTimeout(loadingTimeouts.current.get(currentBackground.id.toString()));
-      loadingTimeouts.current.delete(currentBackground.id.toString());
-    }
-    
-    // Check if video is preloaded using video manager
-    const preloadedVideo = videoManager.getPreloadedVideo(currentBackground.id.toString());
-    if (preloadedVideo && videoRef.current) {
-      // Use preloaded video for instant switching
-      console.log(`Using preloaded video for background ${currentBackground.id}`);
-      videoRef.current.src = preloadedVideo.src;
-      videoRef.current.currentTime = 0;
-      setVideoLoading(false);
-      videoRef.current.play().catch(console.error);
-    } else if (videoRef.current) {
-      // Load video normally
+    if (videoRef.current) {
       videoRef.current.currentTime = 0;
       videoRef.current.play().catch(console.error);
     }
-    
-    // Preload nearby videos after a short delay to avoid blocking
-    const preloadTimeout = setTimeout(() => {
-      preloadNearbyVideos(currentBackground.id);
-    }, 1000);
-    
-    return () => {
-      clearTimeout(preloadTimeout);
-    };
-  }, [currentBackground, videoManager, preloadNearbyVideos]);
+  }, [currentBackground]);
 
   // Load saved background when user authenticates
   useEffect(() => {
@@ -294,7 +185,7 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
           if (savedBackgroundId) {
             const savedBackground = backgrounds.find(bg => bg.id.toString() === savedBackgroundId);
             if (savedBackground) {
-              setCurrentBackground(savedBackground as Background);
+              setCurrentBackground(savedBackground);
             }
           }
         } catch (error) {
@@ -305,17 +196,8 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
     loadSavedBackground();
   }, [isAuthenticated, loadSelectedBackground]);
 
-  // Handle background change with database persistence and intelligent preloading
+  // Handle background change with database persistence
   const handleBackgroundChange = useCallback(async (background: Background) => {
-    // Track user behavior for intelligent preloading
-    intelligentPreloader.trackBackgroundView(background);
-    
-    // Check if video is already preloaded for instant switching
-    const preloadedVideo = videoManager.getPreloadedVideo(background.id.toString());
-    if (preloadedVideo) {
-      console.log(`Background switch - using preloaded: ${background.id}`);
-    }
-    
     setCurrentBackground(background);
 
     // Save to localStorage for non-authenticated users
@@ -339,15 +221,7 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
         setBackgroundSaveLoading(false);
       }
     }
-    
-    // Clean up old preloaded videos to manage memory
-    videoManager.cleanupOldVideos(8);
-    
-    // Trigger intelligent preloading of nearby backgrounds after a short delay
-    setTimeout(() => {
-      preloadNearbyVideos(background.id);
-    }, 500);
-  }, [isAuthenticated, saveSelectedBackground, videoManager, preloadNearbyVideos]);
+  }, [isAuthenticated, saveSelectedBackground]);
 
   // Get responsive size for each app type based on viewport
   const getResponsiveSize = useCallback((appId: string) => {
@@ -447,32 +321,8 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
     return (
       <div className={desktopStyles.desktop}>
         <div className={desktopStyles.loadingState}>
-          {/* Minimal decorative floating dots */}
-          <div className={desktopStyles.loadingDecorations}>
-            <div className={desktopStyles.floatingDot}></div>
-            <div className={desktopStyles.floatingDot}></div>
-            <div className={desktopStyles.floatingDot}></div>
-            <div className={desktopStyles.floatingDot}></div>
-          </div>
-          
-          {/* Modern spinner with study icon */}
-          <div className={desktopStyles.bookLoader}>
-            <div className={desktopStyles.modernSpinner}>
-              <div className={desktopStyles.spinnerRing}></div>
-              <div className={desktopStyles.spinnerRing}></div>
-              <div className={desktopStyles.spinnerRing}></div>
-              <div className={desktopStyles.spinnerCenter}></div>
-            </div>
-          </div>
-          
-          {/* Loading text with shimmer effect */}
           <div className={desktopStyles.loadingText}>LoFi Study</div>
           <div className={desktopStyles.loadingSubtext}>Preparing your focus environment</div>
-          
-          {/* Smooth progress indicator */}
-          <div className={desktopStyles.loadingProgress}>
-            <div className={desktopStyles.progressBar}></div>
-          </div>
         </div>
       </div>
     );
@@ -480,7 +330,7 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
 
   return (
     <div className={desktopStyles.desktop}>
-      {/* Background Video with Enhanced Performance */}
+      {/* Simple Background Video */}
       <div className={desktopStyles.backgroundContainer}>
         {currentBackground?.src && (
           <video
@@ -492,28 +342,16 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
             loop
             playsInline
             preload="metadata"
-            onLoadStart={handleVideoLoadStart}
             onCanPlay={handleVideoLoad}
             onError={handleVideoError}
             style={{
               opacity: videoLoadError ? 0 : 1,
               transition: 'opacity 0.5s ease'
             }}
-            // Performance optimizations
             crossOrigin="anonymous"
             disablePictureInPicture
             controlsList="nodownload noplaybackrate"
-            // Reduce memory usage
-            poster=""
           />
-        )}
-        
-        {/* Loading indicator */}
-        {videoLoading && !videoLoadError && (
-          <div className={desktopStyles.videoLoadingIndicator}>
-            <div className={desktopStyles.loadingSpinner}></div>
-            <p>Loading background...</p>
-          </div>
         )}
 
         {/* Fallback for video errors */}
@@ -577,17 +415,14 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
         <BackgroundSelector
           showBackgrounds={showBackgrounds}
           currentBackground={currentBackground}
-         
           selectedCategory={selectedCategory}
           youtubeUrl={youtubeUrl}
           customBackground={customBackground}
           onClose={() => {
             setShowBackgrounds(false);
-            
           }}
           onBackgroundChange={handleBackgroundChange}
           onCategoryChange={setSelectedCategory}
-         
           onYoutubeSubmit={() => {
             // YouTube submission logic would go here
           }}
