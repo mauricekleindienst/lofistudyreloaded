@@ -1,33 +1,35 @@
 "use client";
 
-import React, { useState, useEffect, useCallback, useMemo } from 'react';
+import React, { 
+  // useState, useEffect, useCallback, useMemo 
+} from 'react';
 import { 
   X, 
-  Trophy, 
-  Clock, 
-  TrendingUp,
   BarChart3,
-  BookOpen,
-  Code,
-  PenTool,
-  Briefcase,
-  MoreHorizontal,
-  RefreshCw
+  // Trophy, 
+  // Clock, 
+  // TrendingUp,
+  // BookOpen,
+  // Code,
+  // PenTool,
+  // Briefcase,
+  // MoreHorizontal,
+  // RefreshCw
 } from 'lucide-react';
-import { useAuth } from '../contexts/AuthContext';
-import { useDataPersistence } from '../hooks/useDataPersistence';
-import { PomodoroStats } from '../lib/database';
+// import { useAuth } from '../contexts/AuthContext';
+// import { useDataPersistence } from '../hooks/useDataPersistence';
+// import { PomodoroStats } from '../lib/database';
 import styles from '../../styles/StatsModal.module.css';
-import { createClient } from '../utils/supabase/client';
+// import { createClient } from '../utils/supabase/client';
 
 // Create a single Supabase client instance
-const supabase = createClient();
+// const supabase = createClient();
 
 interface StatsModalProps {
   isOpen: boolean;
   onClose: () => void;
 }
-
+/*
 const getCategoryIcon = (category: string) => {
   const iconProps = { size: 16, className: styles.categoryIcon };
   switch (category.toLowerCase()) {
@@ -43,15 +45,17 @@ const getCategoryIcon = (category: string) => {
       return <MoreHorizontal {...iconProps} />;
   }
 };
+*/
 
 const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
-  const { user } = useAuth();
-  const { loadPomodoroStats } = useDataPersistence();
+  // const { user } = useAuth();
+  // const { loadPomodoroStats } = useDataPersistence();
   
-  const [stats, setStats] = useState<PomodoroStats[] | null>(null);
-  const [loading, setLoading] = useState(true);
-  const [days, setDays] = useState(7);
+  // const [stats, setStats] = useState<PomodoroStats[] | null>(null);
+  // const [loading, setLoading] = useState(true);
+  // const [days, setDays] = useState(7);
 
+  /*
   const loadStats = useCallback(async (isInitialLoad = false) => {
     if (!isOpen || !user) {
       if (!user) {
@@ -133,10 +137,11 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
       categoryStats
     };
   }, [stats, days]);
+  */
 
   if (!isOpen) return null;
 
-  console.log('[StatsModal] Rendering with loading state:', loading);
+  // console.log('[StatsModal] Rendering with loading state:', loading);
 
   return (
     <div className={styles.overlay} onClick={onClose}>
@@ -150,66 +155,17 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
         </div>
         
         <div className={styles.content}>
-          <div className={styles.tabs}>
-            {[7, 30, 90].map(d => (
-              <button key={d} onClick={() => setDays(d)} className={days === d ? styles.activeTab : ''}>
-                Last {d} Days
-              </button>
-            ))}
-            <button onClick={() => loadStats()} className={styles.refreshButton} disabled={loading}>
-              <RefreshCw size={16} className={loading ? styles.loadingIcon : ''} />
-            </button>
+          <div className={styles.comingSoon}>
+            <h3>Advanced Statistics Coming Soon!</h3>
+            <p>We are working to bring you detailed insights into your focus sessions.</p>
           </div>
-          
-          {loading ? (
-            <div className={styles.loader}>
-              <div className={styles.spinner}></div>
-              <span>Loading stats...</span>
-            </div>
-          ) : (
-            <div className={styles.statsContainer}>
-              <div className={styles.statsGrid}>
-                <StatCard icon={<Trophy size={24} />} label="Total Sessions" value={totalSessions} />
-                <StatCard icon={<Clock size={24} />} label="Total Focus Time" value={`${totalFocusTime} min`} />
-                <StatCard icon={<TrendingUp size={24} />} label="Avg. Sessions/Day" value={avgSessionsPerDay.toFixed(1)} />
-              </div>
-              
-              <ActivityHeatmap stats={stats || []} />
-              
-              <div className={styles.categorySection}>
-                <h3>Category Breakdown</h3>
-                {Object.keys(categoryStats).length > 0 ? (
-                  <div className={styles.categoryList}>
-                    {Object.entries(categoryStats).map(([category, data]) => (
-                      <div key={category} className={styles.categoryItem}>
-                        <div className={styles.categoryInfo}>
-                          <div className={styles.categoryName}>
-                            {getCategoryIcon(category)}
-                            <span>{category}</span>
-                          </div>
-                          <span className={styles.categoryValues}>{data.sessions} sessions ({data.time} min)</span>
-                        </div>
-                        <div className={styles.categoryBarContainer}>
-                          <div 
-                            className={styles.categoryBar} 
-                            style={{ width: `${(data.time / totalFocusTime) * 100}%` }}
-                          ></div>
-                        </div>
-                      </div>
-                    ))}
-                  </div>
-                ) : (
-                  <div className={styles.noData}>No data for this period.</div>
-                )}
-              </div>
-            </div>
-          )}
         </div>
       </div>
     </div>
   );
 };
 
+/*
 const StatCard = ({ icon, label, value }: { icon: React.ReactNode, label: string, value: string | number }) => (
   <div className={styles.statCard}>
     <div className={styles.statIcon}>{icon}</div>
@@ -291,5 +247,5 @@ const ActivityHeatmap = ({ stats }: { stats: PomodoroStats[] }) => {
     </div>
   );
 };
-
+*/
 export default StatsModal;

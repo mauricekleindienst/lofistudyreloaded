@@ -888,3 +888,27 @@
     transform: rotate(360deg);
   }
 }
+
+.comingSoon {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  padding: 4rem 2rem;
+  color: var(--text-primary);
+  height: 100%;
+}
+
+.comingSoon h3 {
+  font-size: 1.5rem;
+  font-weight: 600;
+  margin-bottom: 1rem;
+  color: var(--text-primary);
+}
+
+.comingSoon p {
+  font-size: 1rem;
+  color: var(--text-secondary);
+  max-width: 400px;
+}
