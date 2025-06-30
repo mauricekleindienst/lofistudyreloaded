@@ -1,18 +1,12 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, useMemo } from 'react';
 import { 
   X, 
   Trophy, 
   Clock, 
-  Target, 
   TrendingUp,
-  Award,
-  Users,
   BarChart3,
-  Activity,
-  Flame,
-  CheckCircle,
   BookOpen,
   Code,
   PenTool,
@@ -22,30 +16,12 @@ import {
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useDataPersistence } from '../hooks/useDataPersistence';
-import { useRealtimePomodoroSessions, useRealtimePomodoroStats } from '../hooks/useRealtime';
+import { PomodoroStats } from '../lib/database';
 import styles from '../../styles/StatsModal.module.css';
+import { createClient } from '../utils/supabase/client';
 
-interface StatsData {
-  totalSessions: number;
-  totalFocusTime: number; // in minutes
-  streakDays: number;
-  todaySessions: number;
-  weekSessions: number;
-  monthSessions: number;
-  categorySplit: Record<string, number>;
-  dailyActivity: Array<{
-    date: string;
-    sessions: number;
-    focusTime: number;
-  }>;
-}
-
-interface LeaderboardEntry {
-  email: string;
-  totalSessions: number;
-  totalFocusTime: number;
-  rank: number;
-}
+// Create a single Supabase client instance
+const supabase = createClient();
 
 interface StatsModalProps {
   isOpen: boolean;
@@ -53,528 +29,264 @@ interface StatsModalProps {
 }
 
 const getCategoryIcon = (category: string) => {
+  const iconProps = { size: 16, className: styles.categoryIcon };
   switch (category.toLowerCase()) {
     case 'studying':
-      return <BookOpen size={16} />;
+      return <BookOpen {...iconProps} />;
     case 'coding':
-      return <Code size={16} />;
+      return <Code {...iconProps} />;
     case 'writing':
-      return <PenTool size={16} />;
+      return <PenTool {...iconProps} />;
     case 'working':
-      return <Briefcase size={16} />;
+      return <Briefcase {...iconProps} />;
     default:
-      return <MoreHorizontal size={16} />;
+      return <MoreHorizontal {...iconProps} />;
   }
 };
 
 const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
   const { user } = useAuth();
-  const { 
-    loadPomodoroSessions, 
-    loadLeaderboard,
-    isAuthenticated
-  } = useDataPersistence();
+  const { loadPomodoroStats } = useDataPersistence();
   
-  // Use realtime data when authenticated
-  const { sessions: realtimeSessions } = useRealtimePomodoroSessions();
-  const { stats: realtimeStats } = useRealtimePomodoroStats();
-  
-  const [activeTab, setActiveTab] = useState<'overview' | 'analytics' | 'leaderboard'>('overview');
-  const [statsData, setStatsData] = useState<StatsData | null>(null);
-  const [leaderboard, setLeaderboard] = useState<LeaderboardEntry[]>([]);
-  const [loading, setLoading] = useState(false);
-  const [hasLoadedOnce, setHasLoadedOnce] = useState(false);  const loadStats = useCallback(async () => {
-    setLoading(true);
+  const [stats, setStats] = useState<PomodoroStats[] | null>(null);
+  const [loading, setLoading] = useState(true);
+  const [days, setDays] = useState(7);
+
+  const loadStats = useCallback(async (isInitialLoad = false) => {
+    if (!isOpen || !user) {
+      if (!user) {
+        console.log('[StatsModal] No user, clearing stats.');
+        setStats([]);
+      }
+      if (isInitialLoad) setLoading(false);
+      return;
+    }
+
+    console.log(`[StatsModal] Loading stats for user: ${user.email} for last ${days} days.`);
+    if (isInitialLoad) setLoading(true);
     
+    const minDisplayTime = 400;
+    const startTime = Date.now();
+
     try {
-      let sessions;
-      
-      if (isAuthenticated) {
-        // Use realtime data when authenticated
-        sessions = realtimeSessions;
-        console.log('📊 Stats Modal - Using realtime sessions:', sessions?.length || 0);
-      } else {
-        // Load from local storage when not authenticated
-        const localSessions = await loadPomodoroSessions();
-        sessions = localSessions;
-        console.log('📊 Stats Modal - Using local sessions:', sessions?.length || 0);
-      }
-
-      // Load leaderboard (always from database)
-      const leaderboardData = await loadLeaderboard();
-
-      console.log('📊 Stats Modal - Processing stats for user:', user?.email || 'guest');
-
-      if (!sessions || !Array.isArray(sessions)) {
-        console.warn('No sessions data available');
-        setStatsData({
-          totalSessions: 0,
-          totalFocusTime: 0,
-          streakDays: 0,
-          todaySessions: 0,
-          weekSessions: 0,
-          monthSessions: 0,
-          categorySplit: {},
-          dailyActivity: []
-        });
-        setLeaderboard(leaderboardData || []);
-        return;
-      }
-
-      // Calculate comprehensive stats
-      const now = new Date();
-      const today = now.toISOString().split('T')[0];
-      const weekAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
-      const monthAgo = new Date(now.getFullYear(), now.getMonth(), 1);
-
-      // Filter sessions safely - only count work sessions for stats
-      const completedSessions = sessions.filter(s => s?.completed && s?.type === 'work');
-      
-      const todaySessions = completedSessions.filter(s => 
-        s?.completed_at?.startsWith(today)
-      );
-      const weekSessions = completedSessions.filter(s => 
-        s?.completed_at && new Date(s.completed_at) >= weekAgo
-      );
-      const monthSessions = completedSessions.filter(s => 
-        s?.completed_at && new Date(s.completed_at) >= monthAgo
-      );
-
-      // Calculate category split
-      const categorySplit: Record<string, number> = {};
-      completedSessions.forEach(session => {
-        const category = session?.category || 'Other';
-        categorySplit[category] = (categorySplit[category] || 0) + 1;
-      });
-
-      // Calculate daily activity for last 30 days
-      const dailyActivity: Array<{ date: string; sessions: number; focusTime: number }> = [];
-      for (let i = 29; i >= 0; i--) {
-        const date = new Date(now.getTime() - i * 24 * 60 * 60 * 1000);
-        const dateStr = date.toISOString().split('T')[0];
-        const daySessions = completedSessions.filter(s => 
-          s?.completed_at?.startsWith(dateStr) && s?.type === 'work'
-        );
-        
-        dailyActivity.push({
-          date: dateStr,
-          sessions: daySessions.length,
-          focusTime: daySessions.reduce((total, s) => total + ((s?.duration || 0) / 60), 0) // Convert seconds to minutes
-        });
-      }
-
-      // Calculate streak (improved logic)
-      let streakDays = 0;
-      const checkDate = new Date(now);
-      let consecutiveDays = true;
-      
-      while (consecutiveDays && streakDays < 365) { // Prevent infinite loop
-        const dateStr = checkDate.toISOString().split('T')[0];
-        const hasSessions = completedSessions.some(s => 
-          s?.completed_at?.startsWith(dateStr) && s?.type === 'work'
-        );
-        
-        if (hasSessions) {
-          streakDays++;
-          checkDate.setDate(checkDate.getDate() - 1);
-        } else {
-          consecutiveDays = false;
-        }
-      }
-
-      const finalStatsData = {
-        totalSessions: completedSessions.length,
-        totalFocusTime: completedSessions.reduce((total, s) => total + ((s?.duration || 0) / 60), 0), // Convert seconds to minutes
-        streakDays,
-        todaySessions: todaySessions.length,
-        weekSessions: weekSessions.length,
-        monthSessions: monthSessions.length,
-        categorySplit,
-        dailyActivity
-      };
-
-      setStatsData(finalStatsData);
-
-      setLeaderboard(leaderboardData || []);
-      setHasLoadedOnce(true);
+      const fetchedStats = await loadPomodoroStats(days);
+      console.log('[StatsModal] Fetched stats:', fetchedStats);
+      setStats(fetchedStats || []);
     } catch (error) {
-      console.error('Failed to load stats:', error);
-      // Set empty state on error
-      setStatsData({
-        totalSessions: 0,
-        totalFocusTime: 0,
-        streakDays: 0,
-        todaySessions: 0,
-        weekSessions: 0,
-        monthSessions: 0,
-        categorySplit: {},
-        dailyActivity: []
-      });
-      setLeaderboard([]);
-      setHasLoadedOnce(true);
+      console.error('[StatsModal] Failed to load stats:', error);
+      setStats([]);
     } finally {
-      setLoading(false);
+      const duration = Date.now() - startTime;
+      setTimeout(() => setLoading(false), Math.max(0, minDisplayTime - duration));
     }
-  }, [loadPomodoroSessions, loadLeaderboard, user, isAuthenticated, realtimeSessions]);
-
-  // Update stats automatically when realtime data changes
-  useEffect(() => {
-    if (isAuthenticated && realtimeSessions && hasLoadedOnce) {
-      console.log('📊 Stats Modal - Realtime sessions updated, recalculating stats');
-      loadStats();
-    }
-  }, [isAuthenticated, realtimeSessions, realtimeStats, hasLoadedOnce, loadStats]);
+  }, [isOpen, user, days, loadPomodoroStats]);
 
   useEffect(() => {
-    if (isOpen && !hasLoadedOnce) {
-      loadStats();
-    }
-  }, [isOpen, hasLoadedOnce, loadStats]);  // Function to manually refresh stats
-  const refreshStats = useCallback(async () => {
-    setLoading(true);
-    await loadStats();
-  }, [loadStats]);
+    loadStats(true);
+  }, [user, days, loadStats]);
 
-  // Reset state when modal is closed
   useEffect(() => {
-    if (!isOpen) {
-      setHasLoadedOnce(false);
-      setLoading(false);
-    }
-  }, [isOpen]);
+    if (!isOpen) return;
 
-  const formatTime = (minutes: number) => {
-    const hours = Math.floor(minutes / 60);
-    const mins = Math.round(minutes % 60);
-    if (hours > 0) {
-      return `${hours}h ${mins}m`;
+    const channel = supabase.channel('pomodoro_stats_changes')
+      .on('postgres_changes', {
+        event: '*',
+        schema: 'public',
+        table: 'pomodoro_stats',
+        filter: user ? `user_id=eq.${user.id}` : undefined,
+      }, (payload) => {
+        console.log('[StatsModal] Real-time change received:', payload);
+        loadStats(false);
+      })
+      .subscribe();
+
+    return () => {
+      console.log('[StatsModal] Unsubscribing from real-time channel.');
+      supabase.removeChannel(channel);
+    };
+  }, [isOpen, user, loadStats]);
+
+  const { totalSessions, totalFocusTime, avgSessionsPerDay, categoryStats } = useMemo(() => {
+    if (!stats) {
+      console.log('[StatsModal] Memo: Stats are null.');
+      return { totalSessions: 0, totalFocusTime: 0, avgSessionsPerDay: 0, categoryStats: {} };
     }
-    return `${mins}m`;
-  };
+
+    console.log('[StatsModal] Memo: Recalculating stats.');
+    const totalSessions = stats.reduce((acc, s) => acc + (s.sessions_completed || 0), 0);
+    const totalFocusTime = stats.reduce((acc, s) => acc + (s.total_focus_time || 0), 0);
+    
+    const categoryStats = stats.reduce((acc, s) => {
+      const category = s.category || 'Other';
+      if (!acc[category]) {
+        acc[category] = { sessions: 0, time: 0 };
+      }
+      acc[category].sessions += s.sessions_completed || 0;
+      acc[category].time += s.total_focus_time || 0;
+      return acc;
+    }, {} as Record<string, { sessions: number; time: number }>);
+
+    return {
+      totalSessions,
+      totalFocusTime,
+      avgSessionsPerDay: totalSessions > 0 ? (totalSessions / days) : 0,
+      categoryStats
+    };
+  }, [stats, days]);
 
   if (!isOpen) return null;
 
-  return (
-    <div className={styles.modalOverlay}>
-      <div className={styles.modalContainer}>        {/* Header */}
-        <div className={styles.modalHeader}>
-          <div className={styles.headerContent}>
-            <div className={styles.headerIcon}>
-              <BarChart3 size={24} />
-            </div>
-            <div>
-              <h2 className={styles.modalTitle}>Study Statistics</h2>
-              <p className={styles.modalSubtitle}>Your productivity insights</p>
-            </div>
-          </div>
-          <div className={styles.headerActions}>
-            {user?.email && (
-              <button 
-                onClick={refreshStats} 
-                className={styles.refreshButton}
-                disabled={loading}
-                title="Refresh statistics"
-              >
-                <RefreshCw size={16} className={loading ? styles.spinning : ''} />
-              </button>
-            )}
-            <button onClick={onClose} className={styles.closeButton}>
-              <X size={20} />
-            </button>
-          </div>
-        </div>
+  console.log('[StatsModal] Rendering with loading state:', loading);
 
-        {/* Tab Navigation */}
-        <div className={styles.tabNavigation}>
-          {[
-            { id: 'overview', label: 'Overview', icon: <Activity size={16} /> },
-            { id: 'analytics', label: 'Analytics', icon: <TrendingUp size={16} /> },
-            { id: 'leaderboard', label: 'Leaderboard', icon: <Trophy size={16} /> }
-          ].map(tab => (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id as 'overview' | 'analytics' | 'leaderboard')}
-              className={`${styles.tabButton} ${activeTab === tab.id ? styles.activeTab : ''}`}
-            >
-              {tab.icon}
-              <span>{tab.label}</span>
+  return (
+    <div className={styles.overlay} onClick={onClose}>
+      <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+        <div className={styles.header}>
+          <div className={styles.headerTitle}>
+            <BarChart3 size={20} />
+            <h2>Statistics</h2>
+          </div>
+          <button onClick={onClose} className={styles.closeButton}><X /></button>
+        </div>
+        
+        <div className={styles.content}>
+          <div className={styles.tabs}>
+            {[7, 30, 90].map(d => (
+              <button key={d} onClick={() => setDays(d)} className={days === d ? styles.activeTab : ''}>
+                Last {d} Days
+              </button>
+            ))}
+            <button onClick={() => loadStats()} className={styles.refreshButton} disabled={loading}>
+              <RefreshCw size={16} className={loading ? styles.loadingIcon : ''} />
             </button>
-          ))}
-        </div>        {/* Content */}
-        <div className={styles.modalContent}>
-          {loading && !hasLoadedOnce ? (
-            <div className={styles.loadingState}>
+          </div>
+          
+          {loading ? (
+            <div className={styles.loader}>
               <div className={styles.spinner}></div>
-              <p>Loading your statistics...</p>
+              <span>Loading stats...</span>
             </div>
-          ) : !user?.email ? (
-            <div className={styles.authRequiredState}>
-              <div className={styles.authIcon}>🔒</div>
-              <h3>Authentication Required</h3>
-              <p>Please sign in to view comprehensive study statistics, leaderboard rankings, and sync your data across devices.</p>
-              <div className={styles.authHint}>
-                <BarChart3 size={20} />
-                <span>Local session data is available but requires login for full features</span>
+          ) : (
+            <div className={styles.statsContainer}>
+              <div className={styles.statsGrid}>
+                <StatCard icon={<Trophy size={24} />} label="Total Sessions" value={totalSessions} />
+                <StatCard icon={<Clock size={24} />} label="Total Focus Time" value={`${totalFocusTime} min`} />
+                <StatCard icon={<TrendingUp size={24} />} label="Avg. Sessions/Day" value={avgSessionsPerDay.toFixed(1)} />
+              </div>
+              
+              <ActivityHeatmap stats={stats || []} />
+              
+              <div className={styles.categorySection}>
+                <h3>Category Breakdown</h3>
+                {Object.keys(categoryStats).length > 0 ? (
+                  <div className={styles.categoryList}>
+                    {Object.entries(categoryStats).map(([category, data]) => (
+                      <div key={category} className={styles.categoryItem}>
+                        <div className={styles.categoryInfo}>
+                          <div className={styles.categoryName}>
+                            {getCategoryIcon(category)}
+                            <span>{category}</span>
+                          </div>
+                          <span className={styles.categoryValues}>{data.sessions} sessions ({data.time} min)</span>
+                        </div>
+                        <div className={styles.categoryBarContainer}>
+                          <div 
+                            className={styles.categoryBar} 
+                            style={{ width: `${(data.time / totalFocusTime) * 100}%` }}
+                          ></div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                ) : (
+                  <div className={styles.noData}>No data for this period.</div>
+                )}
               </div>
             </div>
-          ) : (<>
-              {/* Overview Tab */}
-              {activeTab === 'overview' && statsData && (
-                <div className={styles.overviewContent}>
-                  {statsData.totalSessions === 0 ? (
-                    <div className={styles.emptyDataState}>
-                      <div className={styles.emptyIcon}>📊</div>
-                      <h3>No study data yet</h3>
-                      <p>Start your first focus session to begin tracking your productivity!</p>
-                      <div className={styles.emptyHints}>
-                        <div className={styles.emptyHint}>
-                          <CheckCircle size={16} />
-                          <span>Complete Pomodoro sessions</span>
-                        </div>
-                        <div className={styles.emptyHint}>
-                          <Clock size={16} />
-                          <span>Track your focus time</span>
-                        </div>
-                        <div className={styles.emptyHint}>
-                          <Flame size={16} />
-                          <span>Build study streaks</span>
-                        </div>
-                      </div>
-                    </div>
-                  ) : (
-                    <>                      {/* Quick Stats */}
-                      <div className={styles.quickStats}>
-                        <div className={styles.statCard}>
-                          <div className={styles.statIcon}>
-                            <CheckCircle size={20} />
-                          </div>
-                          <div className={styles.statContent}>
-                            <div className={styles.statValue}>{statsData.totalSessions}</div>
-                            <div className={styles.statLabel}>Total Sessions</div>
-                          </div>
-                        </div>
-
-                        <div className={styles.statCard}>
-                          <div className={styles.statIcon}>
-                            <Clock size={20} />
-                          </div>
-                          <div className={styles.statContent}>
-                            <div className={styles.statValue}>{formatTime(statsData.totalFocusTime)}</div>
-                            <div className={styles.statLabel}>Focus Time</div>
-                          </div>
-                        </div>
-
-                        <div className={styles.statCard}>
-                          <div className={styles.statIcon}>
-                            <Flame size={20} />
-                          </div>
-                          <div className={styles.statContent}>
-                            <div className={styles.statValue}>{statsData.streakDays}</div>
-                            <div className={styles.statLabel}>Day Streak</div>
-                          </div>
-                        </div>
-
-                        <div className={styles.statCard}>
-                          <div className={styles.statIcon}>
-                            <Target size={20} />
-                          </div>
-                          <div className={styles.statContent}>
-                            <div className={styles.statValue}>{statsData.todaySessions}</div>
-                            <div className={styles.statLabel}>Today</div>
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Period Comparison */}
-                      <div className={styles.periodStats}>
-                        <h3>Performance Overview</h3>
-                        <div className={styles.periodGrid}>
-                          <div className={styles.periodCard}>
-                            <div className={styles.periodLabel}>This Week</div>
-                            <div className={styles.periodValue}>{statsData.weekSessions} sessions</div>
-                            <div className={styles.periodTime}>
-                              {formatTime(statsData.dailyActivity.slice(-7).reduce((sum, day) => sum + day.focusTime, 0))}
-                            </div>
-                          </div>
-                          <div className={styles.periodCard}>
-                            <div className={styles.periodLabel}>This Month</div>
-                            <div className={styles.periodValue}>{statsData.monthSessions} sessions</div>
-                            <div className={styles.periodTime}>
-                              {formatTime(statsData.dailyActivity.reduce((sum, day) => sum + day.focusTime, 0))}
-                            </div>
-                          </div>
-                        </div>
-                      </div>                      {/* Category Breakdown */}
-                      <div className={styles.categoryBreakdown}>
-                        <h3>Study Categories</h3>
-                        {Object.keys(statsData.categorySplit).length > 0 ? (
-                          <div className={styles.categoryList}>
-                            {Object.entries(statsData.categorySplit).map(([category, count]) => {
-                              const percentage = (count / statsData.totalSessions) * 100;
-                              return (
-                                <div key={category} className={styles.categoryItem}>
-                                  <div className={styles.categoryHeader}>
-                                    <div className={styles.categoryName}>
-                                      {getCategoryIcon(category)}
-                                      <span>{category}</span>
-                                    </div>
-                                    <div className={styles.categoryCount}>{count} sessions</div>
-                                  </div>
-                                  <div className={styles.categoryProgress}>
-                                    <div 
-                                      className={styles.categoryBar}
-                                      style={{ width: `${percentage}%` }}
-                                    ></div>
-                                  </div>
-                                  <div className={styles.categoryPercentage}>{Math.round(percentage)}%</div>
-                                </div>
-                              );
-                            })}
-                          </div>
-                        ) : (
-                          <div className={styles.emptyCategories}>
-                            <BookOpen size={32} />
-                            <p>No study categories yet</p>
-                            <span>Complete some focus sessions to see your category breakdown</span>
-                          </div>
-                        )}
-                      </div>
-                    </>
-                  )}
-                </div>
-              )}
-
-              {/* Analytics Tab */}
-              {activeTab === 'analytics' && statsData && (
-                <div className={styles.analyticsContent}>
-                  <h3>30-Day Activity Chart</h3>
-                  <div className={styles.activityChart}>
-                    <div className={styles.chartGrid}>
-                      {statsData.dailyActivity.map((day, index) => {
-                        const maxSessions = Math.max(...statsData.dailyActivity.map(d => d.sessions));
-                        const intensity = maxSessions > 0 ? day.sessions / maxSessions : 0;
-                        const dayOfWeek = new Date(day.date).getDay();
-                        const dayNames = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-                        
-                        return (
-                          <div
-                            key={day.date}
-                            className={styles.chartDay}
-                            style={{
-                              backgroundColor: intensity > 0 
-                                ? `rgba(255, 123, 0, ${0.2 + intensity * 0.8})` 
-                                : 'rgba(255, 255, 255, 0.05)'
-                            }}
-                            title={`${day.date}: ${day.sessions} sessions, ${formatTime(day.focusTime)}`}
-                          >
-                            {index < 7 && (
-                              <div className={styles.dayLabel}>{dayNames[dayOfWeek]}</div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                    <div className={styles.chartLegend}>
-                      <span>Less</span>
-                      <div className={styles.legendScale}>
-                        {[0, 0.25, 0.5, 0.75, 1].map(intensity => (
-                          <div
-                            key={intensity}
-                            className={styles.legendSquare}
-                            style={{
-                              backgroundColor: intensity > 0 
-                                ? `rgba(255, 123, 0, ${0.2 + intensity * 0.8})` 
-                                : 'rgba(255, 255, 255, 0.05)'
-                            }}
-                          />
-                        ))}
-                      </div>
-                      <span>More</span>
-                    </div>
-                  </div>
-
-                  {/* Weekly Pattern */}
-                  <div className={styles.weeklyPattern}>
-                    <h3>Weekly Pattern</h3>
-                    <div className={styles.weeklyChart}>
-                      {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map((day, index) => {
-                        const dayData = statsData.dailyActivity.filter(d => 
-                          new Date(d.date).getDay() === (index + 1) % 7
-                        );
-                        const avgSessions = dayData.length > 0 
-                          ? dayData.reduce((sum, d) => sum + d.sessions, 0) / dayData.length 
-                          : 0;
-                        const maxAvg = 5; // Assume max 5 sessions per day on average
-                        const height = Math.min((avgSessions / maxAvg) * 100, 100);
-                        
-                        return (
-                          <div key={day} className={styles.weeklyBar}>
-                            <div 
-                              className={styles.barFill}
-                              style={{ height: `${height}%` }}
-                            />
-                            <div className={styles.barLabel}>{day}</div>
-                            <div className={styles.barValue}>{avgSessions.toFixed(1)}</div>
-                          </div>
-                        );
-                      })}
-                    </div>
-                  </div>
-                </div>
-              )}
-
-              {/* Leaderboard Tab */}
-              {activeTab === 'leaderboard' && (
-                <div className={styles.leaderboardContent}>
-                  <div className={styles.leaderboardHeader}>
-                    <h3>Global Leaderboard</h3>
-                    <p>See how you rank among other focused learners</p>
-                  </div>
-
-                  {leaderboard.length > 0 ? (
-                    <div className={styles.leaderboardList}>
-                      {leaderboard.map((entry, index) => {
-                        const isCurrentUser = entry.email === user?.email;
-                        return (
-                          <div 
-                            key={entry.email} 
-                            className={`${styles.leaderboardItem} ${isCurrentUser ? styles.currentUser : ''}`}
-                          >
-                            <div className={styles.rank}>
-                              {index < 3 ? (
-                                <div className={`${styles.medal} ${styles[`medal${index + 1}`]}`}>
-                                  <Award size={20} />
-                                </div>
-                              ) : (
-                                <span className={styles.rankNumber}>#{index + 1}</span>
-                              )}
-                            </div>
-                            <div className={styles.userInfo}>
-                              <div className={styles.userName}>
-                                {isCurrentUser ? 'You' : entry.email.split('@')[0]}
-                              </div>
-                              <div className={styles.userStats}>
-                                {entry.totalSessions} sessions • {formatTime(entry.totalFocusTime)}
-                              </div>
-                            </div>
-                            {isCurrentUser && (
-                              <div className={styles.currentUserBadge}>You</div>
-                            )}
-                          </div>
-                        );
-                      })}
-                    </div>
-                  ) : (
-                    <div className={styles.emptyState}>
-                      <Users size={48} />
-                      <h4>No leaderboard data yet</h4>
-                      <p>Complete some focus sessions to see rankings!</p>
-                    </div>                  )}
-                </div>
-              )}
-            </>
           )}
         </div>
+      </div>
+    </div>
+  );
+};
+
+const StatCard = ({ icon, label, value }: { icon: React.ReactNode, label: string, value: string | number }) => (
+  <div className={styles.statCard}>
+    <div className={styles.statIcon}>{icon}</div>
+    <div className={styles.statValue}>{value}</div>
+    <div className={styles.statLabel}>{label}</div>
+  </div>
+);
+
+const ActivityHeatmap = ({ stats }: { stats: PomodoroStats[] }) => {
+  const { days, maxCount } = useMemo(() => {
+    const endDate = new Date();
+    // Go back 29 days to get a total of 30 days
+    const startDate = new Date();
+    startDate.setDate(endDate.getDate() - 29);
+
+    // Create array of dates
+    const days = Array.from({ length: 30 }, (_, i) => {
+      const date = new Date(startDate);
+      date.setDate(startDate.getDate() + i);
+      return {
+        date: date.toISOString().split('T')[0],
+        count: 0,
+        dayOfWeek: date.getDay(),
+        column: Math.floor(i / 7)
+      };
+    });
+
+    let maxCount = 0;
+    stats.forEach(stat => {
+      const statDate = stat.date?.split('T')[0];
+      const day = days.find(d => d.date === statDate);
+      if (day) {
+        const sessionCount = stat.sessions_completed || 0;
+        day.count = sessionCount;
+        if (sessionCount > maxCount) maxCount = sessionCount;
+      }
+    });
+
+    return { days, maxCount: maxCount || 4 }; // Use at least 4 as max to avoid division by zero
+  }, [stats]);
+
+  const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+  
+  return (
+    <div className={styles.heatmapContainer}>
+      <h3>Last 30 Days Activity</h3>
+      <div className={styles.heatmap}>
+        <div className={styles.weekdays}>
+          {weekdays.map((name, idx) => (
+            <div key={idx}>{name}</div>
+          ))}
+        </div>
+        <div className={styles.days}>
+          {days.map((day, index) => (
+            <div
+              key={index}
+              className={styles.dayCell}
+              style={{ 
+                '--intensity': day.count / maxCount,
+                gridRow: day.dayOfWeek + 1,
+                gridColumn: day.column + 1
+              } as React.CSSProperties}
+              title={`${day.date}: ${day.count} sessions`}
+            />
+          ))}
+        </div>
+      </div>
+      <div className={styles.heatmapLegend}>
+        <span>Less</span>
+        <div className={styles.legendColors}>
+          <div className={styles.dayCell} style={{ '--intensity': 0 } as React.CSSProperties}></div>
+          <div className={styles.dayCell} style={{ '--intensity': 0.25 } as React.CSSProperties}></div>
+          <div className={styles.dayCell} style={{ '--intensity': 0.5 } as React.CSSProperties}></div>
+          <div className={styles.dayCell} style={{ '--intensity': 0.75 } as React.CSSProperties}></div>
+          <div className={styles.dayCell} style={{ '--intensity': 1 } as React.CSSProperties}></div>
+        </div>
+        <span>More</span>
       </div>
     </div>
   );

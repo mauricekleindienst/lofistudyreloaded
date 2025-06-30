@@ -114,7 +114,7 @@ export function useDataPersistence() {
         created_at: session.created_at
       }));
     }
-  }, [isAuthenticated, authContext?.user?.email, authContext?.user?.id, localCache, withLoadingAndError]);
+  }, [isAuthenticated, authContext.user, localCache, withLoadingAndError]);
 
   const updatePomodoroStats = useCallback(async (stats: PomodoroStats): Promise<boolean> => {
     if (isAuthenticated) {
@@ -141,7 +141,7 @@ export function useDataPersistence() {
         category: 'mixed'
       }];
     }
-  }, [isAuthenticated, authContext?.user?.email, authContext?.user?.id, localCache, withLoadingAndError]);
+  }, [isAuthenticated, authContext.user, localCache, withLoadingAndError]);
 
   // Get combined stats for both authenticated and unauthenticated users
   const getCombinedPomodoroStats = useCallback(() => {

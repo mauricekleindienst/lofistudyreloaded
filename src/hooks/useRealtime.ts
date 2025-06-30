@@ -18,7 +18,7 @@ export function useRealtimeTodos() {
   const authContext = useAuth();
   const [todos, setTodos] = useState<Todo[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [setChannel] = useState<RealtimeChannel | null>(null);
+  const [, setChannel] = useState<RealtimeChannel | null>(null);
 
   // Load initial todos
   const loadTodos = useCallback(async () => {
@@ -105,7 +105,7 @@ export function useRealtimePomodoroSessions() {
   const authContext = useAuth();
   const [sessions, setSessions] = useState<PomodoroSession[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [setChannel] = useState<RealtimeChannel | null>(null);
+  const [, setChannel] = useState<RealtimeChannel | null>(null);
 
   const loadSessions = useCallback(async () => {
     try {
@@ -193,7 +193,7 @@ export function useRealtimePomodoroStats() {
   const authContext = useAuth();
   const [stats, setStats] = useState<PomodoroStats[]>([]);
   const [isLoading, setIsLoading] = useState(true);
-  const [setChannel] = useState<RealtimeChannel | null>(null);
+  const [, setChannel] = useState<RealtimeChannel | null>(null);
 
   const loadStats = useCallback(async () => {
     try {
@@ -268,7 +268,7 @@ export function useRealtimePomodoroStats() {
         supabase.removeChannel(statsChannel);
       }
     };
-  }, [authContext?.isConfigured, authContext?.user?.email, loadStats]);
+  }, [authContext?.isConfigured, authContext?.user?.email, loadStats, setChannel]);
 
   return {
     stats,
@@ -280,18 +280,20 @@ export function useRealtimePomodoroStats() {
 // Combined hook for all realtime data
 export function useRealtimeData() {
   const todos = useRealtimeTodos();
-  const sessions = useRealtimePomodoroSessions();
-  const stats = useRealtimePomodoroStats();
+  const pomodoroSessions = useRealtimePomodoroSessions();
+  const pomodoroStats = useRealtimePomodoroStats();
+
+  const refreshAll = useCallback(() => {
+    todos.refresh();
+    pomodoroSessions.refresh();
+    pomodoroStats.refresh();
+  }, [todos, pomodoroSessions, pomodoroStats]);
 
   return {
     todos: todos.todos,
-    sessions: sessions.sessions,
-    stats: stats.stats,
-    isLoading: todos.isLoading || sessions.isLoading || stats.isLoading,
-    refresh: {
-      todos: todos.refresh,
-      sessions: sessions.refresh,
-      stats: stats.refresh
-    }
+    pomodoroSessions: pomodoroSessions.sessions,
+    pomodoroStats: pomodoroStats.stats,
+    isLoading: todos.isLoading || pomodoroSessions.isLoading || pomodoroStats.isLoading,
+    refreshAll,
   };
 }

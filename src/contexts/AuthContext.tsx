@@ -1,6 +1,6 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from 'react';
+import { createContext, useContext, useEffect, useState, useMemo } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { createClient } from '../utils/supabase/client';
 import { useUserProfile, ExtendedUser } from '../hooks/useUserProfile';
@@ -130,7 +130,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     );
 
     return () => subscription.unsubscribe();
-  }, [supabase]);  const signIn = async (email: string, password: string) => {
+  }, [supabase]);
+
+  const signIn = async (email: string, password: string) => {
     if (!isConfigured) {
       return { error: { message: 'Authentication not configured' } };
     }    try {
@@ -196,7 +198,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
   };
 
-  const value = {
+  const value = useMemo(() => ({
     user: getExtendedUser(),
     authUser,
     session,
@@ -206,7 +208,17 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signUp,
     signOut,
     signInWithProvider,
-  };
+  }), [
+    authUser, 
+    session, 
+    loading, 
+    isConfigured, 
+    getExtendedUser,
+    signIn,
+    signUp,
+    signOut,
+    signInWithProvider
+  ]);
 
   return (
     <AuthContext.Provider value={value}>

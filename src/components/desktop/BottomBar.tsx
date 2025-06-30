@@ -9,7 +9,6 @@ import {
   LogIn
 } from 'lucide-react';
 import { User as SupabaseUser } from '@supabase/supabase-js';
-import RealtimeStatusIndicator from '../RealtimeStatusIndicator';
 import styles from '../../../styles/SelectionBar.module.css';
 import desktopStyles from '../../../styles/Desktop.module.css';
 import { type AppStates } from '../../contexts/AppStateContext';
@@ -268,9 +267,6 @@ export default function BottomBar({
           </div>
         )}
       </div>
-      
-      {/* Realtime Status Indicator - positioned absolutely within selection bar */}
-      <RealtimeStatusIndicator />
     </div>
   );
 }

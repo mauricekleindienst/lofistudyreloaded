@@ -9,7 +9,6 @@ import React, {
 } from "react";
 import { useAuth } from '../../contexts/AuthContext';
 import { useDataPersistence } from '../../hooks/useDataPersistence';
-import { useRealtimePomodoroSessions } from '../../hooks/useRealtime';
 import { useAppState } from '../../contexts/AppStateContext';
 import { 
   Play, 
@@ -96,8 +95,6 @@ function reducer(state: PomodoroState, action: PomodoroAction): PomodoroState {
       return { ...state, pomodoroCount: state.pomodoroCount + 1 };
     case "SET_POMODORO_COUNT":
       return { ...state, pomodoroCount: action.payload };
-    case "SET_POMODORO_COUNT":
-      return { ...state, pomodoroCount: action.payload };
     case "TOGGLE_SETTINGS":
       return { ...state, showSettings: !state.showSettings };
     case "SET_CATEGORY":
@@ -116,8 +113,7 @@ function reducer(state: PomodoroState, action: PomodoroAction): PomodoroState {
   }
 }
 
-export default function PomodoroTimer() {
-  const [state, dispatch] = useReducer(reducer, initialState);
+export default function PomodoroTimer() {  const [state, dispatch] = useReducer(reducer, initialState);
   const { user } = useAuth();
   const { 
     isAuthenticated, 
@@ -125,10 +121,6 @@ export default function PomodoroTimer() {
     loadPomodoroSessions,
     updatePomodoroStats 
   } = useDataPersistence();
-  
-  // Use realtime sessions for live updates
-  const { sessions: realtimeSessions } = useRealtimePomodoroSessions();
-  
   const { updatePomodoroState } = useAppState();
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   const completionHandledRef = useRef<boolean>(false);
@@ -197,47 +189,33 @@ export default function PomodoroTimer() {
   }, [requestNotificationPermission]);
 
   // Load user's pomodoro history to get current count
-  const loadPomodoroCount = useCallback(async () => {
-    if (isAuthenticated && user?.email) {
-      try {
-        // Use realtime sessions when available, fallback to loading
-        const sessions = isAuthenticated && realtimeSessions.length > 0 
-          ? realtimeSessions 
-          : await loadPomodoroSessions();
-          
-        // Count completed pomodoro sessions for today
-        const today = new Date().toISOString().split('T')[0];
-        const todaySessions = sessions.filter(session => 
-          session.completed && 
-          session.type === 'work' &&
-          session.completed_at?.startsWith(today)
-        );
-        
-        // Update local count to match database - only if different
-        const newCount = todaySessions.length;
-        if (newCount !== state.pomodoroCount) {
-          dispatch({ type: "SET_POMODORO_COUNT", payload: newCount });
-        }
-      } catch (error) {
-        console.error("Failed to load pomodoro count:", error);
-      }
-    }
-  }, [isAuthenticated, user?.email, realtimeSessions, state.pomodoroCount, loadPomodoroSessions]);
-
-  // Load count when key dependencies change (not the function itself)
   useEffect(() => {
-    loadPomodoroCount();
-  }, [loadPomodoroCount, isAuthenticated, user?.email, realtimeSessions]);
+    const loadPomodoroCount = async () => {
+      if (isAuthenticated && user?.email) {
+        try {
+          const sessions = await loadPomodoroSessions();
+          // Count completed pomodoro sessions for today
+          const today = new Date().toISOString().split('T')[0];
+          const todaySessions = sessions.filter(session => 
+            session.completed && 
+            session.type === 'work' &&
+            session.completed_at?.startsWith(today)
+          );
+          
+          // Update local count to match database
+          if (todaySessions.length > 0) {
+            // Set the count to match database without dispatching INCREMENT for each
+            // This is a direct state update to sync with database
+            dispatch({ type: "SET_POMODORO_COUNT", payload: todaySessions.length });
+          }
+        } catch (error) {
+          console.error("Failed to load pomodoro count:", error);
+        }
+      }
+    };
 
-  // Auto-refresh realtime sessions when new session is saved
-  const handleSessionSave = useCallback(async (sessionData: Record<string, unknown>) => {
-    const savedSession = await savePomodoroSession(sessionData);
-    if (savedSession && isAuthenticated) {
-      // The realtime hook will automatically refresh sessions
-      // No need to manually call refreshSessions()
-    }
-    return savedSession;
-  }, [savePomodoroSession, isAuthenticated]);
+    loadPomodoroCount();
+  }, [isAuthenticated, user?.email, loadPomodoroSessions]);
 
   // Timer effect - handle completion within the tick
   useEffect(() => {
@@ -259,98 +237,100 @@ export default function PomodoroTimer() {
     };
   }, [state.isTimerRunning, state.timeLeft]);
 
+  const handleCompletion = useCallback(async () => {
+    let sessionType: 'work' | 'short_break' | 'long_break' = 'work';
+    switch (state.currentMode) {
+      case "pomodoro":
+        sessionType = "work";
+        break;
+      case "shortBreak":
+        sessionType = "short_break";
+        break;
+      case "longBreak":
+        sessionType = "long_break";
+        break;
+    }
+
+    if (state.currentMode === 'pomodoro' && isAuthenticated && user?.email) {
+      const sessionData = {
+        user_id: user.id,
+        email: user.email,
+        duration: state.pomodoroDurations.pomodoro,
+        type: sessionType,
+        completed: true,
+        category: state.category,
+        completed_at: new Date().toISOString(),
+      };
+  
+      await savePomodoroSession(sessionData);
+  
+      const statsUpdate = {
+        date: new Date().toISOString().split('T')[0],
+        sessions_completed: 1, // Will be incremented
+        total_focus_time: Math.round(state.pomodoroDurations.pomodoro / 60), // in minutes
+        category: state.category,
+        email: user.email,
+        user_id: user.id,
+      };
+      
+      await updatePomodoroStats(statsUpdate);
+      dispatch({ type: 'INCREMENT_POMODORO' });
+    }
+
+    // Determine next mode
+    const nextMode =
+      state.currentMode === "pomodoro"
+        ? (state.pomodoroCount + 1) % 4 === 0
+          ? "longBreak"
+          : "shortBreak"
+        : "pomodoro";
+
+    const autoStartNext = nextMode !== "pomodoro";
+    dispatch({ type: "SET_MODE", payload: nextMode, autoStart: autoStartNext });
+
+    // Notifications and Sounds
+    let soundToPlay = null;
+    let notificationTitle = "Time's up!";
+    let notificationMessage = "";
+
+    if (nextMode === 'pomodoro') {
+      soundToPlay = soundRefs.pomodoroStart;
+      notificationTitle = "Break's Over!";
+      notificationMessage = "Time to get back to focus.";
+    } else if (nextMode === 'shortBreak') {
+      soundToPlay = soundRefs.pomodoroEnd;
+      notificationTitle = "Nice work!";
+      notificationMessage = "Time for a short break.";
+    } else if (nextMode === 'longBreak') {
+      soundToPlay = soundRefs.longPause;
+      notificationTitle = "Great session!";
+      notificationMessage = "Time for a long break.";
+    }
+
+    if (soundToPlay) playSound(soundToPlay);
+    showNotification(notificationTitle, notificationMessage);
+  }, [
+    state.currentMode,
+    state.pomodoroCount,
+    state.pomodoroDurations,
+    state.category,
+    user,
+    isAuthenticated,
+    savePomodoroSession,
+    updatePomodoroStats,
+    playSound,
+    showNotification,
+    soundRefs,
+  ]);
+  
   // Timer completion handler - when timer hits 0, switch modes and auto-start
   useEffect(() => {
     if (state.timeLeft === 0 && state.isTimerRunning && !completionHandledRef.current) {
       completionHandledRef.current = true;
-      
-      const handleCompletion = () => {
-        if (state.currentMode === "pomodoro") {
-          // Pomodoro finished - increment count and switch to break IMMEDIATELY
-          dispatch({ type: "INCREMENT_POMODORO" });
-          const newCount = state.pomodoroCount + 1;
-          
-          // Determine break type: long break after every 4th pomodoro
-          const isLongBreak = newCount % 4 === 0;
-          const nextMode = isLongBreak ? "longBreak" : "shortBreak";
-          
-          // Switch mode and auto-start break timer IMMEDIATELY
-          dispatch({ type: "SET_MODE", payload: nextMode, autoStart: true });
-          showNotification(
-            "Pomodoro Complete!", 
-            isLongBreak ? "Time for a long break! ☕️" : "Take a short break! ☕️"
-          );
-          // Play appropriate sound: long break sound for long break, regular break sound for short break
-          playSound(isLongBreak ? soundRefs.longPause : soundRefs.pomodoroEnd);
-          
-          // Handle database operations in the background (non-blocking)
-          if (isAuthenticated) {
-            const saveSessionInBackground = async () => {
-              try {
-                console.log('🍅 Saving completed Pomodoro session in background:', {
-                  category: state.category,
-                  duration: state.pomodoroDurations.pomodoro,
-                  count: newCount
-                });
-
-                const completedSession = await handleSessionSave({
-                  type: 'work',
-                  duration: state.pomodoroDurations.pomodoro,
-                  category: state.category,
-                  completed: true,
-                  completed_at: new Date().toISOString(),
-                  task_name: `${state.category} Session`,
-                  notes: `Pomodoro #${newCount} completed`
-                });
-
-                console.log('✅ Session saved:', !!completedSession);
-
-                // Update daily stats if session was saved successfully
-                if (completedSession) {
-                  const statsResult = await updatePomodoroStats({
-                    sessions_completed: 1,
-                    total_focus_time: state.pomodoroDurations.pomodoro,
-                    category: state.category
-                  });
-                  console.log('📊 Stats updated:', statsResult);
-                }
-              } catch (error) {
-                console.error('❌ Failed to save session or stats:', error);
-              }
-            };
-            
-            // Execute database operations without blocking the UI
-            saveSessionInBackground();
-          }
-          
-        } else {
-          // Break finished - switch back to pomodoro and auto-start IMMEDIATELY
-          dispatch({ type: "SET_MODE", payload: "pomodoro", autoStart: true });
-          showNotification("Break Over!", "Ready to focus again? 🚀");
-          playSound(soundRefs.pomodoroStart);
-        }
-        
-        // Reset completion flag immediately after handling
-        completionHandledRef.current = false;
-      };
-
-      // Execute the completion handler (now synchronous for immediate mode switching)
       handleCompletion();
     }
-  }, [
-    state.timeLeft, 
-    state.isTimerRunning, 
-    state.currentMode, 
-    state.pomodoroCount, 
-    state.pomodoroDurations.pomodoro,
-    state.category,
-    isAuthenticated,
-    handleSessionSave,
-    updatePomodoroStats,
-    showNotification, 
-    playSound, 
-    soundRefs
-  ]);
+  }, [state.timeLeft, state.isTimerRunning, handleCompletion]);
+  
   // Update document title
   useEffect(() => {
     const formatTime = (seconds: number) => {
