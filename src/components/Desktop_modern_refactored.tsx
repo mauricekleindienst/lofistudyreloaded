@@ -120,6 +120,7 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
   // Refs for event handling
   const videoRef = useRef<HTMLVideoElement>(null);
   const bufferCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
+  const processingBackgroundsRef = useRef<Set<string>>(new Set());
   const preloadManagerRef = useRef<{
     preloadVideo: (background: Background) => Promise<HTMLVideoElement>;
     getBufferedVideo: (backgroundId: string) => HTMLVideoElement | null;
@@ -183,6 +184,12 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
           const onError = () => {
             if (progressTimer) clearInterval(progressTimer);
             if (timeoutTimer) clearTimeout(timeoutTimer);
+            // Remove from preloaded videos if it failed
+            setPreloadedVideos(prev => {
+              const newMap = new Map(prev);
+              newMap.delete(background.id.toString());
+              return newMap;
+            });
             reject(new Error(`Failed to preload video: ${background.src}`));
           };
 
@@ -263,15 +270,22 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
       for (const background of priorityBackgrounds) {
         const backgroundId = background.id.toString();
         
-        if (!currentlyBuffering.includes(backgroundId) && !preloadedVideos.has(backgroundId)) {
-          setCurrentlyBuffering(prev => [...prev, backgroundId]);
-          try {
-            await preloadManagerRef.current!.preloadVideo(background);
-          } catch (error) {
-            console.warn(`Failed to preload background ${background.id}:`, error);
-          } finally {
-            setCurrentlyBuffering(prev => prev.filter(id => id !== backgroundId));
-          }
+        // Skip if already processing or already preloaded
+        if (processingBackgroundsRef.current.has(backgroundId) || 
+            preloadedVideos.has(backgroundId)) {
+          continue;
+        }
+
+        processingBackgroundsRef.current.add(backgroundId);
+        setCurrentlyBuffering(prev => [...prev, backgroundId]);
+        
+        try {
+          await preloadManagerRef.current!.preloadVideo(background);
+        } catch (error) {
+          console.warn(`Failed to preload background ${background.id}:`, error);
+        } finally {
+          processingBackgroundsRef.current.delete(backgroundId);
+          setCurrentlyBuffering(prev => prev.filter(id => id !== backgroundId));
         }
       }
     };
@@ -279,7 +293,7 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
     // Start preloading after a short delay to not interfere with initial load
     const timer = setTimeout(preloadPopularBackgrounds, 3000);
     return () => clearTimeout(timer);
-  }, [isClient, currentlyBuffering, preloadedVideos]); // Add missing dependencies
+  }, [isClient]); // Remove currentlyBuffering and preloadedVideos from deps
 
   // Update time and date every second
   useEffect(() => {
@@ -413,27 +427,34 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
 
   // Separate effect for preloading videos to avoid infinite loops
   useEffect(() => {
-    if (!preloadManagerRef.current || currentlyBuffering.includes(currentBackground.id.toString())) {
+    if (!preloadManagerRef.current) {
+      return;
+    }
+
+    const backgroundId = currentBackground.id.toString();
+    
+    // Skip if already processing or already preloaded
+    if (processingBackgroundsRef.current.has(backgroundId) || 
+        preloadedVideos.has(backgroundId)) {
       return;
     }
 
     const preloadCurrentBackground = async () => {
       try {
-        setCurrentlyBuffering(prev => [...prev, currentBackground.id.toString()]);
+        processingBackgroundsRef.current.add(backgroundId);
+        setCurrentlyBuffering(prev => [...prev, backgroundId]);
         await preloadManagerRef.current!.preloadVideo(currentBackground);
         console.log(`Successfully preloaded background ${currentBackground.id}`);
       } catch (error) {
         console.warn(`Failed to preload background ${currentBackground.id}:`, error);
       } finally {
-        setCurrentlyBuffering(prev => prev.filter(id => id !== currentBackground.id.toString()));
+        processingBackgroundsRef.current.delete(backgroundId);
+        setCurrentlyBuffering(prev => prev.filter(id => id !== backgroundId));
       }
     };
 
-    // Only preload if not already preloaded or buffering
-    if (!preloadedVideos.has(currentBackground.id.toString())) {
-      preloadCurrentBackground();
-    }
-  }, [currentBackground.id, preloadedVideos, currentlyBuffering]);
+    preloadCurrentBackground();
+  }, [currentBackground.id]); // Remove preloadedVideos and currentlyBuffering from deps
 
   // Load saved background when user authenticates
   useEffect(() => {
