@@ -1,3 +1,4 @@
+
 /* Global CSS - Modern Clean Design System */
 
 /* CSS Custom Properties */
@@ -279,46 +280,4 @@ a:hover {
   html {
     font-size: 13px;
   }
-}
-
-/* YouTube Background Iframe - Completely disable interactions */
-iframe[src*="youtube-nocookie.com"],
-iframe[src*="youtube.com"] {
-  pointer-events: none !important;
-  user-select: none !important;
-  -webkit-user-select: none !important;
-  -moz-user-select: none !important;
-  -ms-user-select: none !important;
-  border: none !important;
-  outline: none !important;
-}
-
-/* Disable context menu on background elements */
-.backgroundContainer,
-.backgroundContainer * {
-  -webkit-touch-callout: none !important;
-  -webkit-user-select: none !important;
-  -khtml-user-select: none !important;
-  -moz-user-select: none !important;
-  -ms-user-select: none !important;
-  user-select: none !important;
-  pointer-events: none !important;
-}
-
-/* Allow UI elements to have pointer events */
-.topBar,
-.bottomBar,
-.modernWindow,
-.modal,
-.sidebar {
-  pointer-events: auto !important;
-}
-
-.topBar *,
-.bottomBar *,
-.modernWindow *,
-.modal *,
-.sidebar * {
-  pointer-events: auto !important;
-  user-select: auto !important;
 }

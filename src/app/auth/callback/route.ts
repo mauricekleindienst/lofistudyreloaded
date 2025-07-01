@@ -23,23 +23,12 @@ export async function GET(request: Request) {
     try {
       const supabase = createClient(cookies())
       
-      console.log('Exchanging auth code for session...')
       const { data, error: exchangeError } = await supabase.auth.exchangeCodeForSession(code)
       
       if (!exchangeError && data?.session) {
-        console.log('Successfully exchanged code for session for user:', data.session.user.email)
-        
-        // Give Supabase a moment to complete any database triggers
-        await new Promise(resolve => setTimeout(resolve, 500))
-        
         return NextResponse.redirect(`${origin}${next}`)
       } else {
         console.error('Error exchanging code for session:', exchangeError)
-        
-        // Check if it's a database error during user creation
-        if (exchangeError?.message?.includes('Database error saving new user')) {
-          console.error('Database error during user creation - this usually indicates RLS policy or trigger issues')
-        }
         
         const errorParams = new URLSearchParams({
           error: 'exchange_failed',

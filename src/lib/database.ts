@@ -637,10 +637,7 @@ export class DatabaseService {
         .single();
 
       if (error) {
-        // Don't log error if user simply doesn't exist yet (404/PGRST116)
-        if (error.code !== 'PGRST116') {
-          console.error('Error fetching user profile:', error);
-        }
+        console.error('Error fetching user profile:', error);
         return null;
       }
 
@@ -675,15 +672,6 @@ export class DatabaseService {
 
   async createUserProfile(userProfile: Omit<ExtendedUserProfile, 'created_at' | 'updated_at'>): Promise<boolean> {
     try {
-      // First check if user already exists in the users table
-      const existingProfile = await this.getUserProfile(userProfile.id);
-      if (existingProfile) {
-        console.log('User profile already exists, skipping creation');
-        return true;
-      }
-
-      console.log('Creating new user profile for:', userProfile.email);
-      
       const { error } = await supabase
         .from('users')
         .insert([{
@@ -694,23 +682,9 @@ export class DatabaseService {
 
       if (error) {
         console.error('Error creating user profile:', error);
-        
-        // Check if it's a foreign key constraint error (user doesn't exist in auth.users yet)
-        if (error.code === '23503' && error.message.includes('auth.users')) {
-          console.warn('User not found in auth.users table yet, will retry later');
-          return false;
-        }
-        
-        // Check if it's a duplicate key error (user already exists)
-        if (error.code === '23505') {
-          console.log('User profile already exists (duplicate key), treating as success');
-          return true;
-        }
-        
         return false;
       }
 
-      console.log('Successfully created user profile for:', userProfile.email);
       return true;
     } catch (error) {
       console.error('Error in createUserProfile:', error);

@@ -251,6 +251,7 @@ export default function PomodoroTimer() {  const [state, dispatch] = useReducer(
         break;
     }
 
+    // Save completed pomodoro session to database
     if (state.currentMode === 'pomodoro' && isAuthenticated && user?.email) {
       const sessionData = {
         user_id: user.id,
@@ -277,18 +278,25 @@ export default function PomodoroTimer() {  const [state, dispatch] = useReducer(
       dispatch({ type: 'INCREMENT_POMODORO' });
     }
 
-    // Determine next mode
-    const nextMode =
-      state.currentMode === "pomodoro"
-        ? (state.pomodoroCount + 1) % 4 === 0
-          ? "longBreak"
-          : "shortBreak"
-        : "pomodoro";
+    // Determine next mode based on current mode and pomodoro count
+    let nextMode: PomodoroState["currentMode"];
+    let shouldAutoStart = false;
+    
+    if (state.currentMode === "pomodoro") {
+      // After completing a pomodoro, decide on break type
+      const newPomodoroCount = state.pomodoroCount + (isAuthenticated ? 0 : 1); // Count was already incremented above for authenticated users
+      nextMode = (newPomodoroCount % 4 === 0) ? "longBreak" : "shortBreak";
+      shouldAutoStart = true; // Auto-start breaks
+    } else {
+      // After completing a break, go back to pomodoro
+      nextMode = "pomodoro";
+      shouldAutoStart = false; // Don't auto-start work sessions
+    }
 
-    const autoStartNext = nextMode !== "pomodoro";
-    dispatch({ type: "SET_MODE", payload: nextMode, autoStart: autoStartNext });
+    // Switch to next mode
+    dispatch({ type: "SET_MODE", payload: nextMode, autoStart: shouldAutoStart });
 
-    // Notifications and Sounds
+    // Play appropriate sound and show notification
     let soundToPlay = null;
     let notificationTitle = "Time's up!";
     let notificationMessage = "";
@@ -328,6 +336,11 @@ export default function PomodoroTimer() {  const [state, dispatch] = useReducer(
     if (state.timeLeft === 0 && state.isTimerRunning && !completionHandledRef.current) {
       completionHandledRef.current = true;
       handleCompletion();
+    }
+    
+    // Reset the completion flag when timer is reset or mode changes
+    if (state.timeLeft > 0) {
+      completionHandledRef.current = false;
     }
   }, [state.timeLeft, state.isTimerRunning, handleCompletion]);
   

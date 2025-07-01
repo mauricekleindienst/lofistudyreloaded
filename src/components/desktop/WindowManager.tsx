@@ -78,7 +78,7 @@ const useDraggable = (nodeRef: React.RefObject<HTMLElement | null>) => {
     
     nodeRef.current.style.left = `${boundedX}px`;
     nodeRef.current.style.top = `${boundedY}px`;
-  }, [isDragging, dragOffset.x, dragOffset.y, nodeRef]);
+  }, [isDragging, dragOffset.x, dragOffset.y]);
 
   const handleMouseUp = React.useCallback(() => {
     setIsDragging(false);

@@ -259,7 +259,7 @@ export default function BottomBar({
         {/* Data Sync Status - Only show syncing indicator, not local mode */}
         {backgroundSaveLoading && (
           <div className={`${styles.statusIndicator} ${styles.syncing}`}>
-          
+            <div className={styles.syncSpinner}></div>
             <div className={styles.tooltip}>
               <div className="font-semibold">Syncing...</div>
               <div className={desktopStyles.tooltipDescription}>Saving your preferences</div>

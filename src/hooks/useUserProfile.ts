@@ -16,8 +16,7 @@ export const useUserProfile = (user: User | null) => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  // Create a stable dbService instance
-  const [dbService] = useState(() => new DatabaseService());
+  const dbService = new DatabaseService();
 
   // Load user profile when user changes
   useEffect(() => {
@@ -42,7 +41,7 @@ export const useUserProfile = (user: User | null) => {
     };
 
     loadUserProfile();
-  }, [user, dbService]);
+  }, [user]);
 
   // Update user profile
   const updateProfile = async (updates: Partial<ExtendedUserProfile>): Promise<boolean> => {
@@ -74,8 +73,6 @@ export const useUserProfile = (user: User | null) => {
     setError(null);
 
     try {
-      console.log('Creating user profile for:', user.email);
-      
       const success = await dbService.createUserProfile({
         ...profileData,
         id: user.id,
@@ -83,19 +80,8 @@ export const useUserProfile = (user: User | null) => {
       });
       
       if (success) {
-        // Wait a moment for the database to be consistent
-        await new Promise(resolve => setTimeout(resolve, 500));
-        
         const newProfile = await dbService.getUserProfile(user.id);
         setUserProfile(newProfile);
-        
-        if (newProfile) {
-          console.log('User profile created and loaded successfully');
-        } else {
-          console.warn('Profile creation reported success but could not load profile');
-        }
-      } else {
-        console.warn('Failed to create user profile - will be retried');
       }
       
       return success;

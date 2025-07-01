@@ -1,10 +1,9 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState, useMemo } from 'react';
+import { createContext, useContext, useEffect, useState } from 'react';
 import { User, Session } from '@supabase/supabase-js';
 import { createClient } from '../utils/supabase/client';
 import { useUserProfile, ExtendedUser } from '../hooks/useUserProfile';
-import { DatabaseService } from '../lib/database';
 
 interface AuthContextType {
   user: ExtendedUser | null;
@@ -31,60 +30,29 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const { getExtendedUser, createProfile, userProfile } = useUserProfile(authUser);
 
   // Auto-create user profile for new users (especially OAuth users)
-  // Note: This is now handled by database triggers for better reliability
   useEffect(() => {
-    const ensureUserProfileExists = async () => {
+    const createUserProfileIfNeeded = async () => {
       if (authUser && !userProfile && isConfigured) {
-        console.log('Checking for user profile for:', authUser.email);
-        
-        // Give the database trigger a moment to work
-        await new Promise(resolve => setTimeout(resolve, 1000));
-        
         try {
-          const profile = await new DatabaseService().getUserProfile(authUser.id);
-          if (!profile) {
-            console.log('Profile not found, trying API route as fallback');
-            
-            // Try the API route first
-            try {
-              const response = await fetch('/api/create-profile', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-              });
-              
-              if (response.ok) {
-                console.log('Profile created via API route');
-                // Wait a moment and then the useUserProfile hook will load it
-                await new Promise(resolve => setTimeout(resolve, 500));
-                return;
-              }
-            } catch (apiError) {
-              console.warn('API route failed, trying manual creation:', apiError);
-            }
-            
-            // Fallback to manual creation
-            console.log('Creating profile manually as final fallback');
-            const profileData = {
-              id: authUser.id,
-              email: authUser.email || '',
-              full_name: authUser.user_metadata?.full_name || authUser.user_metadata?.name || '',
-              avatar_url: authUser.user_metadata?.avatar_url || authUser.user_metadata?.picture || '',
-              premium: false,
-              streak_count: 0,
-              total_focus_time: 0,
-              settings: {}
-            };
-            await createProfile(profileData);
-          }
+          const profileData = {
+            id: authUser.id,
+            email: authUser.email || '',
+            full_name: authUser.user_metadata?.full_name || authUser.user_metadata?.name || '',
+            avatar_url: authUser.user_metadata?.avatar_url || authUser.user_metadata?.picture || '',
+            premium: false,
+            streak_count: 0,
+            total_focus_time: 0,
+            settings: {}
+          };
+
+          await createProfile(profileData);
         } catch (error) {
-          console.error('Error ensuring user profile exists:', error);
+          console.error('Failed to create user profile:', error);
         }
       }
     };
 
-    ensureUserProfileExists();
+    createUserProfileIfNeeded();
   }, [authUser, userProfile, createProfile, isConfigured]);
 
   useEffect(() => {
@@ -130,9 +98,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     );
 
     return () => subscription.unsubscribe();
-  }, [supabase]);
-
-  const signIn = async (email: string, password: string) => {
+  }, [supabase]);  const signIn = async (email: string, password: string) => {
     if (!isConfigured) {
       return { error: { message: 'Authentication not configured' } };
     }    try {
@@ -174,31 +140,18 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     }
     
     try {
-      console.log(`Initiating OAuth with ${provider}...`);
-      
       const { error } = await supabase.auth.signInWithOAuth({
         provider,
         options: {
-          redirectTo: `${window.location.origin}/auth/callback`,
-          queryParams: {
-            access_type: 'offline',
-            prompt: 'consent',
-          }
-        }
-      });
-      
-      if (error) {
-        console.error(`OAuth ${provider} error:`, error);
-      }
-      
+          redirectTo: `${window.location.origin}/auth/callback`
+        }      });
       return { error };
-    } catch (err) {
-      console.error(`Unexpected error during ${provider} OAuth:`, err);
+    } catch {
       return { error: { message: 'Authentication service unavailable' } };
     }
   };
 
-  const value = useMemo(() => ({
+  const value = {
     user: getExtendedUser(),
     authUser,
     session,
@@ -208,17 +161,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     signUp,
     signOut,
     signInWithProvider,
-  }), [
-    authUser, 
-    session, 
-    loading, 
-    isConfigured, 
-    getExtendedUser,
-    signIn,
-    signUp,
-    signOut,
-    signInWithProvider
-  ]);
+  };
 
   return (
     <AuthContext.Provider value={value}>
