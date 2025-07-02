@@ -62,8 +62,6 @@ export default function BackgroundSelector({
   const [isSubmittingYoutube, setIsSubmittingYoutube] = useState(false);
   const [previewTimeout, setPreviewTimeout] = useState<NodeJS.Timeout | null>(null);
   const [visibleCount, setVisibleCount] = useState(20); // Initially show only 20 backgrounds
-  const [loadedVideos, setLoadedVideos] = useState<Set<number>>(new Set());
-  const [loadingVideos, setLoadingVideos] = useState<Set<number>>(new Set());
   const [errorVideos, setErrorVideos] = useState<Set<number>>(new Set());
 
   // Memoize filtered backgrounds to avoid recalculation on every render
@@ -118,65 +116,8 @@ export default function BackgroundSelector({
   // Reset visible count when category changes
   useEffect(() => {
     setVisibleCount(20);
-    setLoadedVideos(new Set());
-    setLoadingVideos(new Set());
     setErrorVideos(new Set());
   }, [selectedCategory]);
-
-  // Progressive loading effect - load videos one by one with delays
-  useEffect(() => {
-    if (visibleBackgrounds.length === 0) return;
-
-    const loadVideosProgressively = async () => {
-      for (let i = 0; i < Math.min(visibleBackgrounds.length, 12); i++) {
-        const bg = visibleBackgrounds[i];
-        
-        // Skip if already loaded or loading
-        if (loadedVideos.has(bg.id) || loadingVideos.has(bg.id)) {
-          continue;
-        }
-
-        // Add to loading set
-        setLoadingVideos(prev => new Set(prev).add(bg.id));
-
-        // Add a delay between each video load to prevent overwhelming the browser
-        await new Promise(resolve => setTimeout(resolve, i * 200)); // 200ms between each load
-
-        // Create a video element to preload metadata
-        const video = document.createElement('video');
-        video.preload = 'metadata';
-        video.muted = true;
-        
-        const onLoadedData = () => {
-          setLoadingVideos(prev => {
-            const newSet = new Set(prev);
-            newSet.delete(bg.id);
-            return newSet;
-          });
-          setLoadedVideos(prev => new Set(prev).add(bg.id));
-          video.removeEventListener('loadeddata', onLoadedData);
-          video.removeEventListener('error', onError);
-        };
-
-        const onError = () => {
-          setLoadingVideos(prev => {
-            const newSet = new Set(prev);
-            newSet.delete(bg.id);
-            return newSet;
-          });
-          setErrorVideos(prev => new Set(prev).add(bg.id));
-          video.removeEventListener('loadeddata', onLoadedData);
-          video.removeEventListener('error', onError);
-        };
-
-        video.addEventListener('loadeddata', onLoadedData);
-        video.addEventListener('error', onError);
-        video.src = bg.src;
-      }
-    };
-
-    loadVideosProgressively();
-  }, [visibleBackgrounds, loadedVideos, loadingVideos]);
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -192,50 +133,7 @@ export default function BackgroundSelector({
   const getFilteredBackgrounds = () => visibleBackgrounds;
 
   const loadMoreBackgrounds = () => {
-    const newVisibleCount = Math.min(visibleCount + 20, filteredBackgrounds.length);
-    setVisibleCount(newVisibleCount);
-    
-    // Trigger progressive loading for new videos
-    const newVideos = filteredBackgrounds.slice(visibleCount, newVisibleCount);
-    setTimeout(() => {
-      newVideos.forEach((bg, index) => {
-        if (!loadedVideos.has(bg.id) && !loadingVideos.has(bg.id)) {
-          setTimeout(() => {
-            setLoadingVideos(prev => new Set(prev).add(bg.id));
-            
-            const video = document.createElement('video');
-            video.preload = 'metadata';
-            video.muted = true;
-            
-            const onLoadedData = () => {
-              setLoadingVideos(prev => {
-                const newSet = new Set(prev);
-                newSet.delete(bg.id);
-                return newSet;
-              });
-              setLoadedVideos(prev => new Set(prev).add(bg.id));
-              video.removeEventListener('loadeddata', onLoadedData);
-              video.removeEventListener('error', onError);
-            };
-
-            const onError = () => {
-              setLoadingVideos(prev => {
-                const newSet = new Set(prev);
-                newSet.delete(bg.id);
-                return newSet;
-              });
-              setErrorVideos(prev => new Set(prev).add(bg.id));
-              video.removeEventListener('loadeddata', onLoadedData);
-              video.removeEventListener('error', onError);
-            };
-
-            video.addEventListener('loadeddata', onLoadedData);
-            video.addEventListener('error', onError);
-            video.src = bg.src;
-          }, index * 200); // Stagger loading
-        }
-      });
-    }, 100);
+    setVisibleCount(prev => Math.min(prev + 20, filteredBackgrounds.length));
   };
 
   const validateYoutubeUrl = (url: string): boolean => {
@@ -369,23 +267,6 @@ export default function BackgroundSelector({
             ))}
           </div>
 
-          {/* Loading Progress Indicator */}
-          {(loadingVideos.size > 0 || loadedVideos.size < Math.min(visibleBackgrounds.length, 12)) && (
-            <div className={styles.loadingProgress}>
-              <div className={styles.progressText}>
-                Loading previews... {loadedVideos.size}/{Math.min(visibleBackgrounds.length, 12)}
-              </div>
-              <div className={styles.progressBar}>
-                <div 
-                  className={styles.progressFill} 
-                  style={{ 
-                    width: `${(loadedVideos.size / Math.min(visibleBackgrounds.length, 12)) * 100}%` 
-                  }}
-                ></div>
-              </div>
-            </div>
-          )}
-
           {/* Wallpaper Grid */}
           <div className={styles.wallpaperGrid}>
             {/* Custom YouTube background */}
@@ -446,63 +327,31 @@ export default function BackgroundSelector({
 
             {/* Regular backgrounds */}
             {getFilteredBackgrounds().map((bg) => {
-              const isLoaded = loadedVideos.has(bg.id);
-              const isLoading = loadingVideos.has(bg.id);
               const hasError = errorVideos.has(bg.id);
-              const shouldShowSkeleton = !isLoaded && !hasError;
               
               return (
                 <div
                   key={bg.id}
                   className={`${styles.wallpaperBox} ${
                     currentBackground.id === bg.id ? styles.selected : ''
-                  } ${shouldShowSkeleton ? styles.loading : ''}`}
+                  }`}
                   onClick={() => {
                     onBackgroundChange(bg);
                     onClose();
                   }}
                 >
-                  {/* Skeleton placeholder */}
-                  {shouldShowSkeleton && (
-                    <div className={styles.skeletonPlaceholder}>
-                      <div className={styles.skeletonShimmer}></div>
-                      {isLoading && (
-                        <div className={styles.skeletonSpinner}>
-                          <div className={styles.spinner}></div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  
                   {/* Video element */}
                   <video
                     src={bg.src}
-                    className={`${styles.wallpaperMedia} ${
-                      shouldShowSkeleton ? styles.hidden : ''
-                    }`}
+                    className={styles.wallpaperMedia}
                     muted
                     loop
-                    preload="none"
+                    preload="metadata"
                     aria-label={`Background video: ${bg.alt}`}
                     title={bg.alt}
-                    onLoadedData={() => {
-                      if (!loadedVideos.has(bg.id)) {
-                        setLoadedVideos(prev => new Set(prev).add(bg.id));
-                      }
-                      setLoadingVideos(prev => {
-                        const newSet = new Set(prev);
-                        newSet.delete(bg.id);
-                        return newSet;
-                      });
-                    }}
                     onMouseEnter={(e) => {
-                      if (!isLoaded) return; // Don't preview if not loaded
-                      
                       setPreviewingId(bg.id);
                       const video = e.currentTarget;
-                      if (video.readyState === 0) {
-                        video.load();
-                      }
                       handleVideoPreview(video, true);
                     }}
                     onMouseLeave={(e) => {
@@ -512,11 +361,6 @@ export default function BackgroundSelector({
                     onError={() => {
                       console.error(`Failed to load video: ${bg.src}`);
                       setErrorVideos(prev => new Set(prev).add(bg.id));
-                      setLoadingVideos(prev => {
-                        const newSet = new Set(prev);
-                        newSet.delete(bg.id);
-                        return newSet;
-                      });
                     }}
                   />
                   
@@ -543,7 +387,7 @@ export default function BackgroundSelector({
                     </div>
                   )}
                   
-                  {previewingId === bg.id && isLoaded && (
+                  {previewingId === bg.id && !hasError && (
                     <div className={styles.playingIndicator}>
                       <Play size={12} />
                     </div>
