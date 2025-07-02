@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useCallback } from 'react';
-import { X, CheckSquare, Play, Loader2, AlertCircle, Youtube, Image } from 'lucide-react';
+import { X, CheckSquare, Play, Loader2, AlertCircle, Youtube, Image, Pause } from 'lucide-react';
 import { backgrounds } from '@/data/backgrounds';
 import { processYouTubeUrl, isValidYouTubeUrl } from '@/utils/youtube';
 import styles from '../../../styles/BackgroundSelector.module.css';
@@ -24,11 +24,13 @@ interface BackgroundSelectorProps {
   selectedCategory: string;
   youtubeUrl: string;
   customBackground: Background | null;
+  animationDisabled: boolean;
   onClose: () => void;
   onBackgroundChange: (background: Background) => void;
   onCategoryChange: (category: string) => void;
   onYoutubeSubmit: (background: Background) => void;
   onYoutubeUrlChange: (url: string) => void;
+  onAnimationToggle: (disabled: boolean) => void;
   onClearCustomBackground?: () => void;
 }
 
@@ -46,11 +48,13 @@ export default function BackgroundSelector({
   selectedCategory,
   youtubeUrl,
   customBackground,
+  animationDisabled,
   onClose,
   onBackgroundChange,
   onCategoryChange,
   onYoutubeSubmit,
   onYoutubeUrlChange,
+  onAnimationToggle,
   onClearCustomBackground
 }: BackgroundSelectorProps) {
   const [previewingId, setPreviewingId] = useState<number | null>(null);
@@ -138,13 +142,24 @@ export default function BackgroundSelector({
               <p className={styles.subtitle}>Choose your perfect study ambiance</p>
             </div>
           </div>
-          <button
-            onClick={onClose}
-            className={styles.closeButton}
-            aria-label="Close gallery"
-          >
-            <X size={20} />
-          </button>
+          <div className={styles.headerActions}>
+            <button
+              onClick={() => onAnimationToggle(!animationDisabled)}
+              className={`${styles.animationToggle} ${animationDisabled ? styles.active : ''}`}
+              title={animationDisabled ? "Enable background animation" : "Disable background animation"}
+              aria-label={animationDisabled ? "Enable background animation" : "Disable background animation"}
+            >
+              {animationDisabled ? <Image size={18} /> : <Pause size={18} />}
+              <span>{animationDisabled ? 'Still' : 'Animated'}</span>
+            </button>
+            <button
+              onClick={onClose}
+              className={styles.closeButton}
+              aria-label="Close gallery"
+            >
+              <X size={20} />
+            </button>
+          </div>
         </div>
 
         {/* Content */}

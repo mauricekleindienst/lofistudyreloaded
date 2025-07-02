@@ -108,6 +108,7 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
   const [youtubeUrl, setYoutubeUrl] = useState('');
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
   const [customBackground, setCustomBackground] = useState<Background | null>(null);
+  const [animationDisabled, setAnimationDisabled] = useState(false);
   const [showStats, setShowStats] = useState(false);
 
   // Enhanced video buffering state
@@ -131,7 +132,20 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
   // Initialize client-side rendering flag
   useEffect(() => {
     setIsClient(true);
+    
+    // Load animation disabled preference from localStorage
+    const savedAnimationDisabled = localStorage.getItem('desktop_animationDisabled');
+    if (savedAnimationDisabled !== null) {
+      setAnimationDisabled(savedAnimationDisabled === 'true');
+    }
   }, []);
+
+  // Save animation disabled preference to localStorage
+  useEffect(() => {
+    if (isClient) {
+      localStorage.setItem('desktop_animationDisabled', animationDisabled.toString());
+    }
+  }, [animationDisabled, isClient]);
 
   // Advanced Video Buffer Management System
   useEffect(() => {
@@ -677,23 +691,45 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
       {/* Background Video with Enhanced Buffering */}
       <div className={desktopStyles.backgroundContainer}>
         {currentBackground?.src && (
-          <video
-            ref={videoRef}
-            className={desktopStyles.backgroundVideo}
-            src={currentBackground.src}
-            autoPlay
-            muted
-            loop
-            playsInline
-            preload="auto"
-            onLoadStart={handleVideoLoadStart}
-            onCanPlay={handleVideoLoad}
-            onError={handleVideoError}
-            style={{
-              opacity: videoLoadError ? 0 : 1,
-              transition: 'opacity 0.3s ease'
-            }}
-          />
+          <>
+            {animationDisabled ? (
+              // Still image when animation is disabled
+              <video
+                ref={videoRef}
+                className={desktopStyles.backgroundVideo}
+                src={currentBackground.src}
+                muted
+                preload="metadata"
+                onLoadStart={handleVideoLoadStart}
+                onCanPlay={handleVideoLoad}
+                onError={handleVideoError}
+                style={{
+                  opacity: videoLoadError ? 0 : 1,
+                  transition: 'opacity 0.3s ease'
+                }}
+                poster={`${currentBackground.src}#t=0.1`}
+              />
+            ) : (
+              // Animated video when animation is enabled
+              <video
+                ref={videoRef}
+                className={desktopStyles.backgroundVideo}
+                src={currentBackground.src}
+                autoPlay
+                muted
+                loop
+                playsInline
+                preload="auto"
+                onLoadStart={handleVideoLoadStart}
+                onCanPlay={handleVideoLoad}
+                onError={handleVideoError}
+                style={{
+                  opacity: videoLoadError ? 0 : 1,
+                  transition: 'opacity 0.3s ease'
+                }}
+              />
+            )}
+          </>
         )}
         
        
@@ -763,12 +799,14 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
           selectedCategory={selectedCategory}
           youtubeUrl={youtubeUrl}
           customBackground={customBackground}
+          animationDisabled={animationDisabled}
           onClose={() => {
             setShowBackgrounds(false);
             
           }}
           onBackgroundChange={handleBackgroundChange}
           onCategoryChange={setSelectedCategory}
+          onAnimationToggle={setAnimationDisabled}
          
           onYoutubeSubmit={() => {
             // YouTube submission logic would go here
