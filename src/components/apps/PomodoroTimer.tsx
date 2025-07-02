@@ -291,7 +291,7 @@ export default function PomodoroTimer() {  const [state, dispatch] = useReducer(
       } else {
         // Completed a break session
         console.log('Completed break, switching to focus');
-        dispatch({ type: "SET_MODE", payload: "pomodoro", autoStart: false });
+        dispatch({ type: "SET_MODE", payload: "pomodoro", autoStart: true });
         playSound(soundRefs.pomodoroStart);
         showNotification("Break's Over!", "Time to get back to focus.");
       }
@@ -530,8 +530,8 @@ export default function PomodoroTimer() {  const [state, dispatch] = useReducer(
         </div>
       </div>
 
-      {/* Statistics */}
-      <div className={styles.statsSection}>
+
+      {/* <div className={styles.statsSection}>
         <div className={styles.statCard}>
           <div className={styles.statIcon}>
             <CheckCircle size={20} />
@@ -553,7 +553,7 @@ export default function PomodoroTimer() {  const [state, dispatch] = useReducer(
             <div className={styles.statLabel}>Focus</div>
           </div>
         </div>
-      </div>
+      </div> */}
 
       {/* Settings Modal */}
       {state.showSettings && (

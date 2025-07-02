@@ -576,6 +576,36 @@
   animation: spin 1s linear infinite;
 }
 
+/* Load More Button */
+.loadMoreContainer {
+  grid-column: 1 / -1;
+  display: flex;
+  justify-content: center;
+  padding: 20px 0;
+}
+
+.loadMoreButton {
+  background: linear-gradient(135deg, var(--accent-color), var(--accent-color-darker));
+  color: white;
+  border: none;
+  border-radius: 12px;
+  padding: 12px 24px;
+  font-size: 14px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 4px 12px rgba(74, 144, 226, 0.3);
+}
+
+.loadMoreButton:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(74, 144, 226, 0.4);
+}
+
+.loadMoreButton:active {
+  transform: translateY(0);
+}
+
 /* Animations */
 @keyframes fadeIn {
   from {

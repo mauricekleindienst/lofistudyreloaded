@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useCallback } from 'react';
+import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { X, CheckSquare, Play, Loader2, AlertCircle, Youtube, Image, Pause } from 'lucide-react';
 import { backgrounds } from '@/data/backgrounds';
 import { processYouTubeUrl, isValidYouTubeUrl } from '@/utils/youtube';
@@ -60,35 +60,78 @@ export default function BackgroundSelector({
   const [previewingId, setPreviewingId] = useState<number | null>(null);
   const [youtubeError, setYoutubeError] = useState<string>('');
   const [isSubmittingYoutube, setIsSubmittingYoutube] = useState(false);
+  const [previewTimeout, setPreviewTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [visibleCount, setVisibleCount] = useState(20); // Initially show only 20 backgrounds
 
   const handleVideoPreview = useCallback((videoElement: HTMLVideoElement, isEntering: boolean) => {
     if (isEntering) {
-      videoElement.currentTime = 0;
-      videoElement.play().catch(() => {
-        // Silently handle autoplay failures
-      });
+      // Clear any existing timeout
+      if (previewTimeout) {
+        clearTimeout(previewTimeout);
+      }
+      
+      // Delay the preview to avoid triggering on quick mouse movements
+      const timeout = setTimeout(() => {
+        videoElement.currentTime = 0;
+        videoElement.play().catch(() => {
+          // Silently handle autoplay failures
+        });
+      }, 200); // 200ms delay
+      
+      setPreviewTimeout(timeout);
     } else {
+      // Clear timeout and stop video immediately
+      if (previewTimeout) {
+        clearTimeout(previewTimeout);
+        setPreviewTimeout(null);
+      }
       videoElement.pause();
       videoElement.currentTime = 0;
     }
-  }, []);
+  }, [previewTimeout]);
+
+  // Cleanup timeout on unmount
+  useEffect(() => {
+    return () => {
+      if (previewTimeout) {
+        clearTimeout(previewTimeout);
+      }
+    };
+  }, [previewTimeout]);
 
   if (!showBackgrounds) return null;
 
-  // Calculate category counts
-  const categoryCounts = categories.map(category => ({
-    ...category,
-    count: category.id === 'all' 
-      ? backgrounds.length 
-      : backgrounds.filter(bg => bg.category === category.id).length
-  }));
-
-  const getFilteredBackgrounds = () => {
+  // Memoize filtered backgrounds to avoid recalculation on every render
+  const filteredBackgrounds = useMemo(() => {
     let filtered = backgrounds;
     if (selectedCategory !== 'all') {
       filtered = backgrounds.filter(bg => bg.category === selectedCategory);
     }
-    return filtered; // Return all filtered backgrounds without limiting
+    return filtered;
+  }, [selectedCategory]);
+
+  // Reset visible count when category changes
+  useEffect(() => {
+    setVisibleCount(20);
+  }, [selectedCategory]);
+
+  // Get visible backgrounds (limited for performance)
+  const visibleBackgrounds = useMemo(() => {
+    return filteredBackgrounds.slice(0, visibleCount);
+  }, [filteredBackgrounds, visibleCount]);
+
+  // Memoize category counts to avoid recalculation on every render
+  const categoryCounts = useMemo(() => categories.map(category => ({
+    ...category,
+    count: category.id === 'all' 
+      ? backgrounds.length 
+      : backgrounds.filter(bg => bg.category === category.id).length
+  })), []);
+
+  const getFilteredBackgrounds = () => visibleBackgrounds;
+
+  const loadMoreBackgrounds = () => {
+    setVisibleCount(prev => Math.min(prev + 20, filteredBackgrounds.length));
   };
 
   const validateYoutubeUrl = (url: string): boolean => {
@@ -297,12 +340,17 @@ export default function BackgroundSelector({
                   className={styles.wallpaperMedia}
                   muted
                   loop
-                  preload="metadata"
+                  preload="none"
                   aria-label={`Background video: ${bg.alt}`}
                   title={bg.alt}
                   onMouseEnter={(e) => {
                     setPreviewingId(bg.id);
-                    handleVideoPreview(e.currentTarget, true);
+                    // Only load and play if not already loaded
+                    const video = e.currentTarget;
+                    if (video.readyState === 0) {
+                      video.load();
+                    }
+                    handleVideoPreview(video, true);
                   }}
                   onMouseLeave={(e) => {
                     setPreviewingId(null);
@@ -332,6 +380,18 @@ export default function BackgroundSelector({
                 )}
               </div>
             ))}
+
+            {/* Load More Button */}
+            {visibleCount < filteredBackgrounds.length && (
+              <div className={styles.loadMoreContainer}>
+                <button
+                  onClick={loadMoreBackgrounds}
+                  className={styles.loadMoreButton}
+                >
+                  Load More ({filteredBackgrounds.length - visibleCount} remaining)
+                </button>
+              </div>
+            )}
 
             {/* Empty state */}
             {getFilteredBackgrounds().length === 0 && !customBackground && (
