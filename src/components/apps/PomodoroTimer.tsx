@@ -123,7 +123,6 @@ export default function PomodoroTimer() {  const [state, dispatch] = useReducer(
   } = useDataPersistence();
   const { updatePomodoroState } = useAppState();
   const timerRef = useRef<NodeJS.Timeout | null>(null);
-  const completionHandledRef = useRef<boolean>(false);
   
   // Sound refs at the top level
   const pomodoroStartRef = useRef<HTMLAudioElement | null>(null);
@@ -237,130 +236,67 @@ export default function PomodoroTimer() {  const [state, dispatch] = useReducer(
     };
   }, [state.isTimerRunning, state.timeLeft]);
 
-  const handleCompletion = useCallback(async () => {
-    console.log('handleCompletion called - currentMode:', state.currentMode, 'pomodoroCount:', state.pomodoroCount);
-    let sessionType: 'work' | 'short_break' | 'long_break' = 'work';
-    switch (state.currentMode) {
-      case "pomodoro":
-        sessionType = "work";
-        break;
-      case "shortBreak":
-        sessionType = "short_break";
-        break;
-      case "longBreak":
-        sessionType = "long_break";
-        break;
-    }
-
-    // Determine next mode based on current mode and pomodoro count
-    let nextMode: PomodoroState["currentMode"];
-    let shouldAutoStart = false;
-    let newPomodoroCount = state.pomodoroCount;
-    
-    if (state.currentMode === "pomodoro") {
-      // Increment pomodoro count for completed work session
-      newPomodoroCount = state.pomodoroCount + 1;
-      console.log('Completing pomodoro session, new count will be:', newPomodoroCount);
-      
-      // Save completed pomodoro session to database
-      if (isAuthenticated && user?.email) {
-        const sessionData = {
-          user_id: user.id,
-          email: user.email,
-          duration: state.pomodoroDurations.pomodoro,
-          type: sessionType,
-          completed: true,
-          category: state.category,
-          completed_at: new Date().toISOString(),
-        };
-    
-        await savePomodoroSession(sessionData);
-    
-        const statsUpdate = {
-          date: new Date().toISOString().split('T')[0],
-          sessions_completed: 1, // Will be incremented
-          total_focus_time: Math.round(state.pomodoroDurations.pomodoro / 60), // in minutes
-          category: state.category,
-          email: user.email,
-          user_id: user.id,
-        };
-        
-        await updatePomodoroStats(statsUpdate);
-      }
-      
-      // Update local pomodoro count
-      dispatch({ type: 'INCREMENT_POMODORO' });
-      
-      // After completing a pomodoro, decide on break type based on new count
-      nextMode = (newPomodoroCount % 4 === 0) ? "longBreak" : "shortBreak";
-      shouldAutoStart = true; // Auto-start breaks
-      console.log('Next mode after pomodoro:', nextMode, 'shouldAutoStart:', shouldAutoStart);
-    } else {
-      // After completing a break, go back to pomodoro
-      nextMode = "pomodoro";
-      shouldAutoStart = false; // Don't auto-start work sessions
-      console.log('Next mode after break:', nextMode, 'shouldAutoStart:', shouldAutoStart);
-    }
-
-    // Switch to next mode
-    console.log('Dispatching SET_MODE with:', nextMode, shouldAutoStart);
-    dispatch({ type: "SET_MODE", payload: nextMode, autoStart: shouldAutoStart });
-
-    // Play appropriate sound and show notification
-    let soundToPlay = null;
-    let notificationTitle = "Time's up!";
-    let notificationMessage = "";
-
-    if (nextMode === 'pomodoro') {
-      soundToPlay = soundRefs.pomodoroStart;
-      notificationTitle = "Break's Over!";
-      notificationMessage = "Time to get back to focus.";
-    } else if (nextMode === 'shortBreak') {
-      soundToPlay = soundRefs.pomodoroEnd;
-      notificationTitle = "Nice work!";
-      notificationMessage = "Time for a short break.";
-    } else if (nextMode === 'longBreak') {
-      soundToPlay = soundRefs.longPause;
-      notificationTitle = "Great session!";
-      notificationMessage = "Time for a long break.";
-    }
-
-    if (soundToPlay) playSound(soundToPlay);
-    showNotification(notificationTitle, notificationMessage);
-  }, [
-    state.currentMode,
-    state.pomodoroCount,
-    state.pomodoroDurations,
-    state.category,
-    user,
-    isAuthenticated,
-    savePomodoroSession,
-    updatePomodoroStats,
-    playSound,
-    showNotification,
-    soundRefs,
-  ]);
-  
-  // Timer completion handler - when timer hits 0, switch modes and auto-start
+  // Simple timer completion handler
   useEffect(() => {
-    if (state.timeLeft === 0 && state.isTimerRunning && !completionHandledRef.current) {
-      console.log('Timer completed! Current mode:', state.currentMode, 'Pomodoro count:', state.pomodoroCount);
-      completionHandledRef.current = true;
+    if (state.timeLeft === 0 && state.isTimerRunning) {
+      console.log('Timer hit 0! Current mode:', state.currentMode, 'Pomodoro count:', state.pomodoroCount);
       
-      // Stop the current timer first
+      // Stop the timer
       dispatch({ type: "TOGGLE_TIMER" });
       
-      // Add a small delay to ensure state updates
-      setTimeout(() => {
-        handleCompletion();
-      }, 100);
+      // Simple mode switching logic
+      if (state.currentMode === "pomodoro") {
+        // Completed a focus session
+        const newCount = state.pomodoroCount + 1;
+        console.log('Completed focus session, new count:', newCount);
+        
+        // Save to database if authenticated
+        if (isAuthenticated && user?.email) {
+          const sessionData = {
+            user_id: user.id,
+            email: user.email,
+            duration: state.pomodoroDurations.pomodoro,
+            type: 'work' as const,
+            completed: true,
+            category: state.category,
+            completed_at: new Date().toISOString(),
+          };
+          
+          savePomodoroSession(sessionData);
+          updatePomodoroStats({
+            date: new Date().toISOString().split('T')[0],
+            sessions_completed: 1,
+            total_focus_time: Math.round(state.pomodoroDurations.pomodoro / 60),
+            category: state.category,
+            email: user.email,
+            user_id: user.id,
+          });
+        }
+        
+        // Increment count
+        dispatch({ type: 'INCREMENT_POMODORO' });
+        
+        // Switch to break (long break every 4th pomodoro)
+        if (newCount % 4 === 0) {
+          console.log('Switching to long break');
+          dispatch({ type: "SET_MODE", payload: "longBreak", autoStart: true });
+          playSound(soundRefs.longPause);
+          showNotification("Great session!", "Time for a long break.");
+        } else {
+          console.log('Switching to short break');
+          dispatch({ type: "SET_MODE", payload: "shortBreak", autoStart: true });
+          playSound(soundRefs.pomodoroEnd);
+          showNotification("Nice work!", "Time for a short break.");
+        }
+      } else {
+        // Completed a break session
+        console.log('Completed break, switching to focus');
+        dispatch({ type: "SET_MODE", payload: "pomodoro", autoStart: false });
+        playSound(soundRefs.pomodoroStart);
+        showNotification("Break's Over!", "Time to get back to focus.");
+      }
     }
-    
-    // Reset the completion flag when timer is reset or mode changes
-    if (state.timeLeft > 0) {
-      completionHandledRef.current = false;
-    }
-  }, [state.timeLeft, state.isTimerRunning, handleCompletion]);
+  }, [state.timeLeft, state.isTimerRunning, state.currentMode, state.pomodoroCount, state.pomodoroDurations, state.category, isAuthenticated, user, savePomodoroSession, updatePomodoroStats, playSound, showNotification, soundRefs]);
   
   // Update document title
   useEffect(() => {
