@@ -117,16 +117,16 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
     }
 
     console.log('[StatsModal] Memo: Recalculating stats.');
-    const totalSessions = stats.reduce((acc, s) => acc + (s.sessions_completed || 0), 0);
-    const totalFocusTime = stats.reduce((acc, s) => acc + (s.total_focus_time || 0), 0);
+    const totalSessions = stats.reduce((acc, s) => acc + (s.pomodoro_count || 0), 0);
+    const totalFocusTime = stats.reduce((acc, s) => acc + (s.total_focus_time_minutes || 0), 0);
     
     const categoryStats = stats.reduce((acc, s) => {
-      const category = s.category || 'Other';
+      const category = 'General'; // Since we removed category from stats
       if (!acc[category]) {
         acc[category] = { sessions: 0, time: 0 };
       }
-      acc[category].sessions += s.sessions_completed || 0;
-      acc[category].time += s.total_focus_time || 0;
+      acc[category].sessions += s.pomodoro_count || 0;
+      acc[category].time += s.total_focus_time_minutes || 0;
       return acc;
     }, {} as Record<string, { sessions: number; time: number }>);
 
@@ -198,7 +198,7 @@ const ActivityHeatmap = ({ stats }: { stats: PomodoroStats[] }) => {
       const statDate = stat.date?.split('T')[0];
       const day = days.find(d => d.date === statDate);
       if (day) {
-        const sessionCount = stat.sessions_completed || 0;
+        const sessionCount = stat.pomodoro_count || 0;
         day.count = sessionCount;
         if (sessionCount > maxCount) maxCount = sessionCount;
       }

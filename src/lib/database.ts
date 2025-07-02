@@ -41,6 +41,16 @@ export interface Note {
   updated_at?: string;
 }
 
+export interface PomodoroStats {
+  id?: number;
+  user_id: string;
+  date: string;
+  pomodoro_count: number;
+  total_focus_time_minutes: number;
+  created_at?: string;
+  updated_at?: string;
+}
+
 export interface PomodoroSession {
   id?: string;
   user_id?: string;
@@ -55,15 +65,7 @@ export interface PomodoroSession {
   category?: string;
 }
 
-export interface PomodoroStats {
-  id?: number;
-  user_id?: string;
-  email?: string;
-  date?: string;
-  sessions_completed?: number;
-  total_focus_time?: number;
-  category?: string;
-}
+
 
 export interface UserSettings {
   id?: string;
@@ -325,76 +327,6 @@ export class DatabaseService {
   }
 
   // Pomodoro operations
-  async savePomodoroSession(session: PomodoroSession): Promise<PomodoroSession | null> {
-    try {
-      const user = await this.checkAuth();
-      if (!user) {
-        console.log('❌ No authenticated user found for saving Pomodoro session');
-        return null;
-      }
-
-      console.log('🍅 Saving Pomodoro session for user:', user.email);
-
-      // Prepare session data - let database auto-generate UUID
-      const sessionData = {
-        user_id: user.id,
-        email: user.email,
-        duration: session.duration || 1500,
-        type: session.type || 'work',
-        completed: session.completed || false,
-        completed_at: session.completed_at || new Date().toISOString(),
-        task_name: session.task_name || 'Pomodoro Session',
-        notes: session.notes || '',
-        category: session.category || 'Other',
-        created_at: session.created_at || new Date().toISOString()
-      };
-
-      console.log('� Inserting session into database:', sessionData);
-
-      const { data, error } = await supabase
-        .from('pomodoro_sessions')
-        .insert([sessionData])
-        .select()
-        .single();
-
-      if (error) {
-        console.error('❌ Database error while saving session:', error);
-        throw error;
-      }
-      
-      console.log('✅ Pomodoro session saved successfully:', data);
-      return data;
-    } catch (error) {
-      console.error('❌ Error saving pomodoro session:', error);
-      return null;
-    }
-  }
-
-  async getPomodoroSessions(email: string, limit?: number): Promise<PomodoroSession[]> {
-    try {
-      const user = await this.checkAuth();
-      if (!user) return [];
-
-      let query = supabase
-        .from('pomodoro_sessions')
-        .select('*')
-        .eq('user_id', user.id)
-        .order('created_at', { ascending: false });
-
-      if (limit) {
-        query = query.limit(limit);
-      }
-
-      const { data, error } = await query;
-
-      if (error) throw error;
-      return data || [];
-    } catch (error) {
-      console.error('Error fetching pomodoro sessions:', error);
-      return [];
-    }
-  }
-
   async updatePomodoroStats(stats: PomodoroStats): Promise<boolean> {
     try {
       const user = await this.checkAuth();
@@ -406,15 +338,13 @@ export class DatabaseService {
       console.log('📊 Updating Pomodoro stats for user:', user.email, 'Stats:', stats);
 
       const today = new Date().toISOString().split('T')[0];
-      const category = stats.category || 'Other';
       
-      // First, try to get existing stats for today and category
+      // First, try to get existing stats for today
       const { data: existingStats } = await supabase
         .from('pomodoro_stats')
         .select('*')
         .eq('user_id', user.id)
         .eq('date', today)
-        .eq('category', category)
         .single();
 
       if (existingStats) {
@@ -423,8 +353,8 @@ export class DatabaseService {
         const { error } = await supabase
           .from('pomodoro_stats')
           .update({
-            sessions_completed: (existingStats.sessions_completed || 0) + (stats.sessions_completed || 1),
-            total_focus_time: (existingStats.total_focus_time || 0) + (stats.total_focus_time || 0),
+            pomodoro_count: (existingStats.pomodoro_count || 0) + (stats.pomodoro_count || 1),
+            total_focus_time_minutes: (existingStats.total_focus_time_minutes || 0) + (stats.total_focus_time_minutes || 0),
             updated_at: new Date().toISOString()
           })
           .eq('id', existingStats.id);
@@ -441,11 +371,9 @@ export class DatabaseService {
           .from('pomodoro_stats')
           .insert([{
             user_id: user.id,
-            email: user.email,
             date: today,
-            sessions_completed: stats.sessions_completed || 1,
-            total_focus_time: stats.total_focus_time || 0,
-            category: category,
+            pomodoro_count: stats.pomodoro_count || 1,
+            total_focus_time_minutes: stats.total_focus_time_minutes || 0,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           }]);

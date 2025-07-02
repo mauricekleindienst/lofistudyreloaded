@@ -116,9 +116,8 @@ export default function PomodoroTimer() {  const [state, dispatch] = useReducer(
   const { user } = useAuth();
   const { 
     isAuthenticated, 
-    savePomodoroSession, 
-    loadPomodoroSessions,
-    updatePomodoroStats 
+    updatePomodoroStats,
+    loadPomodoroStats
   } = useDataPersistence();
   const { updatePomodoroState } = useAppState();
   const timerRef = useRef<NodeJS.Timeout | null>(null);
@@ -186,34 +185,24 @@ export default function PomodoroTimer() {  const [state, dispatch] = useReducer(
     requestNotificationPermission();
   }, [requestNotificationPermission]);
 
-  // Load user's pomodoro history to get current count
+  // Load user's pomodoro stats to get current count
   useEffect(() => {
     const loadPomodoroCount = async () => {
       if (isAuthenticated && user?.email) {
         try {
-          const sessions = await loadPomodoroSessions();
-          // Count completed pomodoro sessions for today
-          const today = new Date().toISOString().split('T')[0];
-          const todaySessions = sessions.filter(session => 
-            session.completed && 
-            session.type === 'work' &&
-            session.completed_at?.startsWith(today)
-          );
-          
-          // Update local count to match database
-          if (todaySessions.length > 0) {
-            // Set the count to match database without dispatching INCREMENT for each
-            // This is a direct state update to sync with database
-            dispatch({ type: "SET_POMODORO_COUNT", payload: todaySessions.length });
+          const stats = await loadPomodoroStats(1); // Load today's stats
+          if (stats.length > 0 && stats[0].pomodoro_count) {
+            // Update local count to match database
+            dispatch({ type: "SET_POMODORO_COUNT", payload: stats[0].pomodoro_count });
           }
         } catch (error) {
-          console.error("Failed to load pomodoro count:", error);
+          console.error("Failed to load pomodoro stats:", error);
         }
       }
     };
 
     loadPomodoroCount();
-  }, [isAuthenticated, user?.email, loadPomodoroSessions]);
+  }, [isAuthenticated, user?.email, loadPomodoroStats]);
 
   // Timer effect - handle completion within the tick
   useEffect(() => {
@@ -251,25 +240,15 @@ export default function PomodoroTimer() {  const [state, dispatch] = useReducer(
         
         // Save to database if authenticated
         if (isAuthenticated && user?.email) {
-          const sessionData = {
+          // Update pomodoro stats for today
+          const statsUpdate = {
+            date: new Date().toISOString().split('T')[0],
+            pomodoro_count: 1, // Will be incremented
+            total_focus_time_minutes: Math.round(state.pomodoroDurations.pomodoro / 60),
             user_id: user.id,
-            email: user.email,
-            duration: state.pomodoroDurations.pomodoro,
-            type: 'work' as const,
-            completed: true,
-            category: state.category,
-            completed_at: new Date().toISOString(),
           };
           
-          savePomodoroSession(sessionData);
-          updatePomodoroStats({
-            date: new Date().toISOString().split('T')[0],
-            sessions_completed: 1,
-            total_focus_time: Math.round(state.pomodoroDurations.pomodoro / 60),
-            category: state.category,
-            email: user.email,
-            user_id: user.id,
-          });
+          updatePomodoroStats(statsUpdate);
         }
         
         // Increment count
@@ -295,7 +274,7 @@ export default function PomodoroTimer() {  const [state, dispatch] = useReducer(
         showNotification("Break's Over!", "Time to get back to focus.");
       }
     }
-  }, [state.timeLeft, state.isTimerRunning, state.currentMode, state.pomodoroCount, state.pomodoroDurations, state.category, isAuthenticated, user, savePomodoroSession, updatePomodoroStats, playSound, showNotification, soundRefs]);
+  }, [state.timeLeft, state.isTimerRunning, state.currentMode, state.pomodoroCount, state.pomodoroDurations, state.category, isAuthenticated, user, updatePomodoroStats, playSound, showNotification, soundRefs]);
   
   // Update document title
   useEffect(() => {

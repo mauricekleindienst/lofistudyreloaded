@@ -1,9 +1,9 @@
 "use client";
 
 import { useEffect, useState, useCallback } from 'react';
-import { db, Todo, Note, PomodoroSession, PomodoroStats, UserSettings } from '../lib/database';
+import { db, Todo, Note, PomodoroStats, UserSettings } from '../lib/database';
 import { useAuth } from '../contexts/AuthContext';
-import { useLocalCache, LocalPomodoroSession } from './useLocalCache';
+import { useLocalCache } from './useLocalCache';
 
 export function useDataPersistence() {
   const authContext = useAuth();
@@ -74,48 +74,6 @@ export function useDataPersistence() {
   }, [withLoadingAndError]);
 
   // Pomodoro operations - Enhanced with local caching
-  const savePomodoroSession = useCallback(async (session: PomodoroSession): Promise<PomodoroSession | null> => {
-    if (isAuthenticated) {
-      // Save to database for authenticated users
-      return await withLoadingAndError(() => db.savePomodoroSession(session));
-    } else {
-      // Save to local cache for unauthenticated users
-      const localSession: LocalPomodoroSession = {
-        id: session.id || Date.now().toString(),
-        duration: session.duration || 0,
-        type: (session.type as 'work' | 'short_break' | 'long_break') || 'work',
-        completed: session.completed || false,
-        category: (session.category as 'Studying' | 'Coding' | 'Writing' | 'Working' | 'Other') || 'Studying',
-        completed_at: session.completed_at || new Date().toISOString(),
-        created_at: session.created_at || new Date().toISOString()
-      };
-      
-      const result = await localCache.savePomodoroSession(localSession);
-      return result ? session : null;
-    }
-  }, [isAuthenticated, localCache, withLoadingAndError]);
-  
-  const loadPomodoroSessions = useCallback(async (limit?: number): Promise<PomodoroSession[]> => {
-    if (isAuthenticated && authContext.user?.email) {
-      return await withLoadingAndError(() => db.getPomodoroSessions(authContext.user!.email!, limit)) || [];
-    } else {
-      // Load from local cache for unauthenticated users
-      const localSessions = localCache.getPomodoroSessions();
-      const limitedSessions = limit ? localSessions.slice(-limit) : localSessions;
-      
-      return limitedSessions.map(session => ({
-        id: session.id,
-        email: 'guest',
-        duration: session.duration,
-        type: session.type,
-        completed: session.completed,
-        category: session.category,
-        completed_at: session.completed_at,
-        created_at: session.created_at
-      }));
-    }
-  }, [isAuthenticated, authContext.user, localCache, withLoadingAndError]);
-
   const updatePomodoroStats = useCallback(async (stats: PomodoroStats): Promise<boolean> => {
     if (isAuthenticated) {
       const result = await withLoadingAndError(() => db.updatePomodoroStats(stats));
@@ -134,11 +92,10 @@ export function useDataPersistence() {
       const localStats = localCache.getPomodoroStats();
       return [{
         id: 1,
-        email: 'guest',
+        user_id: 'guest',
         date: new Date().toISOString().split('T')[0],
-        sessions_completed: localStats.sessionsToday,
-        total_focus_time: localStats.minutesToday,
-        category: 'mixed'
+        pomodoro_count: localStats.sessionsToday,
+        total_focus_time_minutes: localStats.minutesToday,
       }];
     }
   }, [isAuthenticated, authContext.user, localCache, withLoadingAndError]);
@@ -203,8 +160,6 @@ export function useDataPersistence() {
     updateNote,
     deleteNote,
     // Pomodoro operations
-    savePomodoroSession,
-    loadPomodoroSessions,
     updatePomodoroStats,
     loadPomodoroStats,
     getCombinedPomodoroStats,

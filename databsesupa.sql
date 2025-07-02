@@ -91,56 +91,6 @@ CREATE TABLE public.notes (
   CONSTRAINT notes_pkey PRIMARY KEY (id),
   CONSTRAINT notes_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
 );
-CREATE TABLE public.pomodoro_sessions (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL,
-  email character varying NOT NULL,
-  duration integer DEFAULT 1500,
-  type text DEFAULT 'work'::text CHECK (type = ANY (ARRAY['work'::text, 'short_break'::text, 'long_break'::text])),
-  completed boolean DEFAULT false,
-  created_at timestamp with time zone DEFAULT now(),
-  completed_at timestamp with time zone,
-  task_name text,
-  notes text,
-  category character varying,
-  CONSTRAINT pomodoro_sessions_pkey PRIMARY KEY (id),
-  CONSTRAINT pomodoro_sessions_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
-);
-CREATE TABLE public.pomodoro_stats (
-  id integer NOT NULL DEFAULT nextval('pomodoro_stats_id_seq'::regclass),
-  user_id uuid,
-  email character varying NOT NULL,
-  date date DEFAULT CURRENT_DATE,
-  sessions_completed integer DEFAULT 0,
-  total_focus_time integer DEFAULT 0,
-  category character varying,
-  created_at timestamp with time zone DEFAULT now(),
-  updated_at timestamp with time zone DEFAULT now(),
-  CONSTRAINT pomodoro_stats_pkey PRIMARY KEY (id),
-  CONSTRAINT pomodoro_stats_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
-);
-CREATE TABLE public.progress (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  email character varying NOT NULL,
-  challenge_id uuid,
-  progress integer NOT NULL,
-  completed boolean DEFAULT false,
-  completed_at timestamp without time zone,
-  created_at timestamp without time zone DEFAULT now(),
-  updated_at timestamp without time zone DEFAULT now(),
-  user_id uuid,
-  CONSTRAINT progress_pkey PRIMARY KEY (id),
-  CONSTRAINT progress_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id),
-  CONSTRAINT progress_challenge_id_fkey FOREIGN KEY (challenge_id) REFERENCES public.challenges(id)
-);
-CREATE TABLE public.subtasks (
-  id integer NOT NULL DEFAULT nextval('subtasks_id_seq'::regclass),
-  todo_id integer,
-  text text NOT NULL,
-  completed boolean DEFAULT false,
-  CONSTRAINT subtasks_pkey PRIMARY KEY (id),
-  CONSTRAINT subtasks_todo_id_fkey FOREIGN KEY (todo_id) REFERENCES public.todos(id)
-);
 CREATE TABLE public.todos (
   id integer NOT NULL DEFAULT nextval('todos_id_seq'::regclass),
   email character varying NOT NULL,
@@ -164,29 +114,37 @@ CREATE TABLE public.tracks (
   CONSTRAINT tracks_pkey PRIMARY KEY (id),
   CONSTRAINT tracks_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
 );
-CREATE TABLE public.tutorial_state (
-  id integer NOT NULL DEFAULT nextval('tutorial_state_id_seq'::regclass),
-  email character varying NOT NULL,
-  tutorial text NOT NULL,
-  completed boolean DEFAULT false,
-  created_at timestamp without time zone DEFAULT now(),
-  updated_at timestamp without time zone DEFAULT now(),
-  user_id uuid,
-  CONSTRAINT tutorial_state_pkey PRIMARY KEY (id),
-  CONSTRAINT tutorial_state_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
-);
 CREATE TABLE public.users (
   id uuid NOT NULL,
   email character varying NOT NULL UNIQUE,
   full_name character varying,
   avatar_url text,
   premium boolean DEFAULT false,
-  streak_count integer DEFAULT 0,
-  total_focus_time integer DEFAULT 0,
   settings jsonb DEFAULT '{}'::jsonb,
   last_active timestamp with time zone DEFAULT now(),
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
   CONSTRAINT users_pkey PRIMARY KEY (id),
   CONSTRAINT users_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id)
+);
+
+CREATE SEQUENCE public.pomodoro_stats_id_seq
+    AS integer
+    START WITH 1
+    INCREMENT BY 1
+    NO MINVALUE
+    NO MAXVALUE
+    CACHE 1;
+
+CREATE TABLE public.pomodoro_stats (
+  id integer NOT NULL DEFAULT nextval('pomodoro_stats_id_seq'::regclass),
+  user_id uuid NOT NULL,
+  date date NOT NULL DEFAULT CURRENT_DATE,
+  pomodoro_count integer DEFAULT 0,
+  total_focus_time_minutes integer DEFAULT 0,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT pomodoro_stats_pkey PRIMARY KEY (id),
+  CONSTRAINT pomodoro_stats_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id),
+  CONSTRAINT pomodoro_stats_unique_user_date UNIQUE (user_id, date)
 );
