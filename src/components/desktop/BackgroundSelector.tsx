@@ -63,6 +63,28 @@ export default function BackgroundSelector({
   const [previewTimeout, setPreviewTimeout] = useState<NodeJS.Timeout | null>(null);
   const [visibleCount, setVisibleCount] = useState(20); // Initially show only 20 backgrounds
 
+  // Memoize filtered backgrounds to avoid recalculation on every render
+  const filteredBackgrounds = useMemo(() => {
+    let filtered = backgrounds;
+    if (selectedCategory !== 'all') {
+      filtered = backgrounds.filter(bg => bg.category === selectedCategory);
+    }
+    return filtered;
+  }, [selectedCategory]);
+
+  // Get visible backgrounds (limited for performance)
+  const visibleBackgrounds = useMemo(() => {
+    return filteredBackgrounds.slice(0, visibleCount);
+  }, [filteredBackgrounds, visibleCount]);
+
+  // Memoize category counts to avoid recalculation on every render
+  const categoryCounts = useMemo(() => categories.map(category => ({
+    ...category,
+    count: category.id === 'all' 
+      ? backgrounds.length 
+      : backgrounds.filter(bg => bg.category === category.id).length
+  })), []);
+
   const handleVideoPreview = useCallback((videoElement: HTMLVideoElement, isEntering: boolean) => {
     if (isEntering) {
       // Clear any existing timeout
@@ -90,6 +112,11 @@ export default function BackgroundSelector({
     }
   }, [previewTimeout]);
 
+  // Reset visible count when category changes
+  useEffect(() => {
+    setVisibleCount(20);
+  }, [selectedCategory]);
+
   // Cleanup timeout on unmount
   useEffect(() => {
     return () => {
@@ -100,33 +127,6 @@ export default function BackgroundSelector({
   }, [previewTimeout]);
 
   if (!showBackgrounds) return null;
-
-  // Memoize filtered backgrounds to avoid recalculation on every render
-  const filteredBackgrounds = useMemo(() => {
-    let filtered = backgrounds;
-    if (selectedCategory !== 'all') {
-      filtered = backgrounds.filter(bg => bg.category === selectedCategory);
-    }
-    return filtered;
-  }, [selectedCategory]);
-
-  // Reset visible count when category changes
-  useEffect(() => {
-    setVisibleCount(20);
-  }, [selectedCategory]);
-
-  // Get visible backgrounds (limited for performance)
-  const visibleBackgrounds = useMemo(() => {
-    return filteredBackgrounds.slice(0, visibleCount);
-  }, [filteredBackgrounds, visibleCount]);
-
-  // Memoize category counts to avoid recalculation on every render
-  const categoryCounts = useMemo(() => categories.map(category => ({
-    ...category,
-    count: category.id === 'all' 
-      ? backgrounds.length 
-      : backgrounds.filter(bg => bg.category === category.id).length
-  })), []);
 
   const getFilteredBackgrounds = () => visibleBackgrounds;
 
@@ -192,7 +192,7 @@ export default function BackgroundSelector({
               title={animationDisabled ? "Enable background animation" : "Disable background animation"}
               aria-label={animationDisabled ? "Enable background animation" : "Disable background animation"}
             >
-              {animationDisabled ? <Image size={18} /> : <Pause size={18} />}
+              {animationDisabled ? <Image size={18} aria-label="Paused animation" /> : <Pause size={18} />}
               <span>{animationDisabled ? 'Still' : 'Animated'}</span>
             </button>
             <button

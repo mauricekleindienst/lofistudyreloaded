@@ -19,7 +19,6 @@ import {
   VolumeX,
   Timer,
   Coffee,
-  CheckCircle,
   X
 } from "lucide-react";
 import styles from "../../../styles/PomodoroTimer.module.css";
@@ -380,17 +379,6 @@ export default function PomodoroTimer() {  const [state, dispatch] = useReducer(
     return ((total - state.timeLeft) / total) * 100;
   }, [state.timeLeft, state.currentMode, state.pomodoroDurations]);
 
-  const formatFocusTime = useMemo(() => {
-    const totalMinutes = Math.floor((state.pomodoroCount * state.pomodoroDurations.pomodoro) / 60);
-    const hours = Math.floor(totalMinutes / 60);
-    const minutes = totalMinutes % 60;
-    
-    if (hours > 0) {
-      return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
-    } else {
-      return `${minutes}m`;
-    }
-  }, [state.pomodoroCount, state.pomodoroDurations.pomodoro]);
 
   const handleSettingsChange = useCallback((setting: string, value: number) => {
     dispatch({
