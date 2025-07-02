@@ -245,6 +245,7 @@ export default function PomodoroTimer() {  const [state, dispatch] = useReducer(
             date: new Date().toISOString().split('T')[0],
             pomodoro_count: 1, // Will be incremented
             total_focus_time_minutes: Math.round(state.pomodoroDurations.pomodoro / 60),
+            category: state.category,
             user_id: user.id,
           };
           

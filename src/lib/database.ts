@@ -45,6 +45,7 @@ export interface PomodoroStats {
   id?: number;
   user_id: string;
   date: string;
+  category: string;
   pomodoro_count: number;
   total_focus_time_minutes: number;
   created_at?: string;
