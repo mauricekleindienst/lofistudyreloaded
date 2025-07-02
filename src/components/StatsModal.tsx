@@ -121,7 +121,7 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
     const totalFocusTime = stats.reduce((acc, s) => acc + (s.total_focus_time_minutes || 0), 0);
     
     const categoryStats = stats.reduce((acc, s) => {
-      const category = 'General'; // Since we removed category from stats
+      const category = s.category || 'Other';
       if (!acc[category]) {
         acc[category] = { sessions: 0, time: 0 };
       }

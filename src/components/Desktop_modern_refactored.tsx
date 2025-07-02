@@ -6,7 +6,8 @@ import {
   CheckSquare, 
   Calculator as CalculatorIcon,
   Settings,
-  Volume2
+  Volume2,
+  StickyNote
 } from 'lucide-react';
 import { backgrounds, DEFAULT_BACKGROUND } from '@/data/backgrounds';
 import desktopStyles from '../../styles/Desktop.module.css';
@@ -18,6 +19,7 @@ import { useDataPersistence } from '../hooks/useDataPersistence';
 import PomodoroTimer from './apps/PomodoroTimer';
 import TodoList from './apps/TodoList';
 import Calculator from './apps/Calculator';
+import NotesApp from './apps/NotesApp';
 import Calendar from './Calendar';
 import AccountSettings from './apps/AccountSettings';
 import MusicPlayerSidebar from './MusicPlayerSidebar';
@@ -69,6 +71,15 @@ const modernApps: ModernApp[] = [
     color: 'purple',
     description: 'Mix relaxing sounds for focus',
     category: 'study'
+  },
+  {
+    id: 'notes',
+    name: 'Notes',
+    icon: StickyNote,
+    component: NotesApp,
+    color: 'yellow',
+    description: 'Write and organize your notes',
+    category: 'productivity'
   },
   {
     id: 'account-settings',
@@ -596,7 +607,7 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
       'pomodoro': { width: 300, height: 370, minWidth: 220, minHeight: 280 },
       'todo': { width: 350, height: 650, minWidth: 300, minHeight: 360 },
       'music': { width: 280, height: 220, minWidth: 240, minHeight: 180 },
-      'notes': { width: 400, height: 320, minWidth: 350, minHeight: 280 },
+      'notes': { width: 900, height: 600, minWidth: 600, minHeight: 400 },
       'calculator': { width: 240, height: 350, minWidth: 200, minHeight: 280 },
       'sound-player': { width: 350, height: 450, minWidth: 320, minHeight: 380 },
       'account-settings': { width: 360, height: 400, minWidth: 320, minHeight: 360 }

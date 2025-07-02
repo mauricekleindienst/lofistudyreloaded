@@ -339,13 +339,15 @@ export class DatabaseService {
       console.log('📊 Updating Pomodoro stats for user:', user.email, 'Stats:', stats);
 
       const today = new Date().toISOString().split('T')[0];
+      const category = stats.category || 'Other';
       
-      // First, try to get existing stats for today
+      // First, try to get existing stats for today and category
       const { data: existingStats } = await supabase
         .from('pomodoro_stats')
         .select('*')
         .eq('user_id', user.id)
         .eq('date', today)
+        .eq('category', category)
         .single();
 
       if (existingStats) {
@@ -373,6 +375,7 @@ export class DatabaseService {
           .insert([{
             user_id: user.id,
             date: today,
+            category: category,
             pomodoro_count: stats.pomodoro_count || 1,
             total_focus_time_minutes: stats.total_focus_time_minutes || 0,
             created_at: new Date().toISOString(),

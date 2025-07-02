@@ -96,7 +96,7 @@ export function useDataPersistence() {
         date: new Date().toISOString().split('T')[0],
         pomodoro_count: localStats.sessionsToday,
         total_focus_time_minutes: localStats.minutesToday,
-        category: ''
+        category: 'Mixed'
       }];
     }
   }, [isAuthenticated, authContext.user, localCache, withLoadingAndError]);

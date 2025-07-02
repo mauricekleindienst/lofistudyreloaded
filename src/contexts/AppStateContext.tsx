@@ -24,11 +24,16 @@ interface FocusState {
   isDeepFocusMode: boolean;
 }
 
+interface NotesState {
+  totalCount: number;
+}
+
 export interface AppStates {
   pomodoro: PomodoroState;
   todo: TodoState;
   music: MusicState;
   focus: FocusState;
+  notes: NotesState;
 }
 
 interface AppStateContextType {
@@ -37,6 +42,7 @@ interface AppStateContextType {
   updateTodoState: (state: Partial<TodoState>) => void;
   updateMusicState: (state: Partial<MusicState>) => void;
   updateFocusState: (state: Partial<FocusState>) => void;
+  updateNotesState: (state: Partial<NotesState>) => void;
 }
 
 const defaultAppStates: AppStates = {
@@ -56,6 +62,9 @@ const defaultAppStates: AppStates = {
   },
   focus: {
     isDeepFocusMode: false
+  },
+  notes: {
+    totalCount: 0
   }
 };
 
@@ -91,13 +100,21 @@ export const AppStateProvider: React.FC<{ children: ReactNode }> = ({ children }
     }));
   }, []);
 
+  const updateNotesState = useCallback((state: Partial<NotesState>) => {
+    setAppStates(prev => ({
+      ...prev,
+      notes: { ...prev.notes, ...state }
+    }));
+  }, []);
+
   return (
     <AppStateContext.Provider value={{
       appStates,
       updatePomodoroState,
       updateTodoState,
       updateMusicState,
-      updateFocusState
+      updateFocusState,
+      updateNotesState
     }}>
       {children}
     </AppStateContext.Provider>

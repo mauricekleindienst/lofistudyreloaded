@@ -83,6 +83,13 @@ const getAppRuntimeInfo = (app: ModernApp, window: ModernWindow | undefined, app
     return null;
   }
   
+  if (app.id === 'notes') {
+    if (appStates.notes.totalCount > 0) {
+      return appStates.notes.totalCount.toString();
+    }
+    return null;
+  }
+  
   return null;
 };
 
