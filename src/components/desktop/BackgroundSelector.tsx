@@ -324,7 +324,7 @@ export default function BackgroundSelector({
             )}
 
             {/* Regular backgrounds */}
-            {getFilteredBackgrounds().map(bg => (
+            {getFilteredBackgrounds().map((bg, index) => (
               <div
                 key={bg.id}
                 className={`${styles.wallpaperBox} ${
@@ -340,7 +340,7 @@ export default function BackgroundSelector({
                   className={styles.wallpaperMedia}
                   muted
                   loop
-                  preload="none"
+                  preload={index < 12 ? "metadata" : "none"}
                   aria-label={`Background video: ${bg.alt}`}
                   title={bg.alt}
                   onMouseEnter={(e) => {
