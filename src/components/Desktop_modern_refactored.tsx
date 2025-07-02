@@ -346,7 +346,13 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
         }
       }, 1000);
       
-      videoRef.current.play().catch(console.error);
+      // Only play the video if animation is not disabled
+      if (!animationDisabled) {
+        videoRef.current.play().catch(console.error);
+      } else {
+        // Set to first frame when animation is disabled
+        videoRef.current.currentTime = 0;
+      }
     }
   }, [currentBackground.id]);
 
@@ -423,9 +429,11 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
         if (videoRef.current) {
           videoRef.current.src = bufferedVideo.src;
           videoRef.current.currentTime = bufferedVideo.currentTime;
-          videoRef.current.play().catch(() => {
-            // Video autoplay was prevented
-          });
+          if (!animationDisabled) {
+            videoRef.current.play().catch(() => {
+              // Video autoplay was prevented
+            });
+          }
         }
         return;
       }
@@ -433,11 +441,13 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
     
     // Fallback to normal loading
     if (videoRef.current) {
-      videoRef.current.play().catch(() => {
-        // Video autoplay was prevented
-      });
+      if (!animationDisabled) {
+        videoRef.current.play().catch(() => {
+          // Video autoplay was prevented
+        });
+      }
     }
-  }, [currentBackground]);
+  }, [currentBackground, animationDisabled]);
 
   // Separate effect for preloading videos to avoid infinite loops
   useEffect(() => {
@@ -489,6 +499,22 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
     };
     loadSavedBackground();
   }, [isAuthenticated, loadSelectedBackground]);
+
+  // Control video playback based on animation disabled state
+  useEffect(() => {
+    if (videoRef.current && currentBackground?.src) {
+      if (animationDisabled) {
+        // Pause the video and show first frame when animation is disabled
+        videoRef.current.pause();
+        videoRef.current.currentTime = 0;
+      } else {
+        // Play the video when animation is enabled
+        videoRef.current.play().catch((error) => {
+          console.error('Failed to play background video:', error);
+        });
+      }
+    }
+  }, [animationDisabled, currentBackground?.src]);
 
   // Handle background change with database persistence and intelligent preloading
   const handleBackgroundChange = useCallback(async (background: Background) => {

@@ -238,6 +238,7 @@ export default function PomodoroTimer() {  const [state, dispatch] = useReducer(
   }, [state.isTimerRunning, state.timeLeft]);
 
   const handleCompletion = useCallback(async () => {
+    console.log('handleCompletion called - currentMode:', state.currentMode, 'pomodoroCount:', state.pomodoroCount);
     let sessionType: 'work' | 'short_break' | 'long_break' = 'work';
     switch (state.currentMode) {
       case "pomodoro":
@@ -259,6 +260,7 @@ export default function PomodoroTimer() {  const [state, dispatch] = useReducer(
     if (state.currentMode === "pomodoro") {
       // Increment pomodoro count for completed work session
       newPomodoroCount = state.pomodoroCount + 1;
+      console.log('Completing pomodoro session, new count will be:', newPomodoroCount);
       
       // Save completed pomodoro session to database
       if (isAuthenticated && user?.email) {
@@ -292,13 +294,16 @@ export default function PomodoroTimer() {  const [state, dispatch] = useReducer(
       // After completing a pomodoro, decide on break type based on new count
       nextMode = (newPomodoroCount % 4 === 0) ? "longBreak" : "shortBreak";
       shouldAutoStart = true; // Auto-start breaks
+      console.log('Next mode after pomodoro:', nextMode, 'shouldAutoStart:', shouldAutoStart);
     } else {
       // After completing a break, go back to pomodoro
       nextMode = "pomodoro";
       shouldAutoStart = false; // Don't auto-start work sessions
+      console.log('Next mode after break:', nextMode, 'shouldAutoStart:', shouldAutoStart);
     }
 
     // Switch to next mode
+    console.log('Dispatching SET_MODE with:', nextMode, shouldAutoStart);
     dispatch({ type: "SET_MODE", payload: nextMode, autoStart: shouldAutoStart });
 
     // Play appropriate sound and show notification
@@ -339,8 +344,16 @@ export default function PomodoroTimer() {  const [state, dispatch] = useReducer(
   // Timer completion handler - when timer hits 0, switch modes and auto-start
   useEffect(() => {
     if (state.timeLeft === 0 && state.isTimerRunning && !completionHandledRef.current) {
+      console.log('Timer completed! Current mode:', state.currentMode, 'Pomodoro count:', state.pomodoroCount);
       completionHandledRef.current = true;
-      handleCompletion();
+      
+      // Stop the current timer first
+      dispatch({ type: "TOGGLE_TIMER" });
+      
+      // Add a small delay to ensure state updates
+      setTimeout(() => {
+        handleCompletion();
+      }, 100);
     }
     
     // Reset the completion flag when timer is reset or mode changes
