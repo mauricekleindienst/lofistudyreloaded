@@ -251,40 +251,45 @@ export default function PomodoroTimer() {  const [state, dispatch] = useReducer(
         break;
     }
 
-    // Save completed pomodoro session to database
-    if (state.currentMode === 'pomodoro' && isAuthenticated && user?.email) {
-      const sessionData = {
-        user_id: user.id,
-        email: user.email,
-        duration: state.pomodoroDurations.pomodoro,
-        type: sessionType,
-        completed: true,
-        category: state.category,
-        completed_at: new Date().toISOString(),
-      };
-  
-      await savePomodoroSession(sessionData);
-  
-      const statsUpdate = {
-        date: new Date().toISOString().split('T')[0],
-        sessions_completed: 1, // Will be incremented
-        total_focus_time: Math.round(state.pomodoroDurations.pomodoro / 60), // in minutes
-        category: state.category,
-        email: user.email,
-        user_id: user.id,
-      };
-      
-      await updatePomodoroStats(statsUpdate);
-      dispatch({ type: 'INCREMENT_POMODORO' });
-    }
-
     // Determine next mode based on current mode and pomodoro count
     let nextMode: PomodoroState["currentMode"];
     let shouldAutoStart = false;
+    let newPomodoroCount = state.pomodoroCount;
     
     if (state.currentMode === "pomodoro") {
-      // After completing a pomodoro, decide on break type
-      const newPomodoroCount = state.pomodoroCount + (isAuthenticated ? 0 : 1); // Count was already incremented above for authenticated users
+      // Increment pomodoro count for completed work session
+      newPomodoroCount = state.pomodoroCount + 1;
+      
+      // Save completed pomodoro session to database
+      if (isAuthenticated && user?.email) {
+        const sessionData = {
+          user_id: user.id,
+          email: user.email,
+          duration: state.pomodoroDurations.pomodoro,
+          type: sessionType,
+          completed: true,
+          category: state.category,
+          completed_at: new Date().toISOString(),
+        };
+    
+        await savePomodoroSession(sessionData);
+    
+        const statsUpdate = {
+          date: new Date().toISOString().split('T')[0],
+          sessions_completed: 1, // Will be incremented
+          total_focus_time: Math.round(state.pomodoroDurations.pomodoro / 60), // in minutes
+          category: state.category,
+          email: user.email,
+          user_id: user.id,
+        };
+        
+        await updatePomodoroStats(statsUpdate);
+      }
+      
+      // Update local pomodoro count
+      dispatch({ type: 'INCREMENT_POMODORO' });
+      
+      // After completing a pomodoro, decide on break type based on new count
       nextMode = (newPomodoroCount % 4 === 0) ? "longBreak" : "shortBreak";
       shouldAutoStart = true; // Auto-start breaks
     } else {
