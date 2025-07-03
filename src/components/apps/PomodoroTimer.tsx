@@ -20,6 +20,7 @@ import {
   VolumeX,
   Timer,
   Coffee,
+  Armchair,
   X
 } from "lucide-react";
 import styles from "../../../styles/PomodoroTimer.module.css";
@@ -370,8 +371,8 @@ export default function PomodoroTimer() {  const [state, dispatch] = useReducer(
   }, []);
 
   const getModeInfo = (mode: PomodoroState["currentMode"]) => {
-    // Responsive icon size based on screen size
-    const iconSize = isMobile ? 12 : isTablet ? 14 : 16;
+    // Slightly larger icon size for better visibility
+    const iconSize = isMobile ? 10 : isTablet ? 12 : 14;
     
     switch (mode) {
       case "pomodoro":
@@ -389,62 +390,47 @@ export default function PomodoroTimer() {  const [state, dispatch] = useReducer(
       case "longBreak":
         return { 
           label: isMobile ? "Long" : "Long Break", 
-          icon: <Coffee size={iconSize} />, 
+          icon: <Armchair size={iconSize} />, 
           color: "#3b82f6" 
         };
     }
   };
   return (
     <div className={styles.container}>
-      {/* Mode Selector */}
-      <div className={styles.modeSelector}>
-        {(['pomodoro', 'shortBreak', 'longBreak'] as const).map((mode) => {
-          const modeInfo = getModeInfo(mode);
-          return (
-            <button
-              key={mode}
-              className={`${styles.modeButton} ${
-                state.currentMode === mode ? styles.active : ''
-              }`}
-              onClick={() => changeMode(mode)}
-              disabled={state.isTimerRunning}
-              style={{
-                '--mode-color': modeInfo.color
-              } as React.CSSProperties}
-            >
-              {modeInfo.icon}
-              <span>{modeInfo.label}</span>
-            </button>
-          );
-        })}
-      </div>
-
       {/* Timer Display */}
       <div className={styles.timerSection}>
         <div className={styles.progressRing}>
-          <svg className={styles.progressSvg} viewBox="0 0 120 120">
-            <circle
-              className={styles.progressTrack}
-              cx="60"
-              cy="60"
-              r="50"
-              fill="none"
-              strokeWidth="8"
-            />
-            <circle
-              className={styles.progressFill}
-              cx="60"
-              cy="60"
-              r="50"
-              fill="none"
-              strokeWidth="8"
-              strokeDasharray={339.292}
-              strokeDashoffset={339.292 - (progress * 339.292) / 100}
-              style={{
-                stroke: getModeInfo(state.currentMode).color
-              }}
-            />
-          </svg>
+          {/* Mode Selector inside progress ring */}
+          <div className={styles.modeSelector}>
+            {(['pomodoro', 'shortBreak', 'longBreak'] as const).map((mode) => {
+              const modeInfo = getModeInfo(mode);
+              return (
+                <button
+                  key={mode}
+                  className={`${styles.modeButton} ${
+                    state.currentMode === mode ? styles.active : ''
+                  }`}
+                  onClick={() => changeMode(mode)}
+                  disabled={state.isTimerRunning}
+                  style={{
+                    '--mode-color': modeInfo.color
+                  } as React.CSSProperties}
+                  title={modeInfo.label}
+                >
+                  {modeInfo.icon}
+                </button>
+              );
+            })}
+          </div>
+          
+          {/* Horizontal progress bar */}
+          <div 
+            className={styles.progressBar}
+            style={{
+              width: `${progress}%`,
+              backgroundColor: getModeInfo(state.currentMode).color
+            }}
+          />
           <div className={styles.timerDisplay}>
             <div className={styles.timeText}>{formatTime}</div>
             <div className={styles.modeLabel}>
