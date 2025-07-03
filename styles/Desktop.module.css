@@ -733,6 +733,21 @@
   border: 1px solid rgba(255, 255, 255, 0.1);
   backdrop-filter: blur(10px);
   overflow: hidden;
+  /* Responsive sizing */
+  max-width: calc(100vw - 20px);
+  max-height: calc(100vh - 80px);
+  /* Smooth resizing */
+  transition: width 0.3s ease, height 0.3s ease;
+  /* Touch optimization */
+  touch-action: none;
+  /* Prevent tap highlights on mobile */
+  -webkit-tap-highlight-color: transparent;
+  /* Improve touch responsiveness */
+  -webkit-touch-callout: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
 }
 
 .window.minimized {
@@ -743,10 +758,23 @@
   cursor: move;
   display: flex;
   align-items: center;
+  /* Touch optimization for window header */
+  touch-action: none;
+  /* Larger touch target for mobile */
+  min-height: clamp(44px, 8vw, 60px);
+  /* Prevent text selection while dragging */
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+  /* Remove tap highlight */
+  -webkit-tap-highlight-color: transparent;
   justify-content: space-between;
   padding: 16px;
   border-bottom: 1px solid rgba(255, 255, 255, 0.1);
   min-height: 44px;
+  /* Responsive header */
+  flex-shrink: 0;
 }
 
 .windowTitleSection {
@@ -812,10 +840,52 @@
   padding: 0;
   height: calc(100% - 76px); /* Subtract header height (44px + padding) */
   overflow: hidden;
+  /* Responsive content */
+  min-height: 200px;
 }
 
 /* Responsive window header adjustments */
+/* Large tablets and small laptops */
+@media (max-width: 1024px) {
+  .window {
+    border-radius: 16px;
+    max-width: calc(100vw - 16px);
+    max-height: calc(100vh - 70px);
+  }
+  
+  .windowHeader {
+    padding: 12px;
+    min-height: 40px;
+  }
+  
+  .windowTitle {
+    font-size: 14px;
+  }
+  
+  .windowCategory {
+    font-size: 11px;
+    padding: 4px 8px;
+  }
+  
+  .windowButton {
+    width: 22px;
+    height: 22px;
+  }
+  
+  .windowContent {
+    height: calc(100% - 64px);
+    min-height: 180px;
+  }
+}
+
+/* Tablets and large phones */
 @media (max-width: 768px) {
+  .window {
+    border-radius: 12px;
+    max-width: calc(100vw - 12px);
+    max-height: calc(100vh - 60px);
+  }
+  
   .windowHeader {
     padding: 10px;
     min-height: 36px;
@@ -831,19 +901,36 @@
   }
   
   .windowButton {
-    width: 18px;
-    height: 18px;
+    width: 20px;
+    height: 20px;
   }
   
   .windowContent {
     height: calc(100% - 56px);
+    min-height: 160px;
   }
 }
 
+/* Small phones */
 @media (max-width: 480px) {
+  .window {
+    border-radius: 8px;
+    max-width: calc(100vw - 8px);
+    max-height: calc(100vh - 50px);
+    /* On very small screens, center the window */
+    left: 50% !important;
+    top: 50% !important;
+    transform: translate(-50%, -50%) !important;
+  }
+  
   .windowHeader {
     padding: 8px;
     min-height: 32px;
+    gap: 6px;
+  }
+  
+  .windowTitleSection {
+    gap: 8px;
   }
   
   .windowTitle {
@@ -853,6 +940,38 @@
   .windowCategory {
     font-size: 9px;
     padding: 2px 5px;
+    display: none; /* Hide category on very small screens */
+  }
+  
+  .windowButton {
+    width: 18px;
+    height: 18px;
+  }
+  
+  .windowControls {
+    gap: 4px;
+  }
+  
+  .windowContent {
+    height: calc(100% - 48px);
+    min-height: 140px;
+  }
+}
+
+/* Extra small screens */
+@media (max-width: 320px) {
+  .window {
+    max-width: calc(100vw - 4px);
+    max-height: calc(100vh - 40px);
+  }
+  
+  .windowHeader {
+    padding: 6px;
+    min-height: 28px;
+  }
+  
+  .windowTitle {
+    font-size: 11px;
   }
   
   .windowButton {
@@ -861,7 +980,8 @@
   }
   
   .windowContent {
-    height: calc(100% - 48px);
+    height: calc(100% - 40px);
+    min-height: 120px;
   }
 }
 
@@ -1009,6 +1129,15 @@
 /* Utility classes */
 .selectNone {
   user-select: none;
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  /* Prevent touch scrolling/zooming while dragging */
+  touch-action: none;
+  /* Remove tap highlight during drag */
+  -webkit-tap-highlight-color: transparent;
+  /* Prevent text cursor */
+  cursor: move !important;
 }
 
 .hidden {

@@ -40,27 +40,47 @@ interface DraggableProps {
   handle?: string;
 }
 
-// Custom Draggable Hook
+// Custom Draggable Hook with both Mouse and Touch support
 const useDraggable = (nodeRef: React.RefObject<HTMLElement | null>) => {
   const [isDragging, setIsDragging] = React.useState(false);
   const [dragOffset, setDragOffset] = React.useState({ x: 0, y: 0 });
 
-  const handleMouseDown = React.useCallback((e: React.MouseEvent) => {
+  // Get client coordinates from either mouse or touch event
+  const getClientCoordinates = (e: MouseEvent | TouchEvent | React.MouseEvent | React.TouchEvent) => {
+    if ('touches' in e) {
+      // Touch event
+      const touch = e.touches[0] || e.changedTouches[0];
+      return { clientX: touch.clientX, clientY: touch.clientY };
+    } else {
+      // Mouse event
+      return { clientX: e.clientX, clientY: e.clientY };
+    }
+  };
+
+  // Start dragging (mouse or touch)
+  const handleDragStart = React.useCallback((e: React.MouseEvent | React.TouchEvent) => {
     if (!nodeRef.current) return;
     
     const rect = nodeRef.current.getBoundingClientRect();
+    const { clientX, clientY } = getClientCoordinates(e);
+    
     setIsDragging(true);
     setDragOffset({
-      x: e.clientX - rect.left,
-      y: e.clientY - rect.top
+      x: clientX - rect.left,
+      y: clientY - rect.top
     });
+
+    // Prevent default behavior (especially important for touch)
+    e.preventDefault();
   }, [nodeRef]);
 
-  const handleMouseMove = React.useCallback((e: MouseEvent) => {
+  // Update position during drag (mouse or touch)
+  const updatePosition = React.useCallback((e: MouseEvent | TouchEvent) => {
     if (!isDragging || !nodeRef.current) return;
     
-    const newX = e.clientX - dragOffset.x;
-    const newY = e.clientY - dragOffset.y;
+    const { clientX, clientY } = getClientCoordinates(e);
+    const newX = clientX - dragOffset.x;
+    const newY = clientY - dragOffset.y;
     
     // Get viewport dimensions
     const viewportWidth = window.innerWidth;
@@ -78,30 +98,43 @@ const useDraggable = (nodeRef: React.RefObject<HTMLElement | null>) => {
     
     nodeRef.current.style.left = `${boundedX}px`;
     nodeRef.current.style.top = `${boundedY}px`;
+
+    // Prevent default behavior
+    e.preventDefault();
   }, [isDragging, dragOffset.x, dragOffset.y]);
 
-  const handleMouseUp = React.useCallback(() => {
+  // End dragging
+  const handleDragEnd = React.useCallback(() => {
     setIsDragging(false);
   }, []);
 
   React.useEffect(() => {
     if (isDragging) {
-      document.addEventListener('mousemove', handleMouseMove);
-      document.addEventListener('mouseup', handleMouseUp);
+      // Add both mouse and touch event listeners
+      document.addEventListener('mousemove', updatePosition, { passive: false });
+      document.addEventListener('mouseup', handleDragEnd);
+      document.addEventListener('touchmove', updatePosition, { passive: false });
+      document.addEventListener('touchend', handleDragEnd);
+      document.addEventListener('touchcancel', handleDragEnd);
+      
       return () => {
-        document.removeEventListener('mousemove', handleMouseMove);
-        document.removeEventListener('mouseup', handleMouseUp);
+        document.removeEventListener('mousemove', updatePosition);
+        document.removeEventListener('mouseup', handleDragEnd);
+        document.removeEventListener('touchmove', updatePosition);
+        document.removeEventListener('touchend', handleDragEnd);
+        document.removeEventListener('touchcancel', handleDragEnd);
       };
     }
-  }, [isDragging, handleMouseMove, handleMouseUp]);
+  }, [isDragging, updatePosition, handleDragEnd]);
 
   return {
     isDragging,
-    handleMouseDown
+    handleMouseDown: handleDragStart,
+    handleTouchStart: handleDragStart
   };
 };
 
-// Custom Draggable Component
+// Custom Draggable Component with Mouse and Touch support
 const CustomDraggable: React.FC<DraggableProps> = ({ 
   children, 
   disabled = false, 
@@ -110,7 +143,7 @@ const CustomDraggable: React.FC<DraggableProps> = ({
   handle = '.window-handle'
 }) => {
   const nodeRef = React.useRef<HTMLDivElement>(null);
-  const { isDragging, handleMouseDown } = useDraggable(nodeRef);
+  const { isDragging, handleMouseDown, handleTouchStart } = useDraggable(nodeRef);
 
   React.useEffect(() => {
     if (nodeRef.current && defaultPosition) {
@@ -119,7 +152,8 @@ const CustomDraggable: React.FC<DraggableProps> = ({
     }
   }, [defaultPosition]);
 
-  const handleDragStart = (e: React.MouseEvent) => {
+  // Handle mouse drag start
+  const handleMouseDragStart = (e: React.MouseEvent) => {
     if (disabled) return;
     
     const target = e.target as HTMLElement;
@@ -130,11 +164,27 @@ const CustomDraggable: React.FC<DraggableProps> = ({
     handleMouseDown(e);
   };
 
+  // Handle touch drag start
+  const handleTouchDragStart = (e: React.TouchEvent) => {
+    if (disabled) return;
+    
+    const target = e.target as HTMLElement;
+    const handleElement = target.closest(handle);
+    if (!handleElement) return;
+    
+    if (onStart) onStart();
+    handleTouchStart(e);
+  };
+
   return (
     <div
       ref={nodeRef}
-      style={{ position: 'absolute' }}
-      onMouseDown={handleDragStart}
+      style={{ 
+        position: 'absolute',
+        touchAction: 'none' // Prevent default touch behaviors like scrolling
+      }}
+      onMouseDown={handleMouseDragStart}
+      onTouchStart={handleTouchDragStart}
       className={isDragging ? desktopStyles.selectNone : ''}
     >
       {children}

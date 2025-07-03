@@ -14,6 +14,7 @@ import desktopStyles from '../../styles/Desktop.module.css';
 import { useAppState } from '../contexts/AppStateContext';
 import { useAuth } from '../contexts/AuthContext';
 import { useDataPersistence } from '../hooks/useDataPersistence';
+import { useResponsive } from '../hooks/useResponsive';
 
 // Import individual app components
 import PomodoroTimer from './apps/PomodoroTimer';
@@ -102,6 +103,9 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
     saveSelectedBackground, 
     loadSelectedBackground 
   } = useDataPersistence();
+  
+  // Responsive utilities
+  const { getResponsiveSize: getResponsiveSizeUtil, breakpointInfo, isClient: isResponsiveClient } = useResponsive();
 
   // State management
   const [openWindows, setOpenWindows] = useState<ModernWindow[]>([]);
@@ -597,44 +601,97 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
   // Get responsive size for each app type based on viewport
   const getResponsiveSize = useCallback((appId: string) => {
     if (!isClient) return { width: 350, height: 300, minWidth: 300, minHeight: 250 };
-    
-    const viewport = {
-      width: window.innerWidth,
-      height: window.innerHeight
+
+    // Enhanced base sizes with better mobile considerations
+    const baseSizes: Record<string, { 
+      width: number; 
+      height: number; 
+      minWidth: number; 
+      minHeight: number;
+      aspectRatio?: number; // Optional aspect ratio for responsive scaling
+    }> = {
+      'pomodoro': { 
+        width: 320, 
+        height: 450, 
+        minWidth: 280, 
+        minHeight: 360,
+        aspectRatio: 0.71 // width/height
+      },
+      'todo': { 
+        width: 380, 
+        height: 680, 
+        minWidth: 320, 
+        minHeight: 400,
+        aspectRatio: 0.56
+      },
+      'music': { 
+        width: 300, 
+        height: 240, 
+        minWidth: 280, 
+        minHeight: 200,
+        aspectRatio: 1.25
+      },
+      'notes': { 
+        width: 800, 
+        height: 600, 
+        minWidth: 400, 
+        minHeight: 300,
+        aspectRatio: 1.33
+      },
+      'calculator': { 
+        width: 280, 
+        height: 380, 
+        minWidth: 240, 
+        minHeight: 320,
+        aspectRatio: 0.74
+      },
+      'sound-player': { 
+        width: 380, 
+        height: 480, 
+        minWidth: 320, 
+        minHeight: 400,
+        aspectRatio: 0.79
+      },
+      'account-settings': { 
+        width: 400, 
+        height: 500, 
+        minWidth: 340, 
+        minHeight: 400,
+        aspectRatio: 0.8
+      },
+      'chatbot': {
+        width: 420,
+        height: 600,
+        minWidth: 350,
+        minHeight: 450,
+        aspectRatio: 0.7
+      },
+      'weather': {
+        width: 350,
+        height: 400,
+        minWidth: 300,
+        minHeight: 350,
+        aspectRatio: 0.875
+      }
     };
 
-    const baseSizes: Record<string, { width: number; height: number; minWidth: number; minHeight: number }> = {
-      'pomodoro': { width: 300, height: 420, minWidth: 220, minHeight: 280 },
-      'todo': { width: 350, height: 650, minWidth: 300, minHeight: 360 },
-      'music': { width: 280, height: 220, minWidth: 240, minHeight: 180 },
-      'notes': { width: 900, height: 600, minWidth: 600, minHeight: 400 },
-      'calculator': { width: 240, height: 350, minWidth: 200, minHeight: 280 },
-      'sound-player': { width: 350, height: 450, minWidth: 320, minHeight: 380 },
-      'account-settings': { width: 360, height: 400, minWidth: 320, minHeight: 360 }
+    const baseSize = baseSizes[appId] || { 
+      width: 380, 
+      height: 450, 
+      minWidth: 320, 
+      minHeight: 350,
+      aspectRatio: 0.84
     };
 
-    const baseSize = baseSizes[appId] || { width: 350, height: 300, minWidth: 300, minHeight: 250 };
-
-    let scaleFactor = 1;
-    
-    if (viewport.width < 768) {
-      scaleFactor = 0.75;
-    } else if (viewport.width < 1024) {
-      scaleFactor = 0.85;
-    } else if (viewport.width > 1920) {
-      scaleFactor = 1.15;
-    }
-
-    const maxWidth = Math.min(baseSize.width * scaleFactor, viewport.width * 0.45);
-    const maxHeight = Math.min(baseSize.height * scaleFactor, viewport.height * 0.7);
-
-    return {
-      width: Math.max(maxWidth, baseSize.minWidth),
-      height: Math.max(maxHeight, baseSize.minHeight),
+    // Use the responsive utility to calculate size
+    return getResponsiveSizeUtil(baseSize.width, baseSize.height, {
+      aspectRatio: baseSize.aspectRatio,
       minWidth: baseSize.minWidth,
-      minHeight: baseSize.minHeight
-    };
-  }, [isClient]);
+      minHeight: baseSize.minHeight,
+      maxWidthPercent: breakpointInfo.maxWidthPercent,
+      maxHeightPercent: breakpointInfo.maxHeightPercent
+    });
+  }, [isClient, getResponsiveSizeUtil, breakpointInfo]);
 
   // App management functions
   const openApp = useCallback((app: ModernApp) => {
@@ -654,14 +711,72 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
     const windowCount = openWindows.length;
     const size = getResponsiveSize(app.id);
     
+    // Responsive positioning logic
+    const getResponsivePosition = () => {
+      if (!isResponsiveClient) {
+        return { x: 80 + (windowCount * 30), y: 60 + (windowCount * 30) };
+      }
+
+      // Base offset calculations using responsive utilities
+      let baseOffsetX = 60;
+      let baseOffsetY = 40;
+      let cascadeOffset = 25;
+
+      // Adjust for different breakpoints
+      if (breakpointInfo.name === 'xs') {
+        baseOffsetX = 10;
+        baseOffsetY = 10;
+        cascadeOffset = 10;
+      } else if (breakpointInfo.name === 'sm') {
+        baseOffsetX = 20;
+        baseOffsetY = 20;
+        cascadeOffset = 15;
+      } else if (breakpointInfo.name === 'md') {
+        baseOffsetX = 40;
+        baseOffsetY = 30;
+        cascadeOffset = 20;
+      }
+
+      // Calculate position with cascade
+      let x = baseOffsetX + (windowCount * cascadeOffset);
+      let y = baseOffsetY + (windowCount * cascadeOffset);
+
+      // Get viewport constraints from responsive utility
+      const viewport = {
+        width: window.innerWidth,
+        height: window.innerHeight
+      };
+
+      // Prevent windows from going off-screen
+      const maxX = viewport.width - size.width - 20;
+      const maxY = viewport.height - size.height - (breakpointInfo.isMobile ? 80 : 60);
+
+      // Reset cascade if we're going off-screen
+      if (x > maxX || y > maxY) {
+        // Start a new cascade row/column
+        const resetCount = Math.floor(windowCount / 4); // Reset every 4 windows
+        x = baseOffsetX + (resetCount * cascadeOffset * 2);
+        y = baseOffsetY + ((windowCount % 4) * cascadeOffset);
+        
+        // Final bounds check
+        x = Math.min(Math.max(x, 10), maxX);
+        y = Math.min(Math.max(y, 10), maxY);
+      }
+
+      // For very small screens, center the window
+      if (breakpointInfo.name === 'xs') {
+        x = Math.max((viewport.width - size.width) / 2, 5);
+        y = Math.max((viewport.height - size.height) / 2, 30);
+      }
+
+      return { x, y };
+    };
+    
     const newWindow: ModernWindow = {
       id: `${app.id}-${Date.now()}`,
       app,
       isMinimized: false,
-      position: { 
-        x: 80 + (windowCount * 30), 
-        y: 60 + (windowCount * 30) 
-      },
+      position: getResponsivePosition(),
       size,
       zIndex: highestZIndex + 1
     };

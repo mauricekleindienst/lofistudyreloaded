@@ -10,6 +10,7 @@ import React, {
 import { useAuth } from '../../contexts/AuthContext';
 import { useDataPersistence } from '../../hooks/useDataPersistence';
 import { useAppState } from '../../contexts/AppStateContext';
+import { useResponsive } from '../../hooks/useResponsive';
 import { 
   Play, 
   Pause, 
@@ -120,6 +121,7 @@ export default function PomodoroTimer() {  const [state, dispatch] = useReducer(
     loadPomodoroStats
   } = useDataPersistence();
   const { updatePomodoroState } = useAppState();
+  const { isMobile, isTablet } = useResponsive();
   const timerRef = useRef<NodeJS.Timeout | null>(null);
   
   // Sound refs at the top level
@@ -368,23 +370,26 @@ export default function PomodoroTimer() {  const [state, dispatch] = useReducer(
   }, []);
 
   const getModeInfo = (mode: PomodoroState["currentMode"]) => {
+    // Responsive icon size based on screen size
+    const iconSize = isMobile ? 12 : isTablet ? 14 : 16;
+    
     switch (mode) {
       case "pomodoro":
         return { 
-          label: "Focus", 
-          icon: <Timer size={16} />, 
+          label: isMobile ? "Focus" : "Focus Time", 
+          icon: <Timer size={iconSize} />, 
           color: "var(--accent-color)" 
         };
       case "shortBreak":
         return { 
-          label: "Break", 
-          icon: <Coffee size={16} />, 
+          label: isMobile ? "Break" : "Short Break", 
+          icon: <Coffee size={iconSize} />, 
           color: "#10b981" 
         };
       case "longBreak":
         return { 
-          label: "Long", 
-          icon: <Coffee size={16} />, 
+          label: isMobile ? "Long" : "Long Break", 
+          icon: <Coffee size={iconSize} />, 
           color: "#3b82f6" 
         };
     }
@@ -456,7 +461,7 @@ export default function PomodoroTimer() {  const [state, dispatch] = useReducer(
             disabled={state.timeLeft === state.pomodoroDurations[state.currentMode]}
             title="Reset Timer"
           >
-            <RotateCcw size={20} />
+            <RotateCcw size={isMobile ? 16 : 20} />
           </button>
 
           <button
@@ -464,7 +469,10 @@ export default function PomodoroTimer() {  const [state, dispatch] = useReducer(
             onClick={toggleTimer}
             title={state.isTimerRunning ? 'Pause' : 'Start'}
           >
-            {state.isTimerRunning ? <Pause size={24} /> : <Play size={24} />}
+            {state.isTimerRunning ? 
+              <Pause size={isMobile ? 20 : 24} /> : 
+              <Play size={isMobile ? 20 : 24} />
+            }
           </button>
 
           <button
@@ -472,7 +480,7 @@ export default function PomodoroTimer() {  const [state, dispatch] = useReducer(
             onClick={() => dispatch({ type: "TOGGLE_SETTINGS" })}
             title="Settings"
           >
-            <Settings size={20} />
+            <Settings size={isMobile ? 16 : 20} />
           </button>
         </div>
       </div>
@@ -480,7 +488,7 @@ export default function PomodoroTimer() {  const [state, dispatch] = useReducer(
       {/* Category Selection */}
       <div className={styles.categorySection}>
         <label className={styles.categoryLabel}>
-          Category
+          {isMobile ? "Type" : "Category"}
         </label>
         <div className={styles.categorySelector}>
           <select
@@ -497,6 +505,33 @@ export default function PomodoroTimer() {  const [state, dispatch] = useReducer(
           </select>
         </div>
       </div>
+
+      {/* Responsive Stats Display */}
+      {!isMobile && (
+        <div className={styles.statsSection}>
+          <div className={styles.statsGrid}>
+            <div className={styles.statItem}>
+              <div className={styles.statValue}>{state.pomodoroCount}</div>
+              <div className={styles.statLabel}>Sessions</div>
+            </div>
+            <div className={styles.statItem}>
+              <div className={styles.statValue}>
+                {Math.round((state.pomodoroCount * state.pomodoroDurations.pomodoro) / 3600 * 10) / 10}h
+              </div>
+              <div className={styles.statLabel}>Focus</div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Mobile-only compact stats */}
+      {isMobile && (
+        <div className={styles.mobileStats}>
+          <span>{state.pomodoroCount} sessions</span>
+          <span>•</span>
+          <span>{Math.round((state.pomodoroCount * state.pomodoroDurations.pomodoro) / 3600 * 10) / 10}h focus</span>
+        </div>
+      )}
 
 
       {/* <div className={styles.statsSection}>

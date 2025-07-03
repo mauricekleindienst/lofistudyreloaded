@@ -1,0 +1,271 @@
+/* Responsive Design Utilities */
+
+/* CSS Custom Properties for Responsive Design */
+:root {
+  /* Responsive Spacing Scale */
+  --spacing-xs: clamp(2px, 0.4vw, 4px);
+  --spacing-sm: clamp(4px, 0.8vw, 8px);
+  --spacing-md: clamp(8px, 1.2vw, 16px);
+  --spacing-lg: clamp(12px, 1.8vw, 24px);
+  --spacing-xl: clamp(16px, 2.4vw, 32px);
+  --spacing-2xl: clamp(24px, 3.6vw, 48px);
+
+  /* Responsive Font Sizes */
+  --font-xs: clamp(0.65rem, 1.2vw, 0.75rem);
+  --font-sm: clamp(0.75rem, 1.4vw, 0.875rem);
+  --font-base: clamp(0.875rem, 1.6vw, 1rem);
+  --font-lg: clamp(1rem, 1.8vw, 1.125rem);
+  --font-xl: clamp(1.125rem, 2vw, 1.25rem);
+  --font-2xl: clamp(1.25rem, 2.4vw, 1.5rem);
+  --font-3xl: clamp(1.5rem, 3vw, 1.875rem);
+
+  /* Responsive Border Radius */
+  --radius-sm: clamp(4px, 0.8vw, 6px);
+  --radius-md: clamp(6px, 1.2vw, 8px);
+  --radius-lg: clamp(8px, 1.5vw, 12px);
+  --radius-xl: clamp(12px, 2vw, 16px);
+  --radius-2xl: clamp(16px, 2.5vw, 20px);
+
+  /* Responsive Component Heights */
+  --btn-height-sm: clamp(24px, 4vw, 32px);
+  --btn-height-md: clamp(32px, 5vw, 40px);
+  --btn-height-lg: clamp(40px, 6vw, 48px);
+
+  /* Responsive Icon Sizes */
+  --icon-sm: clamp(12px, 2vw, 16px);
+  --icon-md: clamp(16px, 2.5vw, 20px);
+  --icon-lg: clamp(20px, 3vw, 24px);
+  --icon-xl: clamp(24px, 3.5vw, 28px);
+}
+
+/* Responsive Container Classes */
+.responsive-container {
+  width: 100%;
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  padding: var(--spacing-md);
+  gap: var(--spacing-md);
+  box-sizing: border-box;
+  overflow: hidden;
+}
+
+.responsive-container-compact {
+  padding: var(--spacing-sm);
+  gap: var(--spacing-sm);
+}
+
+.responsive-container-spacious {
+  padding: var(--spacing-lg);
+  gap: var(--spacing-lg);
+}
+
+/* Responsive Grid */
+.responsive-grid {
+  display: grid;
+  gap: var(--spacing-md);
+  width: 100%;
+}
+
+.responsive-grid-2 {
+  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+}
+
+.responsive-grid-3 {
+  grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+}
+
+.responsive-grid-4 {
+  grid-template-columns: repeat(auto-fit, minmax(80px, 1fr));
+}
+
+/* Responsive Flex */
+.responsive-flex {
+  display: flex;
+  gap: var(--spacing-md);
+  align-items: center;
+  flex-wrap: wrap;
+}
+
+.responsive-flex-column {
+  flex-direction: column;
+  align-items: stretch;
+}
+
+.responsive-flex-compact {
+  gap: var(--spacing-sm);
+}
+
+/* Responsive Text */
+.text-responsive-xs { font-size: var(--font-xs); }
+.text-responsive-sm { font-size: var(--font-sm); }
+.text-responsive-base { font-size: var(--font-base); }
+.text-responsive-lg { font-size: var(--font-lg); }
+.text-responsive-xl { font-size: var(--font-xl); }
+.text-responsive-2xl { font-size: var(--font-2xl); }
+.text-responsive-3xl { font-size: var(--font-3xl); }
+
+/* Responsive Buttons */
+.btn-responsive {
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: var(--font-sm);
+  border-radius: var(--radius-md);
+  min-height: var(--btn-height-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: var(--spacing-sm);
+  cursor: pointer;
+  transition: all 0.2s ease;
+  border: none;
+  background: transparent;
+}
+
+.btn-responsive-sm {
+  padding: var(--spacing-xs) var(--spacing-sm);
+  font-size: var(--font-xs);
+  min-height: var(--btn-height-sm);
+  border-radius: var(--radius-sm);
+}
+
+.btn-responsive-lg {
+  padding: var(--spacing-md) var(--spacing-lg);
+  font-size: var(--font-lg);
+  min-height: var(--btn-height-lg);
+  border-radius: var(--radius-lg);
+}
+
+/* Responsive Input */
+.input-responsive {
+  padding: var(--spacing-sm) var(--spacing-md);
+  font-size: var(--font-sm);
+  border-radius: var(--radius-md);
+  min-height: var(--btn-height-md);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.1);
+  color: inherit;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Responsive Card */
+.card-responsive {
+  padding: var(--spacing-lg);
+  border-radius: var(--radius-lg);
+  background: rgba(255, 255, 255, 0.1);
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  backdrop-filter: blur(10px);
+}
+
+.card-responsive-compact {
+  padding: var(--spacing-md);
+  border-radius: var(--radius-md);
+}
+
+/* Hide on specific breakpoints */
+.hide-xs { display: block; }
+.hide-sm { display: block; }
+.hide-md { display: block; }
+.hide-lg { display: block; }
+
+/* Show only on specific breakpoints */
+.show-xs { display: none; }
+.show-sm { display: none; }
+.show-md { display: none; }
+.show-lg { display: none; }
+
+/* Responsive breakpoint utilities */
+@media (max-width: 479px) {
+  .hide-xs { display: none; }
+  .show-xs { display: block; }
+  
+  /* Extra compact spacing for tiny screens */
+  .responsive-container {
+    padding: var(--spacing-xs);
+    gap: var(--spacing-xs);
+  }
+  
+  .responsive-grid {
+    gap: var(--spacing-xs);
+  }
+  
+  .responsive-flex {
+    gap: var(--spacing-xs);
+  }
+}
+
+@media (max-width: 767px) {
+  .hide-sm { display: none; }
+  .show-sm { display: block; }
+}
+
+@media (max-width: 1023px) {
+  .hide-md { display: none; }
+  .show-md { display: block; }
+}
+
+@media (max-width: 1365px) {
+  .hide-lg { display: none; }
+  .show-lg { display: block; }
+}
+
+/* Responsive margins and padding utilities */
+.m-responsive { margin: var(--spacing-md); }
+.mx-responsive { margin-left: var(--spacing-md); margin-right: var(--spacing-md); }
+.my-responsive { margin-top: var(--spacing-md); margin-bottom: var(--spacing-md); }
+.mt-responsive { margin-top: var(--spacing-md); }
+.mb-responsive { margin-bottom: var(--spacing-md); }
+.ml-responsive { margin-left: var(--spacing-md); }
+.mr-responsive { margin-right: var(--spacing-md); }
+
+.p-responsive { padding: var(--spacing-md); }
+.px-responsive { padding-left: var(--spacing-md); padding-right: var(--spacing-md); }
+.py-responsive { padding-top: var(--spacing-md); padding-bottom: var(--spacing-md); }
+.pt-responsive { padding-top: var(--spacing-md); }
+.pb-responsive { padding-bottom: var(--spacing-md); }
+.pl-responsive { padding-left: var(--spacing-md); }
+.pr-responsive { padding-right: var(--spacing-md); }
+
+/* Responsive gap utilities */
+.gap-responsive { gap: var(--spacing-md); }
+.gap-responsive-sm { gap: var(--spacing-sm); }
+.gap-responsive-lg { gap: var(--spacing-lg); }
+
+/* Responsive width constraints */
+.w-responsive-full { width: 100%; }
+.w-responsive-auto { width: auto; }
+.max-w-responsive {
+  max-width: min(90vw, 400px);
+}
+
+/* Responsive height constraints */
+.h-responsive-full { height: 100%; }
+.h-responsive-auto { height: auto; }
+.max-h-responsive {
+  max-height: min(80vh, 600px);
+}
+
+/* Responsive overflow handling */
+.overflow-responsive {
+  overflow: auto;
+  /* Custom scrollbar for webkit browsers */
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.3) transparent;
+}
+
+.overflow-responsive::-webkit-scrollbar {
+  width: clamp(4px, 0.8vw, 8px);
+}
+
+.overflow-responsive::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.overflow-responsive::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 4px;
+}
+
+.overflow-responsive::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5);
+}
