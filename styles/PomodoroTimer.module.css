@@ -408,6 +408,26 @@
   background: rgba(255, 255, 255, 0.05);
 }
 
+/* Fix dropdown options styling for better theme consistency */
+.categorySelect option {
+  background: var(--bg-secondary, #2d3748);
+  color: var(--text-primary, #ffffff);
+  padding: var(--spacing-xs, 4px) var(--spacing-sm, 8px);
+  border: none;
+  font-weight: 500;
+}
+
+/* Webkit browsers (Chrome, Safari, Edge) */
+.categorySelect option:checked {
+  background: var(--accent-color, #ff7b00);
+  color: var(--text-primary, #ffffff);
+}
+
+.categorySelect option:hover {
+  background: rgba(255, 123, 0, 0.2);
+  color: var(--text-primary, #ffffff);
+}
+
 /* Stats Section */
 .statsSection {
   display: flex;
