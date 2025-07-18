@@ -91,6 +91,18 @@ CREATE TABLE public.notes (
   CONSTRAINT notes_pkey PRIMARY KEY (id),
   CONSTRAINT notes_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
 );
+CREATE TABLE public.pomodoro_stats (
+  id integer NOT NULL DEFAULT nextval('pomodoro_stats_id_seq'::regclass),
+  user_id uuid NOT NULL,
+  date date NOT NULL DEFAULT CURRENT_DATE,
+  category character varying NOT NULL,
+  pomodoro_count integer DEFAULT 0,
+  total_focus_time_minutes integer DEFAULT 0,
+  created_at timestamp with time zone DEFAULT now(),
+  updated_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT pomodoro_stats_pkey PRIMARY KEY (id),
+  CONSTRAINT pomodoro_stats_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
+);
 CREATE TABLE public.todos (
   id integer NOT NULL DEFAULT nextval('todos_id_seq'::regclass),
   email character varying NOT NULL,
@@ -126,26 +138,4 @@ CREATE TABLE public.users (
   updated_at timestamp with time zone DEFAULT now(),
   CONSTRAINT users_pkey PRIMARY KEY (id),
   CONSTRAINT users_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id)
-);
-
-CREATE SEQUENCE public.pomodoro_stats_id_seq
-    AS integer
-    START WITH 1
-    INCREMENT BY 1
-    NO MINVALUE
-    NO MAXVALUE
-    CACHE 1;
-
-CREATE TABLE public.pomodoro_stats (
-  id integer NOT NULL DEFAULT nextval('pomodoro_stats_id_seq'::regclass),
-  user_id uuid NOT NULL,
-  date date NOT NULL DEFAULT CURRENT_DATE,
-  category character varying NOT NULL,
-  pomodoro_count integer DEFAULT 0,
-  total_focus_time_minutes integer DEFAULT 0,
-  created_at timestamp with time zone DEFAULT now(),
-  updated_at timestamp with time zone DEFAULT now(),
-  CONSTRAINT pomodoro_stats_pkey PRIMARY KEY (id),
-  CONSTRAINT pomodoro_stats_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id),
-  CONSTRAINT pomodoro_stats_unique_user_date_category UNIQUE (user_id, date, category)
 );

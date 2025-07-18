@@ -85,8 +85,8 @@ export function useDataPersistence() {
   }, [isAuthenticated, withLoadingAndError]);
 
   const loadPomodoroStats = useCallback(async (days?: number): Promise<PomodoroStats[]> => {
-    if (isAuthenticated && authContext?.user?.email) {
-      return await withLoadingAndError(() => db.getPomodoroStats(authContext.user!.email!, days)) || [];
+    if (isAuthenticated && authContext?.user?.id) {
+      return await withLoadingAndError(() => db.getPomodoroStats(authContext.user!.id, days)) || [];
     } else {
       // Get stats from local cache
       const localStats = localCache.getPomodoroStats();

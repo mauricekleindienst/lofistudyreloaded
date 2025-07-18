@@ -396,15 +396,17 @@ export class DatabaseService {
     }
   }
 
-  async getPomodoroStats(email: string, days?: number): Promise<PomodoroStats[]> {
+  async getPomodoroStats(userId: string, days?: number): Promise<PomodoroStats[]> {
     try {
-      const user = await this.checkAuth();
-      if (!user) return [];
+      if (!userId) {
+        console.error('getPomodoroStats called without a userId');
+        return [];
+      }
 
       let query = supabase
         .from('pomodoro_stats')
         .select('*')
-        .eq('user_id', user.id)
+        .eq('user_id', userId)
         .order('date', { ascending: false });
 
       if (days) {
