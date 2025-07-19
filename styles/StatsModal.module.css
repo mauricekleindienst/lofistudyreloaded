@@ -425,33 +425,44 @@
 }
 
 .scoreboardHeader h3 {
-  margin: 0;
-  font-size: clamp(1rem, 1.5vw, 1.25rem);
-  color: var(--text-primary);
+  font-size: 1rem;
   font-weight: 600;
+  margin: 0;
 }
 
-.scoreboardFilter {
+.scoreboardFilters {
   display: flex;
+  flex-direction: column;
   gap: 0.5rem;
+  align-items: flex-end;
 }
 
-.scoreboardFilter button {
-  background: var(--glass-button);
-  border: 1px solid var(--border-color);
-  color: var(--text-secondary);
+.timeRangeFilter, .sortFilter {
+  display: flex;
+  gap: 0.25rem;
+}
+
+.timeRangeFilter button, .sortFilter button {
+  background: var(--bg-secondary);
+  border: none;
+  border-radius: 4px;
   padding: 0.25rem 0.5rem;
-  border-radius: 6px;
-  font-weight: 500;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
   cursor: pointer;
-  transition: all 0.2s;
-  font-size: clamp(0.65rem, 1vw, 0.75rem);
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  transition: all 0.2s ease;
 }
 
-.scoreboardFilter button.active {
+.timeRangeFilter button:hover, .sortFilter button:hover {
+  background: var(--bg-tertiary);
+}
+
+.timeRangeFilter button.active, .sortFilter button.active {
   background: var(--accent-color);
-  color: #fff;
-  border-color: var(--accent-color);
+  color: white;
 }
 
 .leaderboard {
@@ -461,105 +472,104 @@
   display: flex;
   flex-direction: column;
   gap: 0.5rem;
-  flex-grow: 1;
+  max-height: 300px;
   overflow-y: auto;
 }
 
 .leaderboardItem {
   display: flex;
   align-items: center;
-  padding: 0.75rem;
-  border-radius: 8px;
-  background: rgba(255, 255, 255, 0.03);
-  transition: transform 0.2s, background-color 0.2s;
-  position: relative;
-  overflow: hidden;
+  padding: 0.5rem;
+  border-radius: 6px;
+  background: var(--bg-secondary);
+  transition: all 0.2s ease;
 }
 
 .leaderboardItem:hover {
-  transform: translateY(-2px);
-  background: rgba(255, 255, 255, 0.05);
+  background: var(--bg-tertiary);
 }
 
 .leaderboardItem.currentUser {
-  background: rgba(255, 123, 0, 0.1);
-  border: 1px solid rgba(255, 123, 0, 0.2);
+  background: rgba(255, 153, 0, 0.1);
+  border-left: 3px solid var(--accent-color);
 }
 
-.leaderboardItem.currentUser::after {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 4px;
-  height: 100%;
-  background: var(--accent-color);
-}
-
-.rank {
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-weight: 700;
-  font-size: clamp(0.75rem, 1.2vw, 0.875rem);
-  margin-right: 0.75rem;
-  flex-shrink: 0;
-}
-
-.rank1, .rank2, .rank3 {
+.rank, .rank1, .rank2, .rank3 {
   width: 24px;
   height: 24px;
   border-radius: 50%;
   display: flex;
   align-items: center;
   justify-content: center;
-  color: #fff;
-  font-weight: 700;
+  font-weight: 600;
+  font-size: 0.8rem;
   margin-right: 0.75rem;
   flex-shrink: 0;
 }
 
+.rank {
+  background: var(--bg-tertiary);
+  color: var(--text-secondary);
+}
+
 .rank1 {
-  background: linear-gradient(135deg, #ffd700 0%, #ffed4e 100%);
-  color: #000;
+  background: #ffd700;
+  color: #333;
 }
 
 .rank2 {
-  background: linear-gradient(135deg, #c0c0c0 0%, #e5e5e5 100%);
-  color: #000;
+  background: #c0c0c0;
+  color: #333;
 }
 
 .rank3 {
-  background: linear-gradient(135deg, #cd7f32 0%, #daa520 100%);
-  color: #000;
+  background: #cd7f32;
+  color: #333;
 }
 
 .userInfo {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
+  flex-grow: 1;
+  min-width: 0;
 }
 
 .userName {
+  font-weight: 500;
+  margin-bottom: 0.25rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  display: flex;
+  align-items: center;
+}
+
+.currentUserTag {
+  background-color: var(--accent-color);
+  color: white;
+  font-size: 0.65rem;
+  padding: 0.1rem 0.3rem;
+  border-radius: 3px;
+  margin-left: 0.5rem;
   font-weight: 600;
-  font-size: clamp(0.75rem, 1.2vw, 0.875rem);
-  color: var(--text-primary);
 }
 
 .userStats {
   display: flex;
-  gap: 0.5rem;
-  font-size: clamp(0.65rem, 1vw, 0.75rem);
+  gap: 1rem;
+  font-size: 0.7rem;
   color: var(--text-secondary);
 }
 
+.userStats span {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
 .scoreValue {
-  margin-left: auto;
-  font-weight: 700;
-  font-size: clamp(0.8rem, 1.3vw, 0.9rem);
+  font-weight: 600;
   color: var(--accent-color);
+  margin-left: 0.5rem;
+  font-size: 0.9rem;
 }
 
 @media (max-width: 768px) {

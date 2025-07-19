@@ -508,6 +508,7 @@ export class DatabaseService {
 
   // Leaderboard
   async getLeaderboard(): Promise<Array<{
+    id: string;
     email: string;
     totalSessions: number;
     totalFocusTime: number;
@@ -515,28 +516,41 @@ export class DatabaseService {
   }>> {
     try {
       // Get aggregated stats for all users
-      const { data, error } = await supabase
+      const { data: statsData, error: statsError } = await supabase
         .from('pomodoro_stats')
-        .select('email, sessions_completed, total_focus_time')
-        .order('sessions_completed', { ascending: false });
+        .select('user_id, pomodoro_count, total_focus_time_minutes, date')
+        .order('pomodoro_count', { ascending: false });
 
-      if (error) throw error;
+      if (statsError) throw statsError;
 
       // Aggregate by user and calculate totals
-      const userStats = new Map<string, { sessions: number; focusTime: number }>();
+      const userStats = new Map<string, { 
+        id: string; 
+        sessions: number; 
+        focusTime: number;
+      }>();
       
-      data?.forEach(stat => {
-        const existing = userStats.get(stat.email) || { sessions: 0, focusTime: 0 };
-        userStats.set(stat.email, {
-          sessions: existing.sessions + (stat.sessions_completed || 0),
-          focusTime: existing.focusTime + (stat.total_focus_time || 0)
-        });
+      statsData?.forEach(stat => {
+        const userId = stat.user_id;
+        
+        if (!userStats.has(userId)) {
+          userStats.set(userId, {
+            id: userId,
+            sessions: 0,
+            focusTime: 0
+          });
+        }
+
+        const userStat = userStats.get(userId)!;
+        userStat.sessions += stat.pomodoro_count || 0;
+        userStat.focusTime += stat.total_focus_time_minutes || 0;
       });
 
       // Convert to leaderboard format and sort
       const leaderboard = Array.from(userStats.entries())
-        .map(([email, stats]) => ({
-          email,
+        .map(([userId, stats]) => ({
+          id: userId,
+          email: `User #${userId.slice(-4)}`,
           totalSessions: stats.sessions,
           totalFocusTime: stats.focusTime,
           rank: 0 // Will be set below
@@ -547,12 +561,12 @@ export class DatabaseService {
             return b.totalSessions - a.totalSessions;
           }
           return b.totalFocusTime - a.totalFocusTime;
-        })
-        .slice(0, 50) // Top 50 users
-        .map((user, index) => ({
-          ...user,
-          rank: index + 1
-        }));
+        });
+
+      // Add rank
+      leaderboard.forEach((entry, index) => {
+        entry.rank = index + 1;
+      });
 
       return leaderboard;
     } catch (error) {

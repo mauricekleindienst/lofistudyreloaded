@@ -16,7 +16,8 @@ import {
   MoreHorizontal,
   RefreshCw,
   Users,
-  Timer
+  Timer,
+  Calendar
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useDataPersistence } from '../hooks/useDataPersistence';
@@ -74,6 +75,7 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
   const [leaderboardUsers, setLeaderboardUsers] = useState<LeaderboardUser[]>([]);
   const [leaderboardLoading, setLeaderboardLoading] = useState(true);
   const [leaderboardFilter, setLeaderboardFilter] = useState<'sessions' | 'time'>('sessions');
+  const [leaderboardTimeRange, setLeaderboardTimeRange] = useState<7 | 30 | 'all'>(7);
 
 
   const loadStats = useCallback(async (isInitialLoad = false) => {
@@ -125,18 +127,30 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
       if (usersData) {
         (usersData as UserData[]).forEach((userData) => {
           userInfoMap.set(userData.id, {
-            email: userData.email || 'Anonymous',
-            name: userData.full_name || userData.email || 'Anonymous User'
+            email: userData.email || 'User',
+            name: userData.full_name || userData.email?.split('@')[0] || `User #${userData.id.slice(-4)}`
           });
         });
       }
       
-      // Get aggregated pomodoro stats for today
-      const today = new Date().toISOString().split('T')[0];
-      const { data: statsData, error: statsError } = await supabase
+      // Get date range for filtering
+      let dateFilter = '';
+      if (leaderboardTimeRange !== 'all') {
+        const startDate = new Date();
+        startDate.setDate(startDate.getDate() - leaderboardTimeRange);
+        dateFilter = startDate.toISOString().split('T')[0];
+      }
+      
+      // Get pomodoro stats with appropriate date filter
+      const query = supabase
         .from('pomodoro_stats')
-        .select('user_id, pomodoro_count, total_focus_time_minutes')
-        .gte('date', today);
+        .select('user_id, pomodoro_count, total_focus_time_minutes, date');
+      
+      if (leaderboardTimeRange !== 'all') {
+        query.gte('date', dateFilter);
+      }
+      
+      const { data: statsData, error: statsError } = await query;
 
       if (statsError) {
         console.error('[StatsModal] Failed to load leaderboard stats:', statsError);
@@ -155,6 +169,7 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
         user_id: string;
         pomodoro_count?: number;
         total_focus_time_minutes?: number;
+        date?: string;
       }
 
       (statsData as StatRecord[]).forEach((record) => {
@@ -175,7 +190,10 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
 
       // Combine user info with stats
       const combinedUsers = Array.from(userStatsMap.entries()).map(([userId, stats]) => {
-        const userInfo = userInfoMap.get(userId) || { email: 'Anonymous', name: 'Anonymous User' };
+        const userInfo = userInfoMap.get(userId) || { 
+          email: 'User', 
+          name: `User #${userId.slice(-4)}` 
+        };
         return {
           id: userId,
           email: userInfo.email,
@@ -203,7 +221,7 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
     } finally {
       setLeaderboardLoading(false);
     }
-  }, [user, leaderboardFilter]);
+  }, [user, leaderboardFilter, leaderboardTimeRange]);
 
   // Load stats only once when the modal is opened and user is available
   useEffect(() => {
@@ -212,7 +230,7 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
       loadLeaderboard();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, user, leaderboardFilter]);
+  }, [isOpen, user, leaderboardFilter, leaderboardTimeRange]);
 
   const { totalSessions, totalFocusTime, avgSessionsPerDay, categoryStats } = useMemo(() => {
     if (!stats) {
@@ -240,6 +258,21 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
     };
   }, [stats, days]);
   
+  // Format time in hours and minutes
+  const formatTime = (minutes: number): string => {
+    if (minutes < 60) {
+      return `${minutes} min`;
+    }
+    
+    const hours = Math.floor(minutes / 60);
+    const remainingMinutes = minutes % 60;
+    
+    if (remainingMinutes === 0) {
+      return `${hours}h`;
+    }
+    
+    return `${hours}h ${remainingMinutes}m`;
+  };
 
   if (!isOpen) return null;
 
@@ -308,7 +341,7 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
                 <StatCard 
                   icon={<Clock size={20} />}
                   label="Total Focus Time"
-                  value={`${totalFocusTime} min`}
+                  value={formatTime(totalFocusTime)}
                 />
                 <StatCard 
                   icon={<TrendingUp size={20} />}
@@ -332,7 +365,7 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
                           </div>
                           <div className={styles.categoryStats}>
                             <span>{data.sessions} sessions</span>
-                            <span>{data.time} min</span>
+                            <span>{formatTime(data.time)}</span>
                           </div>
                         </li>
                       ))}
@@ -347,19 +380,44 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
                 <div className={styles.scoreboardPanel}>
                   <div className={styles.scoreboardHeader}>
                     <h3>Leaderboard</h3>
-                    <div className={styles.scoreboardFilter}>
-                      <button 
-                        className={leaderboardFilter === 'sessions' ? styles.active : ''}
-                        onClick={() => setLeaderboardFilter('sessions')}
-                      >
-                        Sessions
-                      </button>
-                      <button 
-                        className={leaderboardFilter === 'time' ? styles.active : ''}
-                        onClick={() => setLeaderboardFilter('time')}
-                      >
-                        Time
-                      </button>
+                    <div className={styles.scoreboardFilters}>
+                      <div className={styles.timeRangeFilter}>
+                        <button 
+                          className={leaderboardTimeRange === 7 ? styles.active : ''}
+                          onClick={() => setLeaderboardTimeRange(7)}
+                          title="Last 7 days"
+                        >
+                          <Calendar size={12} /> 7d
+                        </button>
+                        <button 
+                          className={leaderboardTimeRange === 30 ? styles.active : ''}
+                          onClick={() => setLeaderboardTimeRange(30)}
+                          title="Last 30 days"
+                        >
+                          <Calendar size={12} /> 30d
+                        </button>
+                        <button 
+                          className={leaderboardTimeRange === 'all' ? styles.active : ''}
+                          onClick={() => setLeaderboardTimeRange('all')}
+                          title="All time"
+                        >
+                          <Calendar size={12} /> All
+                        </button>
+                      </div>
+                      <div className={styles.sortFilter}>
+                        <button 
+                          className={leaderboardFilter === 'sessions' ? styles.active : ''}
+                          onClick={() => setLeaderboardFilter('sessions')}
+                        >
+                          Sessions
+                        </button>
+                        <button 
+                          className={leaderboardFilter === 'time' ? styles.active : ''}
+                          onClick={() => setLeaderboardFilter('time')}
+                        >
+                          Time
+                        </button>
+                      </div>
                     </div>
                   </div>
 
@@ -372,7 +430,7 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
                     <div className={styles.noData} style={{ padding: '2rem 0' }}>
                       <Users size={32} />
                       <h3>No Leaderboard Data</h3>
-                      <p>Be the first to complete Pomodoro sessions today!</p>
+                      <p>Be the first to complete Pomodoro sessions!</p>
                     </div>
                   ) : (
                     <ul className={styles.leaderboard}>
@@ -393,15 +451,17 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
                           
                           <div className={styles.userInfo}>
                             <div className={styles.userName}>
-                              {leaderboardUser.name}
-                              {user && leaderboardUser.id === user.id && ' (You)'}
+                              {leaderboardUser.email}
+                              {user && leaderboardUser.id === user.id && (
+                                <span className={styles.currentUserTag}> (You)</span>
+                              )}
                             </div>
                             <div className={styles.userStats}>
                               <span>
                                 <Trophy size={12} /> {leaderboardUser.totalSessions} sessions
                               </span>
                               <span>
-                                <Timer size={12} /> {leaderboardUser.totalFocusTime} min
+                                <Timer size={12} /> {formatTime(leaderboardUser.totalFocusTime)}
                               </span>
                             </div>
                           </div>
@@ -409,7 +469,7 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
                           <div className={styles.scoreValue}>
                             {leaderboardFilter === 'sessions' 
                               ? `${leaderboardUser.totalSessions} 🔥`
-                              : `${leaderboardUser.totalFocusTime} min`
+                              : formatTime(leaderboardUser.totalFocusTime)
                             }
                           </div>
                         </li>
