@@ -14,7 +14,9 @@ import {
   PenTool,
   Briefcase,
   MoreHorizontal,
-  RefreshCw
+  RefreshCw,
+  Users,
+  Timer
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useDataPersistence } from '../hooks/useDataPersistence';
@@ -30,8 +32,23 @@ interface StatsModalProps {
   onClose: () => void;
 }
 
+interface LeaderboardUser {
+  id: string;
+  email: string;
+  name: string;
+  totalSessions: number;
+  totalFocusTime: number;
+  rank: number;
+}
+
+interface UserData {
+  id: string;
+  email?: string;
+  full_name?: string;
+}
+
 const getCategoryIcon = (category: string) => {
-  const iconProps = { size: 16, className: styles.categoryIcon };
+  const iconProps = { size: 14, className: styles.categoryIcon };
   switch (category.toLowerCase()) {
     case 'studying':
       return <BookOpen {...iconProps} />;
@@ -54,6 +71,9 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
   const [stats, setStats] = useState<PomodoroStats[] | null>(null);
   const [loading, setLoading] = useState(true);
   const [days, setDays] = useState(7);
+  const [leaderboardUsers, setLeaderboardUsers] = useState<LeaderboardUser[]>([]);
+  const [leaderboardLoading, setLeaderboardLoading] = useState(true);
+  const [leaderboardFilter, setLeaderboardFilter] = useState<'sessions' | 'time'>('sessions');
 
 
   const loadStats = useCallback(async (isInitialLoad = false) => {
@@ -81,13 +101,118 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
     }
   }, [user, days, loadPomodoroStats]);
 
+  const loadLeaderboard = useCallback(async () => {
+    if (!user) {
+      setLeaderboardUsers([]);
+      setLeaderboardLoading(false);
+      return;
+    }
+
+    setLeaderboardLoading(true);
+
+    try {
+      // First, get all users to have their profile info
+      const { data: usersData, error: usersError } = await supabase
+        .from('users')
+        .select('id, email, full_name');
+      
+      if (usersError) {
+        console.error('[StatsModal] Failed to load users:', usersError);
+      }
+
+      // Create a map of user IDs to user info
+      const userInfoMap = new Map<string, {email: string; name: string}>();
+      if (usersData) {
+        (usersData as UserData[]).forEach((userData) => {
+          userInfoMap.set(userData.id, {
+            email: userData.email || 'Anonymous',
+            name: userData.full_name || userData.email || 'Anonymous User'
+          });
+        });
+      }
+      
+      // Get aggregated pomodoro stats for today
+      const today = new Date().toISOString().split('T')[0];
+      const { data: statsData, error: statsError } = await supabase
+        .from('pomodoro_stats')
+        .select('user_id, pomodoro_count, total_focus_time_minutes')
+        .gte('date', today);
+
+      if (statsError) {
+        console.error('[StatsModal] Failed to load leaderboard stats:', statsError);
+        setLeaderboardUsers([]);
+        return;
+      }
+
+      // Process and aggregate the data by user
+      const userStatsMap = new Map<string, { 
+        id: string; 
+        totalSessions: number; 
+        totalFocusTime: number;
+      }>();
+
+      interface StatRecord {
+        user_id: string;
+        pomodoro_count?: number;
+        total_focus_time_minutes?: number;
+      }
+
+      (statsData as StatRecord[]).forEach((record) => {
+        const userId = record.user_id;
+        
+        if (!userStatsMap.has(userId)) {
+          userStatsMap.set(userId, {
+            id: userId,
+            totalSessions: 0,
+            totalFocusTime: 0
+          });
+        }
+
+        const userStats = userStatsMap.get(userId)!;
+        userStats.totalSessions += record.pomodoro_count || 0;
+        userStats.totalFocusTime += record.total_focus_time_minutes || 0;
+      });
+
+      // Combine user info with stats
+      const combinedUsers = Array.from(userStatsMap.entries()).map(([userId, stats]) => {
+        const userInfo = userInfoMap.get(userId) || { email: 'Anonymous', name: 'Anonymous User' };
+        return {
+          id: userId,
+          email: userInfo.email,
+          name: userInfo.name,
+          totalSessions: stats.totalSessions,
+          totalFocusTime: stats.totalFocusTime
+        };
+      });
+      
+      // Sort by sessions or time based on filter
+      const sortedUsers = leaderboardFilter === 'sessions' 
+        ? combinedUsers.sort((a, b) => b.totalSessions - a.totalSessions)
+        : combinedUsers.sort((a, b) => b.totalFocusTime - a.totalFocusTime);
+
+      // Add rank
+      const rankedUsers = sortedUsers.map((user, index) => ({
+        ...user,
+        rank: index + 1
+      }));
+
+      setLeaderboardUsers(rankedUsers);
+    } catch (error) {
+      console.error('[StatsModal] Unexpected error loading leaderboard:', error);
+      setLeaderboardUsers([]);
+    } finally {
+      setLeaderboardLoading(false);
+    }
+  }, [user, leaderboardFilter]);
+
   // Load stats only once when the modal is opened and user is available
   useEffect(() => {
     if (isOpen && user) {
       loadStats(true);
+      loadLeaderboard();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, user]);
+  }, [isOpen, user, leaderboardFilter]);
 
   const { totalSessions, totalFocusTime, avgSessionsPerDay, categoryStats } = useMemo(() => {
     if (!stats) {
@@ -129,21 +254,26 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
           </div>
           <div className={styles.headerActions}>
             <button 
-              onClick={() => loadStats(false)} 
+              onClick={() => {
+                loadStats(false);
+                loadLeaderboard();
+              }} 
               className={styles.refreshButton}
               aria-label="Refresh stats"
-              disabled={loading}
+              disabled={loading || leaderboardLoading}
             >
-              <RefreshCw size={16} className={loading ? 'animate-spin' : ''} />
+              <RefreshCw size={16} className={(loading || leaderboardLoading) ? 'animate-spin' : ''} />
             </button>
-            <button onClick={onClose} className={styles.closeButton} aria-label="Close modal"><X /></button>
+            <button onClick={onClose} className={styles.closeButton} aria-label="Close modal">
+              <X size={18} />
+            </button>
           </div>
         </div>
         
         <div className={styles.content}>
           {loading ? (
             <div className={styles.loadingContainer}>
-              <RefreshCw className={`${styles.loadingIcon} animate-spin`} />
+              <RefreshCw size={32} className={`${styles.loadingIcon} animate-spin`} />
               <span>Loading stats...</span>
             </div>
           ) : !stats || stats.length === 0 ? (
@@ -171,45 +301,121 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
 
               <div className={styles.statsGrid}>
                 <StatCard 
-                  icon={<Trophy />}
+                  icon={<Trophy size={20} />}
                   label="Total Sessions"
                   value={totalSessions} 
                 />
                 <StatCard 
-                  icon={<Clock />}
+                  icon={<Clock size={20} />}
                   label="Total Focus Time"
                   value={`${totalFocusTime} min`}
                 />
                 <StatCard 
-                  icon={<TrendingUp />}
+                  icon={<TrendingUp size={20} />}
                   label="Avg. Daily Sessions"
                   value={avgSessionsPerDay.toFixed(1)}
                 />
               </div>
 
-              <div className={styles.detailsContainer}>
-                <div className={styles.categoryBreakdown}>
-                  <h3>Category Breakdown</h3>
-                  <ul>
-                    {Object.entries(categoryStats)
-                      .sort(([, a], [, b]) => b.sessions - a.sessions)
-                      .map(([category, data]) => (
-                      <li key={category}>
-                        <div className={styles.categoryInfo}>
-                          {getCategoryIcon(category)}
-                          <span className={styles.categoryName}>{category}</span>
-                        </div>
-                        <div className={styles.categoryStats}>
-                          <span>{data.sessions} sessions</span>
-                          <span>{data.time} min</span>
-                        </div>
-                      </li>
-                    ))}
-                  </ul>
+              <div className={styles.mainContent}>
+                <div className={styles.detailsContainer}>
+                  <div className={styles.categoryBreakdown}>
+                    <h3>Category Breakdown</h3>
+                    <ul>
+                      {Object.entries(categoryStats)
+                        .sort(([, a], [, b]) => b.sessions - a.sessions)
+                        .map(([category, data]) => (
+                        <li key={category}>
+                          <div className={styles.categoryInfo}>
+                            {getCategoryIcon(category)}
+                            <span className={styles.categoryName}>{category}</span>
+                          </div>
+                          <div className={styles.categoryStats}>
+                            <span>{data.sessions} sessions</span>
+                            <span>{data.time} min</span>
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  </div>
+                  
+                  <div className={styles.activityHeatmap}>
+                    <ActivityHeatmap stats={stats} />
+                  </div>
                 </div>
-                
-                <div className={styles.activityHeatmap}>
-                  <ActivityHeatmap stats={stats} />
+
+                <div className={styles.scoreboardPanel}>
+                  <div className={styles.scoreboardHeader}>
+                    <h3>Leaderboard</h3>
+                    <div className={styles.scoreboardFilter}>
+                      <button 
+                        className={leaderboardFilter === 'sessions' ? styles.active : ''}
+                        onClick={() => setLeaderboardFilter('sessions')}
+                      >
+                        Sessions
+                      </button>
+                      <button 
+                        className={leaderboardFilter === 'time' ? styles.active : ''}
+                        onClick={() => setLeaderboardFilter('time')}
+                      >
+                        Time
+                      </button>
+                    </div>
+                  </div>
+
+                  {leaderboardLoading ? (
+                    <div className={styles.loadingContainer} style={{ padding: '2rem 0' }}>
+                      <RefreshCw size={24} className={`${styles.loadingIcon} animate-spin`} />
+                      <span>Loading leaderboard...</span>
+                    </div>
+                  ) : leaderboardUsers.length === 0 ? (
+                    <div className={styles.noData} style={{ padding: '2rem 0' }}>
+                      <Users size={32} />
+                      <h3>No Leaderboard Data</h3>
+                      <p>Be the first to complete Pomodoro sessions today!</p>
+                    </div>
+                  ) : (
+                    <ul className={styles.leaderboard}>
+                      {leaderboardUsers.map((leaderboardUser) => (
+                        <li 
+                          key={leaderboardUser.id} 
+                          className={`${styles.leaderboardItem} ${user && leaderboardUser.id === user.id ? styles.currentUser : ''}`}
+                        >
+                          {leaderboardUser.rank <= 3 ? (
+                            <div className={styles[`rank${leaderboardUser.rank}`]}>
+                              {leaderboardUser.rank}
+                            </div>
+                          ) : (
+                            <div className={styles.rank}>
+                              {leaderboardUser.rank}
+                            </div>
+                          )}
+                          
+                          <div className={styles.userInfo}>
+                            <div className={styles.userName}>
+                              {leaderboardUser.name}
+                              {user && leaderboardUser.id === user.id && ' (You)'}
+                            </div>
+                            <div className={styles.userStats}>
+                              <span>
+                                <Trophy size={12} /> {leaderboardUser.totalSessions} sessions
+                              </span>
+                              <span>
+                                <Timer size={12} /> {leaderboardUser.totalFocusTime} min
+                              </span>
+                            </div>
+                          </div>
+                          
+                          <div className={styles.scoreValue}>
+                            {leaderboardFilter === 'sessions' 
+                              ? `${leaderboardUser.totalSessions} 🔥`
+                              : `${leaderboardUser.totalFocusTime} min`
+                            }
+                          </div>
+                        </li>
+                      ))}
+                    </ul>
+                  )}
                 </div>
               </div>
             </>

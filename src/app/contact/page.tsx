@@ -1,8 +1,8 @@
 import React from 'react';
-import { Mail, ArrowLeft, Globe, MessageCircle } from 'lucide-react';
+import { Mail, ArrowLeft, MessageCircle } from 'lucide-react';
 import Link from 'next/link';
 import { Metadata } from 'next';
-import styles from '../../../styles/Contact.module.css';
+import styles from '../../../styles/PageLayout.module.css';
 
 export const metadata: Metadata = {
   title: 'Contact Us',
@@ -33,66 +33,50 @@ export default function ContactPage() {
 
         {/* Main Content */}
         <div className={styles.mainContent}>
-          <div className={styles.card}>            <div className={styles.titleSection}>              <div className={styles.iconWrapper}>
-                <Mail className={`${styles.iconLarge} ${styles.iconWhite}`} />
+          <div className={styles.card}>
+            <div className={styles.titleSection}>
+              <div className={styles.iconWrapper}>
+                <Mail className={styles.iconLarge} />
               </div>
-              <h1 className={styles.title}>Contact Us</h1>              <p className={styles.subtitle}>
+              <h1 className={styles.title}>Contact Us</h1>
+              <p className={styles.subtitle}>
                 We&apos;d love to hear from you! Get in touch with any questions, feedback, or suggestions.
               </p>
             </div>
 
-            <div className="space-y-6">
+            <div className={styles.content}>
               {/* Email Contact */}
-              <div className={styles.contactSection}>
+              <section className={styles.section}>
                 <div className={styles.sectionHeader}>
                   <Mail className={`${styles.iconMedium} ${styles.iconBlue}`} />
-                  <h3 className={styles.sectionTitle}>Email Support</h3>
+                  <h2 className={styles.sectionTitle}>Email Support</h2>
                 </div>
-                <p className={styles.sectionDescription}>
-                  For general inquiries, feature requests, or technical support:
-                </p>
-                <a href="mailto:hello@lo-fi.study" className={styles.emailButton}>
-                  <Mail size={16} />
-                  hello@lo-fi.study
-                </a>
-              </div>              {/* Feedback */}
-              <div className={styles.contactSection}>
+                <div className={styles.sectionCard}>
+                
+                  <a href="mailto:hello@lo-fi.study" className={styles.contactLink}>
+                    <Mail size={16} />
+                    hello@lo-fi.study
+                  </a>
+                </div>
+              </section>
+              
+              {/* Feedback */}
+              <section className={styles.section}>
                 <div className={styles.sectionHeader}>
                   <MessageCircle className={`${styles.iconMedium} ${styles.iconPurple}`} />
-                  <h3 className={styles.sectionTitle}>Feedback & Suggestions</h3>
+                  <h2 className={styles.sectionTitle}>Feedback & Suggestions</h2>
                 </div>
-                <p className={styles.sectionDescription}>
-                  Help us improve Lo-Fi.Study by sharing your thoughts and ideas:
-                </p>
-                <a href="mailto:feedback@lo-fi.study" className={styles.socialButton}>
-                  <MessageCircle size={16} />
-                  feedback@lo-fi.study
-                </a>
-              </div>
+                <div className={styles.sectionCard}>
+                  
+                  <a href="mailto:feedback@lo-fi.study" className={styles.contactLink}>
+                    <MessageCircle size={16} />
+                    feedback@lo-fi.study
+                  </a>
+                </div>
+              </section>
 
-              {/* Website */}
-              <div className={styles.contactSection}>
-                <div className={styles.sectionHeader}>
-                  <Globe className={`${styles.iconMedium} ${styles.iconGreen}`} />
-                  <h3 className={styles.sectionTitle}>Website</h3>
-                </div>
-                <p className={styles.sectionDescription}>
-                  Visit our main website:
-                </p>
-                <a 
-                  href="https://lo-fi.study" 
-                  target="_blank" 
-                  rel="noopener noreferrer"
-                  className={styles.submitButton}
-                >
-                  <Globe size={16} />
-                  lo-fi.study
-                </a>
-              </div>
+            
             </div>
-
-            {/* Response Time */}
-         
           </div>
         </div>
       </div>

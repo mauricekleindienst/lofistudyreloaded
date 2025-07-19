@@ -2,7 +2,7 @@ import React from 'react';
 import { Shield, ArrowLeft, Eye, Lock, Database, UserCheck, Settings, AlertTriangle } from 'lucide-react';
 import Link from 'next/link';
 import { Metadata } from 'next';
-import styles from '../../../styles/Privacy.module.css';
+import styles from '../../../styles/PageLayout.module.css';
 
 export const metadata: Metadata = {
   title: 'Privacy Policy',
@@ -33,8 +33,10 @@ export default function PrivacyPolicyPage() {
 
         {/* Main Content */}
         <div className={styles.mainContent}>
-          <div className={styles.card}>            <div className={styles.titleSection}>              <div className={styles.iconWrapper}>
-                <Shield className={`${styles.iconLarge} ${styles.iconWhite}`} />
+          <div className={styles.card}>
+            <div className={styles.titleSection}>
+              <div className={styles.iconWrapper}>
+                <Shield className={styles.iconLarge} />
               </div>
               <h1 className={styles.title}>Privacy Policy</h1>
               <p className={styles.subtitle}>
@@ -50,7 +52,7 @@ export default function PrivacyPolicyPage() {
                   <h2 className={styles.sectionTitle}>Privacy Overview</h2>
                 </div>
                 <div className={styles.sectionCard}>
-                  <p>
+                  <p className={styles.prose}>
                     At Lo-Fi.Study, we are committed to protecting your privacy and ensuring the security of your personal information. 
                     This Privacy Policy explains how we collect, use, store, and protect your data when you use our productivity platform.
                   </p>
@@ -58,7 +60,8 @@ export default function PrivacyPolicyPage() {
               </section>
 
               {/* Information We Collect */}
-              <section className={styles.section}>                <div className={styles.sectionHeader}>
+              <section className={styles.section}>
+                <div className={styles.sectionHeader}>
                   <Database className={`${styles.iconMedium} ${styles.iconPurple}`} />
                   <h2 className={styles.sectionTitle}>Information We Collect</h2>
                 </div>
@@ -88,7 +91,8 @@ export default function PrivacyPolicyPage() {
                     </ul>
                   </div>
                   
-                  <div className={styles.subsection}>                    <h3 className={styles.subsectionTitle}>
+                  <div className={styles.subsection}>
+                    <h3 className={styles.subsectionTitle}>
                       <Database className={styles.iconSmall} />
                       Technical Information
                     </h3>
@@ -131,7 +135,8 @@ export default function PrivacyPolicyPage() {
                       <li className={styles.dataItem}>Fix bugs and optimize performance</li>
                       <li className={styles.dataItem}>Develop new functionality based on user needs</li>
                     </ul>
-                  </div>                </div>
+                  </div>
+                </div>
               </section>
 
               {/* Data Protection */}
@@ -154,11 +159,12 @@ export default function PrivacyPolicyPage() {
                     </ul>
                   </div>
                   
-                  <div className={styles.subsection}>                    <h3 className={styles.subsectionTitle}>
+                  <div className={styles.subsection}>
+                    <h3 className={styles.subsectionTitle}>
                       <Database className={styles.iconSmall} />
                       Data Storage
                     </h3>
-                    <p>
+                    <p className={styles.prose}>
                       Your data is stored securely using Supabase, a trusted database provider with enterprise-grade security. 
                       We retain your data only as long as necessary to provide our services or as required by law.
                     </p>
@@ -184,8 +190,8 @@ export default function PrivacyPolicyPage() {
                     </ul>
                     <p>
                       To exercise these rights, please contact us at{' '}
-                      <a href="mailto:privacy@lo-fi.study" className={styles.link}>
-                        privacy@lo-fi.study
+                      <a href="mailto:hello@lo-fi.study">
+                      hello@lo-fi.study
                       </a>
                     </p>
                   </div>
@@ -199,17 +205,8 @@ export default function PrivacyPolicyPage() {
                   <h2 className={styles.sectionTitle}>Third-Party Services</h2>
                 </div>
                 <div className={styles.sectionCard}>
-                  <div className={styles.warning}>
-                    <div className={styles.warningTitle}>
-                      <AlertTriangle className={styles.iconSmall} />
-                      Third-Party Data Sharing
-                    </div>
-                    <div className={styles.warningText}>
-                      We use the following third-party services and only share data necessary for providing our services.
-                    </div>
-                  </div>
                   <div className={styles.prose}>
-                    <p>We use the following third-party services:</p>
+                    <p>We use the following third-party services and only share data necessary for providing our services:</p>
                     <ul>
                       <li><strong>Supabase:</strong> Database and authentication services</li>
                       <li><strong>Vercel:</strong> Website hosting and deployment</li>
@@ -224,31 +221,32 @@ export default function PrivacyPolicyPage() {
 
               {/* Cookies and Local Storage */}
               <section className={styles.section}>
-                <div className={styles.highlight}>
-                  <div className={styles.highlightTitle}>
+                <div className={styles.sectionCard}>
+                  <div className={styles.subsectionTitle}>
                     <Shield className={styles.iconSmall} />
                     Cookies and Local Storage
                   </div>
-                  <div className={styles.highlightText}>
-                    We use browser local storage to save your preferences and session data when you&apos;re not logged in. 
-                    For logged-in users, data is synchronized with our secure servers. We do not use tracking cookies 
-                    or share data with advertising networks.
+                  <div className={styles.prose}>
+                    <p>
+                      We use browser local storage to save your preferences and session data when you&apos;re not logged in. 
+                      For logged-in users, data is synchronized with our secure servers. We do not use tracking cookies 
+                      or share data with advertising networks.
+                    </p>
                   </div>
                 </div>
               </section>
 
               {/* Contact Information */}
-              <section>
-                <div className={styles.contact}>
-                  <h3 className={styles.contactTitle}>Privacy Questions?</h3>
-                  <p className={styles.contactText}>
-                    If you have any questions about this privacy policy or how we handle your data, please contact us:
-                  </p>                  <a href="mailto:privacy@lo-fi.study" className={styles.contactLink}>
-                    <Shield className={styles.iconSmall} />
-                    privacy@lo-fi.study
-                  </a>
-                </div>
-              </section>
+              <div className={styles.contact}>
+                <h3 className={styles.contactTitle}>Privacy Questions?</h3>
+                <p className={styles.contactText}>
+                  If you have any questions about this privacy policy or how we handle your data, please contact us:
+                </p>
+                <a href="mailto:hello@lo-fi.study" className={styles.contactLink}>
+                  <Shield className={styles.iconSmall} />
+                  hello@lo-fi.study
+                </a>
+              </div>
             </div>
 
             <div className={styles.lastUpdated}>

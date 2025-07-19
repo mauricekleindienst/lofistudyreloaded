@@ -2,7 +2,7 @@ import React from 'react';
 import { FileText, ArrowLeft, Building, User, Globe } from 'lucide-react';
 import Link from 'next/link';
 import { Metadata } from 'next';
-import styles from '../../../styles/Legal.module.css';
+import styles from '../../../styles/PageLayout.module.css';
 
 export const metadata: Metadata = {
   title: 'Legal Notice',
@@ -33,8 +33,10 @@ export default function LegalNoticePage() {
 
         {/* Main Content */}
         <div className={styles.mainContent}>
-          <div className={styles.card}>            <div className={styles.titleSection}>              <div className={styles.iconWrapper}>
-                <FileText className={`${styles.iconLarge} ${styles.iconWhite}`} />
+          <div className={styles.card}>
+            <div className={styles.titleSection}>
+              <div className={styles.iconWrapper}>
+                <FileText className={styles.iconLarge} />
               </div>
               <h1 className={styles.title}>Legal Notice</h1>
               <p className={styles.subtitle}>
@@ -50,13 +52,15 @@ export default function LegalNoticePage() {
                   <h2 className={styles.sectionTitle}>Service Provider Information</h2>
                 </div>
                 <div className={styles.sectionCard}>
-                  <div className={styles.infoGrid}>
-                    <p className={styles.infoItem}><strong>Service:</strong> Lo-Fi.Study</p>
-                    <p className={styles.infoItem}><strong>Website:</strong> <a href="https://lo-fi.study" className={styles.link}>https://lo-fi.study</a></p>
-                    <p className={styles.infoItem}><strong>Email:</strong> <a href="mailto:hello@lo-fi.study" className={styles.link}>hello@lo-fi.study</a></p>
+                  <div className={styles.prose}>
+                    <p><strong>Service:</strong> Lo-Fi.Study</p>
+                    <p><strong>Website:</strong> <a href="https://lo-fi.study">https://lo-fi.study</a></p>
+                    <p><strong>Email:</strong> <a href="mailto:hello@lo-fi.study">hello@lo-fi.study</a></p>
                   </div>
                 </div>
-              </section>              {/* Disclaimer */}
+              </section>
+              
+              {/* Disclaimer */}
               <section className={styles.section}>
                 <div className={styles.sectionHeader}>
                   <User className={`${styles.iconMedium} ${styles.iconPurple}`} />
@@ -65,7 +69,8 @@ export default function LegalNoticePage() {
                 <div className={styles.sectionCard}>
                   <div className={styles.prose}>
                     <h3>Content Responsibility</h3>
-                    <p>                      The contents of our pages have been created with the utmost care. However, we cannot guarantee 
+                    <p>
+                      The contents of our pages have been created with the utmost care. However, we cannot guarantee 
                       the contents&apos; accuracy, completeness, or topicality. According to statutory provisions, we are 
                       furthermore responsible for our own content on these web pages.
                     </p>
@@ -85,7 +90,9 @@ export default function LegalNoticePage() {
                     </p>
                   </div>
                 </div>
-              </section>              {/* Service Terms */}
+              </section>
+              
+              {/* Service Terms */}
               <section className={styles.section}>
                 <div className={styles.sectionHeader}>
                   <Globe className={`${styles.iconMedium} ${styles.iconGreen}`} />
@@ -93,7 +100,8 @@ export default function LegalNoticePage() {
                 </div>
                 <div className={styles.sectionCard}>
                   <div className={styles.prose}>
-                    <h3>Service Availability</h3>                    <p>
+                    <h3>Service Availability</h3>
+                    <p>
                       Lo-Fi.Study is provided &quot;as is&quot; without warranties of any kind. While we strive to maintain 
                       high availability, we do not guarantee uninterrupted service.
                     </p>
@@ -114,17 +122,16 @@ export default function LegalNoticePage() {
               </section>
 
               {/* Contact Information */}
-              <section>
-                <div className={styles.contact}>
-                  <h3 className={styles.contactTitle}>Questions or Concerns?</h3>
-                  <p className={styles.contactText}>
-                    If you have any questions about this legal notice or our services, please contact us:
-                  </p>                  <a href="mailto:hello@lo-fi.study" className={styles.contactLink}>
-                    <User className={styles.iconSmall} />
-                    hello@lo-fi.study
-                  </a>
-                </div>
-              </section>
+              <div className={styles.contact}>
+                <h3 className={styles.contactTitle}>Questions or Concerns?</h3>
+                <p className={styles.contactText}>
+                  If you have any questions about this legal notice or our services, please contact us:
+                </p>
+                <a href="mailto:hello@lo-fi.study" className={styles.contactLink}>
+                  <User className={styles.iconSmall} />
+                  hello@lo-fi.study
+                </a>
+              </div>
             </div>
 
             <div className={styles.lastUpdated}>

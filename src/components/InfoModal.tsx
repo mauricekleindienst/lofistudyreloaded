@@ -6,7 +6,10 @@ import {
   Info,
   Mail,
   FileText,
-  Shield
+  Shield,
+  Music,
+  Clock,
+  CheckSquare
 } from 'lucide-react';
 import styles from '../../styles/InfoModal.module.css';
 
@@ -31,11 +34,11 @@ export default function InfoModal({ isOpen, onClose }: InfoModalProps) {
         <div className={styles.modalHeader}>
           <div className={styles.headerContent}>
             <div className={styles.headerIcon}>
-              <Info size={24} />
+              <Info size={20} />
             </div>
             <div>
               <h2 className={styles.modalTitle}>About Lo-Fi.Study</h2>
-              <p className={styles.modalSubtitle}>Your ultimate focus companion</p>
+              <p className={styles.modalSubtitle}>Your  focus companion</p>
             </div>
           </div>
           <button 
@@ -43,29 +46,35 @@ export default function InfoModal({ isOpen, onClose }: InfoModalProps) {
             className={styles.closeButton}
             title="Close modal"
           >
-            <X size={20} />
+            <X size={18} />
           </button>
         </div>
         
         {/* Content */}
         <div className={styles.modalContent}>
           <div className={styles.description}>
-            <p>
-              Lo-Fi.Study is your ultimate focus companion designed to boost productivity and enhance your study sessions. 
-              Our platform combines the power of the Pomodoro technique with ambient soundscapes, customizable backgrounds, 
-              and comprehensive progress tracking to create the perfect environment for deep work and learning.
-            </p>
+         
           </div>
           
           <div className={styles.features}>
-            <h3>Features:</h3>
+            <h3>Features</h3>
             <ul>
-              <li>🍅 Pomodoro Timer with customizable work and break intervals</li>
-              <li>🎵 Curated lo-fi music and ambient sounds</li>
-              <li>🎨 Beautiful background videos and images</li>
-              <li>📊 Detailed statistics and progress tracking</li>
-              <li>📝 Integrated todo list and task management</li>
-              <li>☁️ Cloud sync to save your progress across devices</li>
+              <li>
+                <Clock size={16} className={styles.featureIcon} /> 
+                Pomodoro Timer with customizable work and break intervals
+              </li>
+              <li>
+                <Music size={16} className={styles.featureIcon} /> 
+                Curated lo-fi music and ambient sounds
+              </li>
+              <li>
+                <CheckSquare size={16} className={styles.featureIcon} /> 
+                Integrated todo list and task management
+              </li>
+              <li>
+                <Shield size={16} className={styles.featureIcon} /> 
+                Cloud sync to save your progress across devices
+              </li>
             </ul>
           </div>
           
@@ -73,7 +82,10 @@ export default function InfoModal({ isOpen, onClose }: InfoModalProps) {
             <a 
               href="/contact" 
               className={styles.actionButton}
-              onClick={onClose}
+              onClick={(e) => {
+                e.stopPropagation();
+                onClose();
+              }}
             >
               <Mail size={16} />
               Contact
@@ -81,7 +93,10 @@ export default function InfoModal({ isOpen, onClose }: InfoModalProps) {
             <a 
               href="/legal" 
               className={styles.actionButton}
-              onClick={onClose}
+              onClick={(e) => {
+                e.stopPropagation();
+                onClose();
+              }}
             >
               <FileText size={16} />
               Legal Notice
@@ -89,7 +104,10 @@ export default function InfoModal({ isOpen, onClose }: InfoModalProps) {
             <a 
               href="/privacy" 
               className={styles.actionButton}
-              onClick={onClose}
+              onClick={(e) => {
+                e.stopPropagation();
+                onClose();
+              }}
             >
               <Shield size={16} />
               Privacy Policy
