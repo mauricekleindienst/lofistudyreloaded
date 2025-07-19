@@ -36,7 +36,6 @@ interface StatsModalProps {
 interface LeaderboardUser {
   id: string;
   email: string;
-  name: string;
   totalSessions: number;
   totalFocusTime: number;
   rank: number;
@@ -191,13 +190,11 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
       // Combine user info with stats
       const combinedUsers = Array.from(userStatsMap.entries()).map(([userId, stats]) => {
         const userInfo = userInfoMap.get(userId) || { 
-          email: 'User', 
-          name: `User #${userId.slice(-4)}` 
+          email: `User #${userId.slice(-4)}`
         };
         return {
           id: userId,
           email: userInfo.email,
-          name: userInfo.name,
           totalSessions: stats.totalSessions,
           totalFocusTime: stats.totalFocusTime
         };
