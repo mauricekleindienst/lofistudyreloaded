@@ -24,7 +24,8 @@ import {
   Quote,
   Code,
   ListOrdered,
-  List as ListIcon
+  List as ListIcon,
+  LogIn
 } from 'lucide-react';
 import { useDataPersistence } from '../../hooks/useDataPersistence';
 import { useAppState } from '../../contexts/AppStateContext';
@@ -407,6 +408,19 @@ export default function NotesApp() {
   };
 
   const isEmpty = filteredNotes.length === 0 && !isLoading;
+
+  // If user is not authenticated, show sign-in message
+  if (!isAuthenticated) {
+    return (
+      <div className={styles.container}>
+        <div className={styles.signInContainer}>
+          <LogIn size={48} className={styles.signInIcon} />
+          <h2>Sign in to use Notes</h2>
+          <p>Please sign in to create and manage your notes.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={styles.container}>

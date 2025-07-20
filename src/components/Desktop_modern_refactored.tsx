@@ -807,6 +807,13 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
     ));
   }, []);
 
+  const restoreWindow = useCallback((windowId: string) => {
+    setOpenWindows(prev => prev.map(w => 
+      w.id === windowId ? { ...w, isMinimized: false, zIndex: highestZIndex + 1 } : w
+    ));
+    setHighestZIndex(prev => prev + 1);
+  }, [highestZIndex]);
+
   const bringToFront = useCallback((windowId: string) => {
     setOpenWindows(prev => prev.map(w => 
       w.id === windowId ? { ...w, zIndex: highestZIndex + 1 } : w
@@ -934,6 +941,8 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
         backgroundSaveLoading={backgroundSaveLoading}
         onOpenCalendar={() => setShowCalendar(true)}
         onOpenApp={openApp}
+        onMinimize={minimizeWindow}
+        onRestoreWindow={restoreWindow}
         onOpenBackgrounds={() => setShowBackgrounds(true)}
         onAccountAction={() => {
           if (!user) {

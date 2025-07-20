@@ -53,6 +53,8 @@ interface BottomBarProps {
   backgroundSaveLoading: boolean;
   onOpenCalendar: () => void;
   onOpenApp: (app: ModernApp) => void;
+  onMinimize: (windowId: string) => void;
+  onRestoreWindow: (windowId: string) => void;
   onOpenBackgrounds: () => void;
   onAccountAction: () => void;
 }
@@ -121,6 +123,8 @@ export default function BottomBar({
   backgroundSaveLoading,
   onOpenCalendar,
   onOpenApp,
+  onMinimize,
+  onRestoreWindow,
   onOpenBackgrounds,
   onAccountAction
 }: BottomBarProps) {
@@ -134,6 +138,22 @@ export default function BottomBar({
   const displayTime = isClient ? currentTime : '--:--';
   const displayDate = isClient ? currentDate : 'Loading...';
 
+  // Handle app button click - minimize if open, restore if minimized, open if closed
+  const handleAppButtonClick = (app: ModernApp) => {
+    const openWindow = openWindows.find(w => w.app.id === app.id);
+    
+    if (!openWindow) {
+      // App is not open, so open it
+      onOpenApp(app);
+    } else if (openWindow.isMinimized) {
+      // App is minimized, so restore it
+      onRestoreWindow(openWindow.id);
+    } else {
+      // App is open and not minimized, so minimize it
+      onMinimize(openWindow.id);
+    }
+  };
+
   return (
     <div className={styles.selectionBar}>
       {/* Time and Date */}
@@ -142,6 +162,7 @@ export default function BottomBar({
           className={styles.timeButton}
           title="Open Calendar"
         >
+          
           <Clock size={20} />
           <div className={styles.timeDisplay}>
             <div className={styles.timeText}>{displayTime}</div>
@@ -174,10 +195,11 @@ export default function BottomBar({
             return (
               <div key={app.id} className={desktopStyles.appContainer}>
                 <button
-                  onClick={() => onOpenApp(app)}
+                  onClick={() => handleAppButtonClick(app)}
                   className={`${styles.iconButton} ${isOpen ? styles.active : ''} ${isMinimized ? styles.minimized : ''}`}
                 >
                   <app.icon size={22} />
+             
                   {isOpen && !isMinimized && <div className={styles.notificationDot} />}
                   {isMinimized && <div className={styles.minimizedIndicator} />}
                   {runtimeInfo && (
@@ -185,7 +207,12 @@ export default function BottomBar({
                       {runtimeInfo}
                     </div>
                   )}
+                   <div className={styles.tooltip}>
+            <div className="font-semibold">{app.name}</div>
+            <div className={desktopStyles.tooltipDescription}>{isMinimized ? 'Click to restore' : app.description}</div>
+          </div>
                 </button>
+                
                 <div className={styles.tooltip}>
                   <div className="font-semibold">{app.name}</div>
                   <div className={desktopStyles.tooltipDescription}>

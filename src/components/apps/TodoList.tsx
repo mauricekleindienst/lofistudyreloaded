@@ -8,7 +8,8 @@ import {
   Heart,
   BookOpen,
   Zap,
-  Loader2
+  Loader2,
+  LogIn
 } from 'lucide-react';
 import todoStyles from '../../../styles/Todo.module.css';
 import { useAppState } from '../../contexts/AppStateContext';
@@ -207,6 +208,19 @@ const TodoList: React.FC = () => {
     return true;
   });
   const completedCount = todos.filter(t => t.completed).length;
+
+  // If user is not authenticated, show sign-in message
+  if (!isAuthenticated) {
+    return (
+      <div className={todoStyles.container}>
+        <div className={todoStyles.signInContainer}>
+          <LogIn size={48} className={todoStyles.signInIcon} />
+          <h2>Sign in to use Tasks</h2>
+          <p>Please sign in to create and manage your tasks.</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className={todoStyles.content}>
