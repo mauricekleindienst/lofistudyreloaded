@@ -105,6 +105,14 @@ export interface Appointment {
   updated_at?: string;
 }
 
+export interface ChatMessage {
+  id?: string;
+  user_id: string;
+  username: string;
+  message: string;
+  created_at?: string;
+}
+
 // Database service class
 export class DatabaseService {
   // Check if user is authenticated and service is configured
@@ -777,6 +785,51 @@ export class DatabaseService {
     } catch (error) {
       console.error('Error fetching appointments by date:', error);
       return [];
+    }
+  }
+
+  // Chat related functions
+  async getChatMessages(limit = 50): Promise<ChatMessage[]> {
+    try {
+      await this.checkAuth();
+      
+      const { data, error } = await supabase
+        .from('chat_messages')
+        .select('*')
+        .order('created_at', { ascending: false })
+        .limit(limit);
+      
+      if (error) {
+        console.error('Error fetching chat messages:', error);
+        return [];
+      }
+      
+      return data?.reverse() || [];
+    } catch (error) {
+      console.error('Failed to fetch chat messages:', error);
+      return [];
+    }
+  }
+
+  async sendChatMessage(message: Omit<ChatMessage, 'id' | 'created_at'>): Promise<ChatMessage | null> {
+    try {
+      await this.checkAuth();
+      
+      const { data, error } = await supabase
+        .from('chat_messages')
+        .insert([message])
+        .select()
+        .single();
+      
+      if (error) {
+        console.error('Error sending chat message:', error);
+        return null;
+      }
+      
+      return data;
+    } catch (error) {
+      console.error('Failed to send chat message:', error);
+      return null;
     }
   }
 }

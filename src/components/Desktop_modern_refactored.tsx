@@ -7,7 +7,8 @@ import {
   Calculator as CalculatorIcon,
   Settings,
   Volume2,
-  StickyNote
+  StickyNote,
+  MessageSquare
 } from 'lucide-react';
 import { backgrounds, DEFAULT_BACKGROUND } from '@/data/backgrounds';
 import desktopStyles from '../../styles/Desktop.module.css';
@@ -26,6 +27,7 @@ import AccountSettings from './apps/AccountSettings';
 import MusicPlayerSidebar from './MusicPlayerSidebar';
 import StatsModal from './StatsModal';
 import SoundPlayer from './apps/SoundPlayer';
+import ChatApp from './apps/ChatApp';
 
 // Import desktop components
 import TopBar from './desktop/TopBar';
@@ -74,6 +76,15 @@ const modernApps: ModernApp[] = [
     category: 'study'
   },
   {
+    id: 'chat',
+    name: 'Chat',
+    icon: MessageSquare,
+    component: ChatApp,
+    color: 'purple',
+    description: 'Chat with other users',
+    category: 'entertainment'
+  },
+  {
     id: 'notes',
     name: 'Notes',
     icon: StickyNote,
@@ -91,6 +102,7 @@ const modernApps: ModernApp[] = [
     description: 'Manage your account and preferences',
     category: 'study'
   }
+ 
 ];
 
 // Main Modern Desktop Component
