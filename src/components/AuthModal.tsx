@@ -170,7 +170,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isVisible, onClose }) => {
               Google
             </button>
           </div><div className={styles.authSwitch}>
-            {isSignUp ? 'Already have an account?' : 'Don&apos;t have an account?'}{' '}
+            {isSignUp ? 'Already have an account?' : "Don't have an account?"}{' '}
             <button
               onClick={() => {
                 setIsSignUp(!isSignUp);
@@ -180,6 +180,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isVisible, onClose }) => {
             >
               {isSignUp ? 'Sign In' : 'Sign Up'}
             </button>
+            <p>By signing up, you agree to our <a href="/legal" target="_blank" rel="noopener noreferrer">Terms of Service</a> and <a href="/privacy" target="_blank" rel="noopener noreferrer">Privacy Policy</a>.</p>
           </div>
             </>
           )}
