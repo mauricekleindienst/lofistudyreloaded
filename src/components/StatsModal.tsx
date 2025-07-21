@@ -17,7 +17,8 @@ import {
   RefreshCw,
   Users,
   Timer,
-  Calendar
+  Calendar,
+  Settings
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useDataPersistence } from '../hooks/useDataPersistence';
@@ -36,6 +37,7 @@ interface StatsModalProps {
 interface LeaderboardUser {
   id: string;
   email: string;
+  username?: string;
   totalSessions: number;
   totalFocusTime: number;
   rank: number;
@@ -45,6 +47,7 @@ interface UserData {
   id: string;
   email?: string;
   full_name?: string;
+  username?: string;
 }
 
 const getCategoryIcon = (category: string) => {
@@ -75,6 +78,12 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
   const [leaderboardLoading, setLeaderboardLoading] = useState(true);
   const [leaderboardFilter, setLeaderboardFilter] = useState<'sessions' | 'time'>('sessions');
   const [leaderboardTimeRange, setLeaderboardTimeRange] = useState<7 | 30 | 'all'>(7);
+  
+  // Username management
+  const [username, setUsername] = useState<string>('');
+  const [showUsernameModal, setShowUsernameModal] = useState(false);
+  const [usernameError, setUsernameError] = useState('');
+  const [isUpdatingUsername, setIsUpdatingUsername] = useState(false);
 
 
   const loadStats = useCallback(async (isInitialLoad = false) => {
@@ -115,19 +124,20 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
       // First, get all users to have their profile info
       const { data: usersData, error: usersError } = await supabase
         .from('users')
-        .select('id, email, full_name');
+        .select('id, email, full_name, username');
       
       if (usersError) {
         console.error('[StatsModal] Failed to load users:', usersError);
       }
 
       // Create a map of user IDs to user info
-      const userInfoMap = new Map<string, {email: string; name: string}>();
+      const userInfoMap = new Map<string, {email: string; name: string; username?: string}>();
       if (usersData) {
         (usersData as UserData[]).forEach((userData) => {
           userInfoMap.set(userData.id, {
             email: userData.email || 'User',
-            name: userData.full_name || userData.email?.split('@')[0] || `User #${userData.id.slice(-4)}`
+            name: userData.full_name || userData.email?.split('@')[0] || `User #${userData.id.slice(-4)}`,
+            username: userData.username
           });
         });
       }
@@ -143,7 +153,7 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
       // Get pomodoro stats with appropriate date filter
       const query = supabase
         .from('pomodoro_stats')
-        .select('user_id, pomodoro_count, total_focus_time_minutes, date');
+        .select('user_id, pomodoro_count, total_focus_time_minutes, date, username');
       
       if (leaderboardTimeRange !== 'all') {
         query.gte('date', dateFilter);
@@ -162,6 +172,7 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
         id: string; 
         totalSessions: number; 
         totalFocusTime: number;
+        username?: string;
       }>();
 
       interface StatRecord {
@@ -169,6 +180,7 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
         pomodoro_count?: number;
         total_focus_time_minutes?: number;
         date?: string;
+        username?: string;
       }
 
       (statsData as StatRecord[]).forEach((record) => {
@@ -178,23 +190,32 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
           userStatsMap.set(userId, {
             id: userId,
             totalSessions: 0,
-            totalFocusTime: 0
+            totalFocusTime: 0,
+            username: record.username
           });
         }
 
         const userStats = userStatsMap.get(userId)!;
         userStats.totalSessions += record.pomodoro_count || 0;
         userStats.totalFocusTime += record.total_focus_time_minutes || 0;
+        // Keep the username if we have it
+        if (record.username && !userStats.username) {
+          userStats.username = record.username;
+        }
       });
 
       // Combine user info with stats
       const combinedUsers = Array.from(userStatsMap.entries()).map(([userId, stats]) => {
         const userInfo = userInfoMap.get(userId) || { 
-          email: `User #${userId.slice(-4)}`
+          email: `User #${userId.slice(-4)}`,
+          name: `User #${userId.slice(-4)}`,
+          username: undefined
         };
         return {
           id: userId,
           email: userInfo.email,
+          // Prioritize username from stats (pomodoro_stats table) over userInfo (users table)
+          username: stats.username || userInfo.username,
           totalSessions: stats.totalSessions,
           totalFocusTime: stats.totalFocusTime
         };
@@ -225,9 +246,105 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
     if (isOpen && user) {
       loadStats(true);
       loadLeaderboard();
+      checkUsername();
     }
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOpen, user, leaderboardFilter, leaderboardTimeRange]);
+
+  // Check if user has a username
+  const checkUsername = useCallback(async () => {
+    if (!user) return;
+    
+    try {
+      // First check if the username exists in pomodoro_stats
+      const { data: pomodoroData, error: pomodoroError } = await supabase
+        .from('pomodoro_stats')
+        .select('username')
+        .eq('user_id', user.id)
+        .not('username', 'is', null)
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .single();
+      
+      if (!pomodoroError && pomodoroData?.username) {
+        setUsername(pomodoroData.username);
+        return;
+      }
+      
+      // If not found in pomodoro_stats, check if the user has a full_name in users table
+      const { data: userData, error: userError } = await supabase
+        .from('users')
+        .select('full_name, email')
+        .eq('id', user.id)
+        .single();
+      
+      if (userError) {
+        console.error('[StatsModal] Failed to check user data:', userError);
+        return;
+      }
+      
+      // If user has no username in pomodoro_stats, show modal to set one
+      // Default the username field to their full_name or email username part
+      if (userData) {
+        const defaultUsername = userData.full_name || userData.email?.split('@')[0] || '';
+        setUsername(defaultUsername);
+        setShowUsernameModal(true);
+      }
+    } catch (error) {
+      console.error('[StatsModal] Error checking username:', error);
+    }
+  }, [user]);
+
+  // Update username
+  const updateUsername = async () => {
+    if (!user || !username.trim()) return;
+    
+    setIsUpdatingUsername(true);
+    setUsernameError('');
+    
+    try {
+      // Check if username is already taken in pomodoro_stats
+      const { data: existingUser, error: checkError } = await supabase
+        .from('pomodoro_stats')
+        .select('user_id')
+        .eq('username', username.trim())
+        .neq('user_id', user.id)
+        .limit(1)
+        .single();
+      
+      if (checkError && checkError.code !== 'PGRST116') { // PGRST116 means no rows returned
+        console.error('[StatsModal] Error checking username availability:', checkError);
+        setUsernameError('Error checking username availability');
+        return;
+      }
+      
+      if (existingUser) {
+        setUsernameError('Username already taken');
+        return;
+      }
+      
+      // Update username in pomodoro_stats table for all user's entries
+      const { error: statsUpdateError } = await supabase
+        .from('pomodoro_stats')
+        .update({ username: username.trim() })
+        .eq('user_id', user.id);
+      
+      if (statsUpdateError) {
+        console.error('[StatsModal] Failed to update username in stats:', statsUpdateError);
+        setUsernameError('Failed to update username');
+        return;
+      }
+      
+      // Update successful
+      setShowUsernameModal(false);
+      loadLeaderboard(); // Refresh leaderboard to show new username
+    } catch (error) {
+      console.error('[StatsModal] Error updating username:', error);
+      setUsernameError('An unexpected error occurred');
+    } finally {
+      setIsUpdatingUsername(false);
+    }
+  };
 
   const { totalSessions, totalFocusTime, avgSessionsPerDay, categoryStats } = useMemo(() => {
     if (!stats) {
@@ -273,10 +390,56 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
 
   if (!isOpen) return null;
 
-
   return (
     <div className={styles.overlay} onClick={onClose}>
       <div className={styles.modal} onClick={(e) => e.stopPropagation()}>
+        {/* Username Modal */}
+        {showUsernameModal && (
+          <div className={styles.usernameModalOverlay} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.usernameModal}>
+              <div className={styles.usernameModalHeader}>
+                <h3>{username ? 'Edit Username' : 'Set Username'}</h3>
+                {/* Only allow closing if user already has a username */}
+                {username && (
+                  <button 
+                    onClick={() => setShowUsernameModal(false)} 
+                    className={styles.closeButton}
+                    aria-label="Close modal"
+                  >
+                    <X size={18} />
+                  </button>
+                )}
+              </div>
+              <div className={styles.usernameModalContent}>
+                <p>
+                  {username 
+                    ? 'Change your display name on the leaderboard.' 
+                    : 'Please set a username to appear on the leaderboard.'}
+                </p>
+                <input
+                  type="text"
+                  value={username}
+                  onChange={(e) => setUsername(e.target.value)}
+                  placeholder="Enter username"
+                  className={styles.usernameInput}
+                  maxLength={20}
+                  autoFocus
+                />
+                {usernameError && <div className={styles.usernameError}>{usernameError}</div>}
+              </div>
+              <div className={styles.usernameModalActions}>
+                <button 
+                  onClick={updateUsername}
+                  className={styles.saveButton}
+                  disabled={!username.trim() || isUpdatingUsername}
+                >
+                  {isUpdatingUsername ? 'Saving...' : 'Save Username'}
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
+
         <div className={styles.header}>
           <div className={styles.headerTitle}>
             <BarChart3 size={20} />
@@ -448,9 +611,22 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
                           
                           <div className={styles.userInfo}>
                             <div className={styles.userName}>
-                              {leaderboardUser.email}
+                              {leaderboardUser.username || leaderboardUser.email.split('@')[0]}
                               {user && leaderboardUser.id === user.id && (
-                                <span className={styles.currentUserTag}> (You)</span>
+                                <>
+                                  <span className={styles.currentUserTag}> (You)</span>
+                                  <button 
+                                    className={styles.settingsButton}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      setUsername(leaderboardUser.username || leaderboardUser.email.split('@')[0]);
+                                      setShowUsernameModal(true);
+                                    }}
+                                    aria-label="Edit username"
+                                  >
+                                    <Settings size={14} />
+                                  </button>
+                                </>
                               )}
                             </div>
                             <div className={styles.userStats}>

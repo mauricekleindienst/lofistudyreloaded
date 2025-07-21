@@ -41,6 +41,15 @@ CREATE TABLE public.challenges (
   updated_at timestamp without time zone DEFAULT now(),
   CONSTRAINT challenges_pkey PRIMARY KEY (id)
 );
+CREATE TABLE public.chat_messages (
+  id uuid NOT NULL DEFAULT gen_random_uuid(),
+  user_id uuid NOT NULL,
+  username character varying NOT NULL,
+  message text NOT NULL,
+  created_at timestamp with time zone DEFAULT now(),
+  CONSTRAINT chat_messages_pkey PRIMARY KEY (id),
+  CONSTRAINT chat_messages_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
+);
 CREATE TABLE public.events (
   id integer NOT NULL DEFAULT nextval('events_id_seq'::regclass),
   email character varying NOT NULL,
@@ -100,6 +109,7 @@ CREATE TABLE public.pomodoro_stats (
   total_focus_time_minutes integer DEFAULT 0,
   created_at timestamp with time zone DEFAULT now(),
   updated_at timestamp with time zone DEFAULT now(),
+  username character varying,
   CONSTRAINT pomodoro_stats_pkey PRIMARY KEY (id),
   CONSTRAINT pomodoro_stats_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
 );
@@ -138,13 +148,4 @@ CREATE TABLE public.users (
   updated_at timestamp with time zone DEFAULT now(),
   CONSTRAINT users_pkey PRIMARY KEY (id),
   CONSTRAINT users_id_fkey FOREIGN KEY (id) REFERENCES auth.users(id)
-);
-CREATE TABLE public.chat_messages (
-  id uuid NOT NULL DEFAULT gen_random_uuid(),
-  user_id uuid NOT NULL,
-  username character varying NOT NULL,
-  message text NOT NULL,
-  created_at timestamp with time zone DEFAULT now(),
-  CONSTRAINT chat_messages_pkey PRIMARY KEY (id),
-  CONSTRAINT chat_messages_user_id_fkey FOREIGN KEY (user_id) REFERENCES auth.users(id)
 );
