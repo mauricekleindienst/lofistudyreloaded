@@ -50,6 +50,7 @@ export interface PomodoroStats {
   total_focus_time_minutes: number;
   created_at?: string;
   updated_at?: string;
+  username?: string;
 }
 
 export interface PomodoroSession {
@@ -349,7 +350,22 @@ export class DatabaseService {
       const today = new Date().toISOString().split('T')[0];
       const category = stats.category || 'Other';
       
-      // First, try to get existing stats for today and category
+      // First, check if the user has a username in any pomodoro_stats records
+      const { data: userWithUsername } = await supabase
+        .from('pomodoro_stats')
+        .select('username')
+        .eq('user_id', user.id)
+        .not('username', 'is', null)
+        .order('updated_at', { ascending: false })
+        .limit(1)
+        .single();
+      
+      let username = stats.username;
+      if (!username && userWithUsername?.username) {
+        username = userWithUsername.username;
+      }
+      
+      // Next, try to get existing stats for today and category
       const { data: existingStats } = await supabase
         .from('pomodoro_stats')
         .select('*')
@@ -366,7 +382,9 @@ export class DatabaseService {
           .update({
             pomodoro_count: (existingStats.pomodoro_count || 0) + (stats.pomodoro_count || 1),
             total_focus_time_minutes: (existingStats.total_focus_time_minutes || 0) + (stats.total_focus_time_minutes || 0),
-            updated_at: new Date().toISOString()
+            updated_at: new Date().toISOString(),
+            // Preserve existing username if available
+            username: username || existingStats.username
           })
           .eq('id', existingStats.id);
 
@@ -387,7 +405,8 @@ export class DatabaseService {
             pomodoro_count: stats.pomodoro_count || 1,
             total_focus_time_minutes: stats.total_focus_time_minutes || 0,
             created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
+            updated_at: new Date().toISOString(),
+            username: username // Include username if available
           }]);
 
         if (error) {

@@ -24,6 +24,10 @@ import {
   X
 } from "lucide-react";
 import styles from "../../../styles/PomodoroTimer.module.css";
+import { createClient } from "../../utils/supabase/client";
+
+// Create a supabase client
+const supabase = createClient();
 
 const categories = ["Studying", "Coding", "Writing", "Working", "Other"];
 
@@ -243,16 +247,44 @@ export default function PomodoroTimer() {  const [state, dispatch] = useReducer(
         
         // Save to database if authenticated
         if (isAuthenticated && user?.email) {
-          // Update pomodoro stats for today
-          const statsUpdate = {
-            date: new Date().toISOString().split('T')[0],
-            pomodoro_count: 1, // Will be incremented
-            total_focus_time_minutes: Math.round(state.pomodoroDurations.pomodoro / 60),
-            category: state.category,
-            user_id: user.id,
+          // First, try to get the user's username from existing pomodoro stats
+          const fetchUsername = async () => {
+            try {
+              const { data: userWithUsername } = await supabase
+                .from('pomodoro_stats')
+                .select('username')
+                .eq('user_id', user.id)
+                .not('username', 'is', null)
+                .order('updated_at', { ascending: false })
+                .limit(1)
+                .single();
+              
+              // Update pomodoro stats for today
+              const statsUpdate = {
+                date: new Date().toISOString().split('T')[0],
+                pomodoro_count: 1, // Will be incremented
+                total_focus_time_minutes: Math.round(state.pomodoroDurations.pomodoro / 60),
+                category: state.category,
+                user_id: user.id,
+                username: userWithUsername?.username
+              };
+              
+              updatePomodoroStats(statsUpdate);
+            } catch {
+              // If there's an error fetching the username, still update stats without it
+              const statsUpdate = {
+                date: new Date().toISOString().split('T')[0],
+                pomodoro_count: 1,
+                total_focus_time_minutes: Math.round(state.pomodoroDurations.pomodoro / 60),
+                category: state.category,
+                user_id: user.id
+              };
+              
+              updatePomodoroStats(statsUpdate);
+            }
           };
           
-          updatePomodoroStats(statsUpdate);
+          fetchUsername();
         }
         
         // Increment count
