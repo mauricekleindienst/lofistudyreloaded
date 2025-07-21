@@ -9,6 +9,7 @@ import {
   Info
 } from 'lucide-react';
 import InfoModal from '../InfoModal';
+import AuthModal from '../AuthModal';
 import Clock from './Clock';
 import desktopStyles from '../../../styles/Desktop.module.css';
 
@@ -31,6 +32,7 @@ const motivationalQuotes = [
 interface TopBarProps {
   user: any; // eslint-disable-line @typescript-eslint/no-explicit-any
   onToggleStats: () => void;
+  onAccountAction: () => void;
   onShare?: () => void; // Make optional since we're not using the prop
 }
 
@@ -39,6 +41,7 @@ export default function TopBar({ user, onToggleStats }: TopBarProps) {
   const [showClock, setShowClock] = useState(false);
   const [showNotification, setShowNotification] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState('');
+  const [showAuthModal, setShowAuthModal] = useState(false);
 
   // Motivational quotes timer
   useEffect(() => {
@@ -114,15 +117,19 @@ export default function TopBar({ user, onToggleStats }: TopBarProps) {
         />
         
         {!user && (
-          <button
-            className={desktopStyles.topIcon}
-            style={{ color: '#f59e0b' }}
-          >
-            <AlertTriangle size={20} />
-            <div className={desktopStyles.topIconTooltip}>
-              Sign in to sync your data
-            </div>
-          </button>
+          <>
+            <button
+              className={desktopStyles.topIcon}
+              style={{ color: '#f59e0b' }}
+              onClick={() => setShowAuthModal(true)}
+            >
+              <AlertTriangle size={20} />
+              <div className={desktopStyles.topIconTooltip}>
+                Sign in to sync your data
+              </div>
+            </button>
+            <AuthModal isVisible={showAuthModal} onClose={() => setShowAuthModal(false)} />
+          </>
         )}
         
         {user && (

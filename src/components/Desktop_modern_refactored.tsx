@@ -927,7 +927,10 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
       <TopBar 
         user={user}
         onToggleStats={() => setShowStats(!showStats)}
-        onShare={() => {}} // Empty function for now
+        onShare={() => { } } // Empty function for now
+        onAccountAction={function (): void {
+          throw new Error('Function not implemented.');
+        } }        
       />
 
       <BottomBar 

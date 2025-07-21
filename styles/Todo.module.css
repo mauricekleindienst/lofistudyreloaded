@@ -308,9 +308,9 @@
 /* Enhanced Select Option Styling */
 .categorySelect option,
 .prioritySelect option {
-  background: #1a1a1a;
-  color: #ffffff;
-  padding: 8px 12px;
+  background: var(--bg-secondary, #2d3748);
+  color: var(--text-primary, #ffffff);
+  padding: var(--spacing-xs, 4px) var(--spacing-sm, 8px);
   border: none;
   font-weight: 500;
 }
