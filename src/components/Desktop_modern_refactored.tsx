@@ -229,7 +229,7 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
               newMap.delete(background.id.toString());
               return newMap;
             });
-            reject(new Error(`Failed to preload video: ${background.src}`));
+          
           };
 
           const onCanPlay = () => {

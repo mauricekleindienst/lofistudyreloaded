@@ -656,7 +656,7 @@ export class DatabaseService {
         }]);
 
       if (error) {
-        console.error('Error creating user profile:', error);
+      
         return false;
       }
 

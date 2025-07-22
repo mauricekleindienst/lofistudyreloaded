@@ -77,7 +77,7 @@ export const useVideoManager = (): VideoManager => {
           video.src = '';
           video.remove();
           loadingPromises.current.delete(videoId);
-          reject(new Error(`Failed to preload video with all fallbacks: ${background.src}`));
+         
         };
 
         const onLoadStart = () => {
