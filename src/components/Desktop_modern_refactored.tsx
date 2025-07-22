@@ -179,7 +179,7 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
       const MIN_BUFFER_HEALTH = 0.3; // 30% buffered considered healthy
 
       const preloadVideo = async (background: Background): Promise<HTMLVideoElement> => {
-        return new Promise((resolve, reject) => {
+        return new Promise((resolve) => {
           if (preloadedVideos.has(background.id.toString())) {
             const existingVideo = preloadedVideos.get(background.id.toString())!;
             resolve(existingVideo);
