@@ -19,19 +19,32 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   metadataBase: new URL('https://lo-fi.study'),
   title: {
-    default: "Lo-Fi.Study - Focus & Productivity App",
+    default: "Lo-Fi.Study - Pomodoro Timer, Music & Productivity App",
     template: "%s | Lo-Fi.Study"
   },
-  description: "Boost your productivity with Lo-Fi.Study - the ultimate focus companion. Features Pomodoro timer, ambient sounds, background customization, and progress tracking for students and professionals.",
+  description: "Boost your productivity with Lo-Fi.Study. Pomodoro timer, ambient sounds, background customization, and progress tracking for students and professionals.",
   keywords: [
+    "lo-fi pomodoro timer app online",
+    "lo-fi study",
     "pomodoro timer",
+    "productivity ambient focus tool",
     "focus app",
     "productivity",
+    "study dashboard with music and timer",
     "study app",
     "ambient sounds",
     "lo-fi music",
+    "what does lo-fi mean",
+    "lo-fi study music",
     "concentration",
+    "Lo-Fi.Study",
+    "	lofi beats to study to",
+    "focus timer",
+    "study music",
     "time management",
+    "lo-fi hip hop",
+    "lo-fi meaning",
+    "best lo-fi study music youtube",
     "work timer",
     "study timer"
   ],
@@ -96,10 +109,14 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
+      <head>
+        <link rel="canonical" href="https://lo-fi.study/" />
+      </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <AuthProvider>
+          <h1 className="sr-only">Lo-Fi.Study - Focus & Productivity App</h1>
           {children}
         </AuthProvider>
         <WebVitals />
