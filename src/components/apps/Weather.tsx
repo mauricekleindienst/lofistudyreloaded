@@ -1,6 +1,6 @@
 "use client";
 import React, { useState, useEffect } from "react";
-import { Search, MapPin, RefreshCw, Sun, CloudRain, Cloud, Snowflake, Thermometer, Wind, Droplets, Loader } from "lucide-react";
+import { Search, MapPin, Sun, CloudRain, Cloud, Snowflake, Thermometer, Wind, Droplets, Loader } from "lucide-react";
 import styles from '../../../styles/Weather.module.css';
 
 const WEATHER_ICONS: Record<string, React.ReactNode> = {
@@ -21,23 +21,34 @@ const WEATHER_ICONS: Record<string, React.ReactNode> = {
   Tornado: <CloudRain size={32} />,
 };
 
-const API_KEY =
-  process.env.NEXT_PUBLIC_OPENWEATHER_API_KEY ||
-  process.env.OpenWeather_API_KEY ||
-  (typeof window !== 'undefined'
-    ? ((window as any).NEXT_PUBLIC_OPENWEATHER_API_KEY || (window as any).OpenWeather_API_KEY)
-    : "");
+const API_KEY = process.env.NEXT_PUBLIC_OPENWEATHER_API_KEY;
 
 function getWeatherIcon(main: string) {
   return WEATHER_ICONS[main] || <Cloud size={32} />;
 }
 
+interface WeatherData {
+  name: string;
+  sys: { country: string; sunrise: number; sunset: number };
+  weather: Array<{ main: string }>;
+  main: {
+    temp: number;
+    feels_like: number;
+    humidity: number;
+    pressure: number;
+    temp_min: number;
+    temp_max: number;
+  };
+  wind: { speed: number };
+  visibility: number;
+  clouds?: { all: number };
+}
+
 export default function Weather() {
   const [query, setQuery] = useState("");
-  const [weather, setWeather] = useState<any>(null);
+  const [weather, setWeather] = useState<WeatherData | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
-  const [locationAllowed, setLocationAllowed] = useState(false);
 
   const fetchWeather = async (q: string) => {
     setLoading(true);
@@ -54,10 +65,14 @@ export default function Weather() {
         const errData = await res.json();
         throw new Error(errData.message || "Location not found");
       }
-      const data = await res.json();
+      const data: WeatherData = await res.json();
       setWeather(data);
-    } catch (err: any) {
-      setError(err.message || "Error fetching weather");
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message || "Error fetching weather");
+      } else {
+        setError("Error fetching weather");
+      }
       setWeather(null);
     } finally {
       setLoading(false);
@@ -79,10 +94,14 @@ export default function Weather() {
         const errData = await res.json();
         throw new Error(errData.message || "Location not found");
       }
-      const data = await res.json();
+      const data: WeatherData = await res.json();
       setWeather(data);
-    } catch (err: any) {
-      setError(err.message || "Error fetching weather");
+    } catch (err: unknown) {
+      if (err instanceof Error) {
+        setError(err.message || "Error fetching weather");
+      } else {
+        setError("Error fetching weather");
+      }
       setWeather(null);
     } finally {
       setLoading(false);
@@ -96,7 +115,6 @@ export default function Weather() {
 
   const handleLocation = () => {
     if (typeof window !== 'undefined' && 'geolocation' in navigator) {
-      setLocationAllowed(true);
       navigator.geolocation.getCurrentPosition(
         (pos) => {
           fetchWeatherByCoords(pos.coords.latitude, pos.coords.longitude);
