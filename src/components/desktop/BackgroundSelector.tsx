@@ -181,6 +181,8 @@ export default function BackgroundSelector({
                     src={`/thumbnails/${bg.id}.jpg`}
                     className={styles.wallpaperMedia}
                     alt={bg.alt}
+                    width={300}
+                    height={200}
                     title={bg.alt}
                     loading="lazy"
                     onError={(e) => {
