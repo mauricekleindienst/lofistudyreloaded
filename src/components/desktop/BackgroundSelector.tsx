@@ -248,16 +248,7 @@ export default function BackgroundSelector({
           </div>
         </div>
         
-        {/* Footer */}
-        <div className={styles.footer}>
-          <div className={styles.footerInfo}>
-            <span>
-              {getFilteredBackgrounds().length} {
-                selectedCategory === 'all' ? 'total' : selectedCategory
-              } background{getFilteredBackgrounds().length !== 1 ? 's' : ''}
-            </span>
-          </div>
-        </div>
+       
       </div>
     </div>
   );
