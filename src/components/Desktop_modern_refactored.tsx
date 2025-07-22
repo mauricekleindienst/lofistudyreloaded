@@ -8,7 +8,8 @@ import {
   Settings,
   Volume2,
   StickyNote,
-  MessageSquare
+  MessageSquare,
+  Cloud
 } from 'lucide-react';
 import { backgrounds, DEFAULT_BACKGROUND } from '@/data/backgrounds';
 import desktopStyles from '../../styles/Desktop.module.css';
@@ -28,6 +29,7 @@ import MusicPlayerSidebar from './MusicPlayerSidebar';
 import StatsModal from './StatsModal';
 import SoundPlayer from './apps/SoundPlayer';
 import ChatApp from './apps/ChatApp';
+import Weather from './apps/Weather';
 
 // Import desktop components
 import TopBar from './desktop/TopBar';
@@ -92,6 +94,15 @@ const modernApps: ModernApp[] = [
     color: 'yellow',
     description: 'Write and organize your notes',
     category: 'productivity'
+  },
+  {
+    id: 'weather',
+    name: 'Weather',
+    icon: Cloud,
+    component: Weather,
+    color: 'purple',
+    description: 'Get the latest weather updates',
+    category: 'entertainment'
   },
   {
     id: 'account-settings',
@@ -628,8 +639,8 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
         aspectRatio: 0.71 // width/height
       },
       'todo': { 
-        width: 380, 
-        height: 680, 
+        width: 350, 
+        height: 600, 
         minWidth: 320, 
         minHeight: 400,
         aspectRatio: 0.56
@@ -656,10 +667,10 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
         aspectRatio: 0.74
       },
       'sound-player': { 
-        width: 380, 
-        height: 480, 
-        minWidth: 320, 
-        minHeight: 400,
+        width: 280, 
+        height: 400, 
+        minWidth: 280, 
+        minHeight: 300,
         aspectRatio: 0.79
       },
       'account-settings': { 
