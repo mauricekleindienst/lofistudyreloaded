@@ -3,7 +3,6 @@
 import React, { useState, useCallback, useMemo, useEffect } from 'react';
 import { X, CheckSquare, Play, Image, Pause } from 'lucide-react';
 import { backgrounds } from '@/data/backgrounds';
-import { processYouTubeUrl, isValidYouTubeUrl } from '@/utils/youtube';
 import styles from '../../../styles/BackgroundSelector.module.css';
 
 interface Background {
@@ -201,26 +200,15 @@ export default function BackgroundSelector({
                     onClose();
                   }}
                 >
-                  {/* Video element */}
-                  <video
-                    src={bg.src}
+                  {/* Thumbnail image */}
+                  <img
+                    src={`/thumbnails/${bg.id}.jpg`}
                     className={styles.wallpaperMedia}
-                    muted
-                    loop
-                    preload="metadata"
-                    aria-label={`Background video: ${bg.alt}`}
+                    alt={bg.alt}
                     title={bg.alt}
-                    onMouseEnter={(e) => {
-                      setPreviewingId(bg.id);
-                      const video = e.currentTarget;
-                      handleVideoPreview(video, true);
-                    }}
-                    onMouseLeave={(e) => {
-                      setPreviewingId(null);
-                      handleVideoPreview(e.currentTarget, false);
-                    }}
-                    onError={() => {
-                      console.error(`Failed to load video: ${bg.src}`);
+                    loading="lazy"
+                    onError={(e) => {
+                      e.currentTarget.src = '/thumbnails/placeholder.jpg';
                       setErrorVideos(prev => new Set(prev).add(bg.id));
                     }}
                   />
