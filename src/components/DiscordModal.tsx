@@ -53,8 +53,7 @@ export default function DiscordModal({ isOpen, onClose }: DiscordModalProps) {
               src="https://discord.com/widget?id=1397139010387709952&theme=dark"
               width="100%"
               height="400"
-              style={{ borderRadius: '8px', border: 'none', maxWidth: '350px', width: '100%' }}
-              allowTransparency={true}
+              style={{ borderRadius: '10px', border: '3px solid transparent', maxWidth: '350px', width: '100%' }}
               title="Discord Widget"
               loading="lazy"
               sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts"
