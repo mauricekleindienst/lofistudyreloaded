@@ -973,8 +973,6 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
           currentBackground={currentBackground}
          
           selectedCategory={selectedCategory}
-          youtubeUrl={youtubeUrl}
-          customBackground={customBackground}
           animationDisabled={animationDisabled}
           onClose={() => {
             setShowBackgrounds(false);
@@ -983,11 +981,8 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
           onBackgroundChange={handleBackgroundChange}
           onCategoryChange={setSelectedCategory}
           onAnimationToggle={setAnimationDisabled}
-         
-          onYoutubeSubmit={() => {
-            // YouTube submission logic would go here
-          }}
-          onYoutubeUrlChange={setYoutubeUrl}
+        
+        
         />
       )}
 
