@@ -2,6 +2,7 @@
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { 
+  Loader,
   Volume2, 
   VolumeX
 } from 'lucide-react';
@@ -254,10 +255,9 @@ export default function SoundPlayer() {
       {/* Sound Grid */}
       <div className={styles.soundGrid}>
         {isTestingAudio ? (
-          <div className={styles.loadingContainer}>
-            <div className={styles.loadingSpinner}></div>
-            <p className={styles.loadingText}>Testing audio files...</p>
-          </div>
+            <div className={styles.loadingContainer}>
+            <Loader className="animate-spin w-12 h-12" style={{ color: '#ff7b00' }} />
+            </div>
         ) : workingSounds.length === 0 ? (
           <div className={styles.noSoundsContainer}>
             <p className={styles.noSoundsText}>No working audio files found</p>
@@ -273,11 +273,13 @@ export default function SoundPlayer() {
             if (!state) return null;
 
             return (
+              
               <div
                 key={sound.id}
                 className={`${styles.soundCard} ${state.isPlaying ? styles.playing : ''} ${error ? styles.error : ''}`}
                 style={{ '--sound-color': sound.color } as React.CSSProperties}
               >
+                
                 <div className={styles.soundInfo}>
                   <span className={styles.soundIcon}>{sound.icon}</span>
                   <span className={styles.soundName}>{sound.name}</span>
