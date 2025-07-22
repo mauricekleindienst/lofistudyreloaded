@@ -860,7 +860,7 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
   return (
     <div className={desktopStyles.desktop}>
       {/* Background Video with Enhanced Buffering */}
-      <div className={desktopStyles.backgroundContainer}>
+      <div >
         {currentBackground?.src && (
           <>
             {animationDisabled ? (
@@ -920,7 +920,7 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
           </div>
         )}
         
-        <div className={desktopStyles.backgroundOverlay} />
+       
       </div>
 
       {/* Desktop UI Components */}

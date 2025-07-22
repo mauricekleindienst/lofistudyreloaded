@@ -1,98 +1,25 @@
 /* Desktop.module.css */
 
-/* Main desktop container */
-.desktop {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  overflow: hidden;
-  z-index: 1;
-}
 
-/* Background video */
+
+
 .backgroundVideo {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  object-fit: cover;
-  object-position: center center;
-  z-index: 0;
-  min-width: 100%;
-  min-height: 100%;
-  /* Performance optimizations */
-  will-change: opacity;
-  transform: translateZ(0);
-  -webkit-transform: translateZ(0);
-  backface-visibility: hidden;
-  -webkit-backface-visibility: hidden;
-  /* Smooth transitions */
-  transition: opacity 0.5s cubic-bezier(0.4, 0, 0.2, 1);
-  /* Ensure no borders or controls for iframes */
-  border: none;
-  outline: none;
-  /* Scale iframe to cover properly like object-fit: cover */
-  transform-origin: center center;
-}
-
-/* Specific styles for YouTube iframe backgrounds */
-.backgroundVideo[src*="youtube"] {
-  pointer-events: none !important;
-  user-select: none !important;
-  -webkit-user-select: none !important;
-  -moz-user-select: none !important;
-  -ms-user-select: none !important;
+  position: fixed !important;
+  top: 0 !important;
+  left: 0 !important;
+  width: 100vw !important;
+  height: 100vh !important;
+  min-width: 100vw !important;
+  min-height: 100vh !important;
+  max-width: 100vw !important;
+  max-height: 100vh !important;
+  object-fit: cover !important;
+  z-index: 0 !important;
   border: none !important;
-  outline: none !important;
-  /* Hide any YouTube UI elements */
-  filter: none;
+  margin: 0 !important;
+  padding: 0 !important;
+  pointer-events: none !important;
 }
-
-.backgroundContainer {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  z-index: 0;
-  /* GPU acceleration */
-  transform: translateZ(0);
-  -webkit-transform: translateZ(0);
-  /* Disable all interactions */
-  pointer-events: none;
-  user-select: none;
-  -webkit-user-select: none;
-  -moz-user-select: none;
-  -ms-user-select: none;
-}
-
-/* Additional overlay to block any YouTube interactions */
-.youtubeOverlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  z-index: 5;
-  pointer-events: none;
-  background: transparent;
-}
-
-/* Background overlay */
-.backgroundOverlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100vw;
-  height: 100vh;
-  background: rgba(0, 0, 0, 0.2);
-  z-index: 10;
-  pointer-events: none;
-}
-
 /* Modal overlays */
 .modalOverlay {
   position: fixed;
@@ -165,154 +92,6 @@
 }
 
 .modalIcon {
-  color: var(--accent-color);
-  background: rgba(255, 123, 0, 0.15);
-  padding: 8px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.modalTitle {
-  font-size: 22px;
-  font-weight: 600;
-  color: white;
-  margin: 0;
-}
-
-.modalSubtitle {
-  font-size: 13px;
-  color: rgba(255, 255, 255, 0.65);
-  margin: 4px 0 0 0;
-  font-weight: 400;
-}
-
-.modalCloseButton {
-  background: rgba(255, 255, 255, 0.1);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  padding: 8px;
-  color: var(--text-secondary, #e2e8f0);
-  cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.modalCloseButton:hover {
-  background: rgba(255, 255, 255, 0.2);
-  color: var(--text-primary, #ffffff);
-  transform: scale(1.1);
-}
-
-.modalContent {
-  padding: 24px 28px 28px;
-}
-
-.modalContent p {
-  color: var(--text-secondary, #e2e8f0);
-  font-size: 1rem;
-  line-height: 1.6;
-  margin: 0 0 24px 0;
-}
-
-.features {
-  margin-bottom: 28px;
-}
-
-.features h3 {
-  color: var(--text-primary, #ffffff);
-  font-size: 1.2rem;
-  font-weight: 600;
-  margin: 0 0 16px 0;
-}
-
-.features ul {
-  list-style: none;
-  padding: 0;
-  margin: 0;
-}
-
-.features li {
-  color: var(--text-secondary, #e2e8f0);
-  font-size: 0.95rem;
-  line-height: 1.5;
-  margin-bottom: 8px;
-  padding-left: 8px;
-}
-
-.modalButtons {
-  display: flex;
-  gap: 12px;
-  flex-wrap: wrap;
-}
-
-.modalButton {
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.05));
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 12px;
-  padding: 12px 16px;
-  color: var(--text-primary, #ffffff);
-  text-decoration: none;
-  font-weight: 600;
-  font-size: 0.9rem;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  backdrop-filter: blur(10px);
-  min-width: 140px;
-  justify-content: center;
-}
-
-.modalButton:hover {
-  background: var(--accent-color, #ff7b00);
-  border-color: var(--accent-color, #ff7b00);
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px rgba(255, 123, 0, 0.3);
-  color: var(--text-primary, #ffffff);
-  text-decoration: none;
-}
-
-/* Custom scrollbar for modal */
-.infoModal::-webkit-scrollbar {
-  width: 6px;
-}
-
-.infoModal::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 3px;
-}
-
-.infoModal::-webkit-scrollbar-thumb {
-  background: var(--accent-color, #ff7b00);
-  border-radius: 3px;
-}
-
-.infoModal::-webkit-scrollbar-thumb:hover {
-  background: var(--accent-hover, #ff9900);
-}
-
-/* Categories Filter */
-.categoriesContainer {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 16px;
-  flex-wrap: wrap;
-  padding: 3px;
-  background: rgba(255, 255, 255, 0.06);
-  border-radius: 12px;
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  flex-shrink: 0;
-}
-
-.categoryButton {
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1) 0%, rgba(255, 255, 255, 0.05) 100%);
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 8px;
   color: rgba(255, 255, 255, 0.8);
   padding: 6px 12px;
   font-size: 12px;
@@ -454,18 +233,8 @@
     font-size: 12px;
   }
 
-  .youtubeSection {
-    padding: 12px;
-  }
+ 
 
-  .youtubeInputContainer {
-    flex-direction: column;
-    gap: 8px;
-  }
-
-  .youtubeSubmitButton {
-    align-self: stretch;
-  }
 
   .categoriesContainer {
     flex-wrap: wrap;
@@ -531,35 +300,10 @@
   overflow: hidden;
 }
 
-.backgroundVideo {
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-  transition: transform 0.3s ease;
-  border-radius: 12px;
-}
 
-.backgroundItem:hover .backgroundVideo {
-  transform: scale(1.02);
-}
 
-.backgroundOverlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(
-    to bottom, 
-    transparent 0%, 
-    rgba(0, 0, 0, 0.4) 60%,
-    rgba(0, 0, 0, 0.8) 100%
-  );
-  display: flex;
-  align-items: flex-end;
-  justify-content: space-between;
-  padding: 16px;
-}
+
+
 
 .backgroundInfo {
   flex: 1;
@@ -677,16 +421,6 @@
   display: flex;
   flex-direction: column;
   gap: 16px;
-}
-
-.shortcutItem {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-}
-
-.shortcutLabel {
-  font-size: 14px;
   color: white;
 }
 
@@ -985,39 +719,11 @@
   }
 }
 
-/* Taskbar for minimized windows */
-.taskbar {
-  position: fixed;
-  bottom: 96px;
-  left: 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  z-index: 40;
-}
 
-.taskbarButton {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  width: auto;
-  padding: 8px 16px;
-  background: rgba(255, 255, 255, 0.1);
-  color: rgba(255, 255, 255, 0.7);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 12px;
-  cursor: pointer;
-  transition: all 0.2s ease;
-}
 
-.taskbarButton:hover {
-  background: rgba(255, 255, 255, 0.2);
-  color: white;
-}
 
-.taskbarButtonText {
-  font-size: 14px;
-}
+
+
 
 /* Notifications */
 .notificationsContainer {
@@ -1088,13 +794,11 @@
 
 /* Video loading and performance optimization styles */
 .videoLoadingIndicator {
-  position: fixed;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  display: flex;
-  flex-direction: column;
-  align-items: center;
+  position: relative;
+  width: 100vw;
+  height: 100vh;
+  overflow: visible;
+  z-index: 1;
   gap: 16px;
   background: rgba(0, 0, 0, 0.8);
   backdrop-filter: blur(10px);
