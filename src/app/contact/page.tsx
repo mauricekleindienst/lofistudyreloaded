@@ -33,51 +33,39 @@ export default function ContactPage() {
 
         {/* Main Content */}
         <div className={styles.mainContent}>
-          <div className={styles.card}>
+            <div className={styles.card}>
             <div className={styles.titleSection}>
               <div className={styles.iconWrapper}>
-                <Mail className={styles.iconLarge} />
+              <Mail className={styles.iconLarge} />
               </div>
               <h1 className={styles.title}>Contact Us</h1>
               <p className={styles.subtitle}>
-                We&apos;d love to hear from you! Get in touch with any questions, feedback, or suggestions.
+              We&apos;d love to hear from you!
               </p>
             </div>
 
-            <div className={styles.content}>
-              {/* Email Contact */}
-              <section className={styles.section}>
-                <div className={styles.sectionHeader}>
-                  <Mail className={`${styles.iconMedium} ${styles.iconBlue}`} />
-                  <h2 className={styles.sectionTitle}>Email Support</h2>
-                </div>
-                <div className={styles.sectionCard}>
-                
-                  <a href="mailto:hello@lo-fi.study" className={styles.contactLink}>
-                    <Mail size={16} />
-                    hello@lo-fi.study
-                  </a>
-                </div>
-              </section>
-              
-              {/* Feedback */}
-              <section className={styles.section}>
-                <div className={styles.sectionHeader}>
-                  <MessageCircle className={`${styles.iconMedium} ${styles.iconPurple}`} />
-                  <h2 className={styles.sectionTitle}>Feedback & Suggestions</h2>
-                </div>
-                <div className={styles.sectionCard}>
-                  
-                  <a href="mailto:feedback@lo-fi.study" className={styles.contactLink}>
-                    <MessageCircle size={16} />
-                    feedback@lo-fi.study
-                  </a>
-                </div>
-              </section>
-
-            
+            <div className={styles.content} style={{ textAlign: 'center' }}>
+              <p className={styles.text}>
+              Join our community on Discord for real-time support and discussions.
+              </p>
+             
+              <div style={{ display: 'flex', justifyContent: 'center', marginTop: '1rem' }}>
+              <iframe
+                src="https://discord.com/widget?id=1397139010387709952&theme=dark"
+                width="350"
+                height="500"
+                allowTransparency={true}
+                frameBorder="0"
+                sandbox="allow-popups allow-popups-to-escape-sandbox allow-same-origin allow-scripts"
+                style={{
+                borderRadius: '12px',
+                boxShadow: '0 2px 16px rgba(0,0,0,0.2)',
+                border: 'none',
+                }}
+              ></iframe>
+              </div>
             </div>
-          </div>
+            </div>
         </div>
       </div>
     </div>

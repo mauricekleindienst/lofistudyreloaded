@@ -58,11 +58,11 @@ export const metadata: Metadata = {
     description: "Boost your productivity with Lo-Fi.Study - the ultimate focus companion featuring Pomodoro timer, ambient sounds, and progress tracking.",
     images: [
       {
-        url: "/og-image.svg",
+        url: "/screenshot.png",
         width: 1200,
         height: 630,
         alt: "Lo-Fi.Study - Focus & Productivity App",
-        type: "image/svg+xml",
+        type: "image/png",
       },
     ],
   },
@@ -70,7 +70,7 @@ export const metadata: Metadata = {
     card: "summary_large_image",
     title: "Lo-Fi.Study - Focus & Productivity App",
     description: "Boost your productivity with Lo-Fi.Study - the ultimate focus companion featuring Pomodoro timer, ambient sounds, and progress tracking.",
-    images: ["/og-image.svg"],
+    images: ["/screenshot.png"],
     creator: "@lofistudy",
   },
   category: "productivity",
