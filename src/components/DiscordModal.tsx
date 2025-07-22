@@ -3,16 +3,9 @@
 import React from 'react';
 import { 
   X,
-  Info,
-  Mail,
-  FileText,
-  Shield,
-  Music,
-  Clock,
-  CheckSquare
 } from 'lucide-react';
 import styles from '../../styles/InfoModal.module.css';
-import { FaD, FaDiscord } from 'react-icons/fa6';
+import { FaDiscord } from 'react-icons/fa6';
 
 interface DiscordModalProps {
   isOpen: boolean;

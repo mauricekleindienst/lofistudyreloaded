@@ -1,9 +1,10 @@
 "use client";
 
-import React, { useState, useCallback, useMemo, useEffect } from 'react';
-import { X, CheckSquare, Play, Image, Pause } from 'lucide-react';
+import React, { useState, useMemo, useEffect } from 'react';
+import { X, CheckSquare, Play, Images, Pause, } from 'lucide-react';
 import { backgrounds } from '@/data/backgrounds';
 import styles from '../../../styles/BackgroundSelector.module.css';
+import Image from 'next/image';
 
 interface Background {
   id: number;
@@ -46,8 +47,8 @@ export default function BackgroundSelector({
   onCategoryChange,
   onAnimationToggle
 }: BackgroundSelectorProps) {
-  const [previewingId, setPreviewingId] = useState<number | null>(null);
-  const [previewTimeout, setPreviewTimeout] = useState<NodeJS.Timeout | null>(null);
+  const [previewingId] = useState<number | null>(null);
+  const [previewTimeout] = useState<NodeJS.Timeout | null>(null);
   const [visibleCount, setVisibleCount] = useState(20); // Initially show only 20 backgrounds
   const [errorVideos, setErrorVideos] = useState<Set<number>>(new Set());
 
@@ -73,32 +74,7 @@ export default function BackgroundSelector({
       : backgrounds.filter(bg => bg.category === category.id).length
   })), []);
 
-  const handleVideoPreview = useCallback((videoElement: HTMLVideoElement, isEntering: boolean) => {
-    if (isEntering) {
-      // Clear any existing timeout
-      if (previewTimeout) {
-        clearTimeout(previewTimeout);
-      }
-      
-      // Delay the preview to avoid triggering on quick mouse movements
-      const timeout = setTimeout(() => {
-        videoElement.currentTime = 0;
-        videoElement.play().catch(() => {
-          // Silently handle autoplay failures
-        });
-      }, 200); // 200ms delay
-      
-      setPreviewTimeout(timeout);
-    } else {
-      // Clear timeout and stop video immediately
-      if (previewTimeout) {
-        clearTimeout(previewTimeout);
-        setPreviewTimeout(null);
-      }
-      videoElement.pause();
-      videoElement.currentTime = 0;
-    }
-  }, [previewTimeout]);
+  
 
   // Reset visible count when category changes
   useEffect(() => {
@@ -134,7 +110,7 @@ export default function BackgroundSelector({
         <div className={styles.header}>
           <div className={styles.titleSection}>
             <div className={styles.icon}>
-              <Image size={24} aria-label="Background gallery icon" />
+              <Images size={24} aria-label="Background gallery icon" />
             </div>
             <div className={styles.titleText}>
               <h3 className={styles.title}>Background Gallery</h3>
@@ -148,7 +124,7 @@ export default function BackgroundSelector({
               title={animationDisabled ? "Enable background animation" : "Disable background animation"}
               aria-label={animationDisabled ? "Enable background animation" : "Disable background animation"}
             >
-              {animationDisabled ? <Image size={18} aria-label="Paused animation" /> : <Pause size={18} />}
+              {animationDisabled ? <Images size={18} aria-label="Paused animation" /> : <Pause size={18} />}
               <span>{animationDisabled ? 'Still' : 'Animated'}</span>
             </button>
             <button
@@ -201,7 +177,7 @@ export default function BackgroundSelector({
                   }}
                 >
                   {/* Thumbnail image */}
-                  <img
+                  <Image
                     src={`/thumbnails/${bg.id}.jpg`}
                     className={styles.wallpaperMedia}
                     alt={bg.alt}

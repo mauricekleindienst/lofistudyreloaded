@@ -132,9 +132,7 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
   const [backgroundSaveLoading, setBackgroundSaveLoading] = useState(false);
   const [isMusicSidebarOpen, setIsMusicSidebarOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('all');
-  const [youtubeUrl, setYoutubeUrl] = useState('');
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [customBackground, setCustomBackground] = useState<Background | null>(null);
   const [animationDisabled, setAnimationDisabled] = useState(false);
   const [showStats, setShowStats] = useState(false);
 

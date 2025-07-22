@@ -1,5 +1,5 @@
 import React from 'react';
-import { Mail, ArrowLeft, MessageCircle } from 'lucide-react';
+import { Mail, ArrowLeft } from 'lucide-react';
 import Link from 'next/link';
 import { Metadata } from 'next';
 import styles from '../../../styles/PageLayout.module.css';
