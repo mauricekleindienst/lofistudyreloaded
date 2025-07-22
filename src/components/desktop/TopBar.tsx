@@ -6,9 +6,12 @@ import {
   BarChart3, 
   Expand, 
   Share,
-  Info
+  Info,
+
 } from 'lucide-react';
+import { FaDiscord } from "react-icons/fa";
 import InfoModal from '../InfoModal';
+import DiscordModal from '../DiscordModal';
 import AuthModal from '../AuthModal';
 import Clock from './Clock';
 import desktopStyles from '../../../styles/Desktop.module.css';
@@ -38,6 +41,7 @@ interface TopBarProps {
 
 export default function TopBar({ user, onToggleStats }: TopBarProps) {
   const [showInfoModal, setShowInfoModal] = useState(false);
+  const [showDiscordModal, setShowDiscordModal] = useState(false);
   const [showClock, setShowClock] = useState(false);
   const [showNotification, setShowNotification] = useState(false);
   const [notificationMessage, setNotificationMessage] = useState('');
@@ -147,7 +151,13 @@ export default function TopBar({ user, onToggleStats }: TopBarProps) {
         >
           <Info size={20} />
         </button>
-        
+          <button
+          onClick={() => setShowDiscordModal(true)}
+          className={desktopStyles.topIcon}
+        >
+          <FaDiscord size={20} />
+        </button> 
+         
         <button
           onClick={handleFullscreen}
           className={desktopStyles.topIcon}
@@ -166,6 +176,10 @@ export default function TopBar({ user, onToggleStats }: TopBarProps) {
       <InfoModal 
         isOpen={showInfoModal}
         onClose={() => setShowInfoModal(false)}
+      />
+      <DiscordModal
+        isOpen={showDiscordModal}
+        onClose={() => setShowDiscordModal(false)}
       />
     </>
   );
