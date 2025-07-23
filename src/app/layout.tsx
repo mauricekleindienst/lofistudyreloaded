@@ -116,7 +116,7 @@ export default function RootLayout({
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
         <AuthProvider>
-          <h1 className="sr-only">Lo-Fi.Study - Focus & Productivity App</h1>
+            <h1 className="sr-only" aria-hidden="true" >Lo-Fi.Study - Focus & Productivity App</h1>
           {children}
         </AuthProvider>
         <WebVitals />

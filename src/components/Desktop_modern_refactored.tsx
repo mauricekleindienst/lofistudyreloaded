@@ -830,20 +830,69 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
     setHighestZIndex(prev => prev + 1);
   }, [highestZIndex]);
 
-  // Don't render until client-side hydration is complete
-  if (!isClient) {
+  // Enhanced loading screen: Wait until client-side hydration AND background is loaded/buffered
+  // Improved: Add a timeout fallback so loading screen can't get stuck forever
+  const [forceReady, setForceReady] = useState(false);
+  const [backgroundLoadedFromDB, setBackgroundLoadedFromDB] = useState(!isAuthenticated);
+  const isFirstMountRef = useRef(true);
+  const [hasMounted, setHasMounted] = useState(false);
+
+  // Compute raw ready state for effect dependency
+  const rawBackgroundReady = currentBackground?.src
+    ? !currentlyBuffering.includes(currentBackground.id.toString()) && !videoLoadError && backgroundLoadedFromDB
+    : true;
+
+  useEffect(() => {
+    if (!isClient || rawBackgroundReady) return;
+    if (!isFirstMountRef.current) return;
+    const timer = setTimeout(() => {
+      setForceReady(true);
+    }, 8000); // 8 seconds max loading screen
+    return () => clearTimeout(timer);
+  }, [isClient, rawBackgroundReady]);
+
+  // Load saved background when user authenticates (only block loading on first mount)
+  useEffect(() => {
+    if (!isFirstMountRef.current) return;
+    const loadSavedBackground = async () => {
+      if (isAuthenticated) {
+        try {
+          const savedBackgroundId = await loadSelectedBackground();
+          if (savedBackgroundId) {
+            const savedBackground = backgrounds.find(bg => bg.id.toString() === savedBackgroundId);
+            if (savedBackground) {
+              setCurrentBackground(savedBackground);
+            }
+          }
+        } catch (error) {
+          console.error('Failed to load saved background:', error);
+        }
+        setBackgroundLoadedFromDB(true);
+      } else {
+        setBackgroundLoadedFromDB(true);
+      }
+    };
+    loadSavedBackground();
+    // After first mount, never block loading again
+    isFirstMountRef.current = false;
+    setHasMounted(true);
+  }, [isAuthenticated, loadSelectedBackground]);
+
+  // Only block loading screen on first mount
+  const isBackgroundReady = hasMounted ? true : (forceReady || rawBackgroundReady);
+
+  if (!isClient || !isBackgroundReady) {
     return (
       <div className={desktopStyles.desktop}>
         <div className={desktopStyles.loadingState}>
-          {/* Minimal decorative floating dots */}
+          {/* Centered spinner and progress bar for better feedback */}
           <div className={desktopStyles.loadingDecorations}>
             <div className={desktopStyles.floatingDot}></div>
             <div className={desktopStyles.floatingDot}></div>
             <div className={desktopStyles.floatingDot}></div>
             <div className={desktopStyles.floatingDot}></div>
           </div>
-          
-          {/* Modern spinner with study icon */}
+
           <div className={desktopStyles.bookLoader}>
             <div className={desktopStyles.modernSpinner}>
               <div className={desktopStyles.spinnerRing}></div>
@@ -852,19 +901,63 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
               <div className={desktopStyles.spinnerCenter}></div>
             </div>
           </div>
-          
-          {/* Loading text with shimmer effect */}
-          <div className={desktopStyles.loadingText}>LoFi Study</div>
-          <div className={desktopStyles.loadingSubtext}>Preparing your focus environment</div>
-          
-          {/* Smooth progress indicator */}
+
+          <div className={desktopStyles.loadingText}>LoFi.Study</div>
+          <div className={desktopStyles.loadingSubtext}>
+            {currentlyBuffering.length > 0
+              ? "Loading background..."
+              : "Preparing your focus environment"}
+          </div>
+
+          <div className={desktopStyles.infiniteLoadingBackground}>
+            <div className={desktopStyles.infiniteLoaderBar}>
+              <div className={desktopStyles.infiniteLoaderFill}></div>
+            </div>
+          </div>
+
+          {/* Always show progress bar, even if buffering is slow */}
           <div className={desktopStyles.loadingProgress}>
-            <div className={desktopStyles.progressBar}></div>
+            <div
+              className={desktopStyles.progressBar}
+              style={{
+                width: `${Math.min(
+                  100,
+                  Math.round(
+                    (preloadManagerRef.current?.getBufferHealth(
+                      currentBackground.id.toString()
+                    ) ?? 0) * 100
+                  )
+                )}%`,
+                background: currentlyBuffering.length > 0 ? '#ffb347' : '#6c63ff',
+                transition: 'width 0.5s cubic-bezier(0.4,0,0.2,1)',
+                height: '8px',
+                borderRadius: '4px',
+                boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
+              }}
+            ></div>
           </div>
         </div>
       </div>
     );
   }
+
+          {/* Smooth progress indicator */}
+          <div className={desktopStyles.loadingProgress}>
+            <div
+              className={desktopStyles.progressBar}
+              style={{
+                width: `${Math.min(
+                  100,
+                  Math.round(
+                    (preloadManagerRef.current?.getBufferHealth(
+                      currentBackground.id.toString()
+                    ) ?? 0) * 100
+                  )
+                )}%`,
+              }}
+            ></div>
+          </div>
+
 
   return (
     <div className={desktopStyles.desktop}>
