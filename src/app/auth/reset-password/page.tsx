@@ -1,9 +1,10 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { useEffect, useState, useCallback } from 'react'
 import { useRouter } from 'next/navigation'
+import Image from 'next/image'
 import { createClient } from '../../../utils/supabase/client'
-import { Eye, EyeOff, Lock, CheckCircle, AlertCircle } from 'lucide-react'
+import { Eye, EyeOff, CheckCircle, AlertCircle } from 'lucide-react'
 import styles from '../../../../styles/Auth.module.css'
 
 export default function ResetPassword() {
@@ -18,42 +19,41 @@ export default function ResetPassword() {
   const [hasValidToken, setHasValidToken] = useState(false)
   const supabase = createClient()
 
-  useEffect(() => {
-    // Check if we have a valid recovery session
-    const checkSession = async () => {
-      try {
-        const { data: { session }, error } = await supabase.auth.getSession()
-        if (session && !error) {
-          setHasValidToken(true)
-        } else {
-          // Try to get session from URL hash
-          const hashParams = new URLSearchParams(window.location.hash.substring(1))
-          const accessToken = hashParams.get('access_token')
-          const refreshToken = hashParams.get('refresh_token')
+  const checkSession = useCallback(async () => {
+    try {
+      const { data: { session }, error } = await supabase.auth.getSession()
+      if (session && !error) {
+        setHasValidToken(true)
+      } else {
+        // Try to get session from URL hash
+        const hashParams = new URLSearchParams(window.location.hash.substring(1))
+        const accessToken = hashParams.get('access_token')
+        const refreshToken = hashParams.get('refresh_token')
+        
+        if (accessToken && refreshToken) {
+          const { data, error: sessionError } = await supabase.auth.setSession({
+            access_token: accessToken,
+            refresh_token: refreshToken
+          })
           
-          if (accessToken && refreshToken) {
-            const { data, error: sessionError } = await supabase.auth.setSession({
-              access_token: accessToken,
-              refresh_token: refreshToken
-            })
-            
-            if (!sessionError && data.session) {
-              setHasValidToken(true)
-            } else {
-              setError('Invalid or expired reset link. Please request a new password reset.')
-            }
+          if (!sessionError && data.session) {
+            setHasValidToken(true)
           } else {
             setError('Invalid or expired reset link. Please request a new password reset.')
           }
+        } else {
+          setError('Invalid or expired reset link. Please request a new password reset.')
         }
-      } catch (err) {
-        console.error('Error checking session:', err)
-        setError('An error occurred. Please try again.')
       }
+    } catch (err) {
+      console.error('Error checking session:', err)
+      setError('An error occurred. Please try again.')
     }
+  }, [supabase.auth])
 
+  useEffect(() => {
     checkSession()
-  }, [])
+  }, [checkSession])
 
   const validatePassword = (pwd: string) => {
     if (pwd.length < 8) {
@@ -105,9 +105,10 @@ export default function ResetPassword() {
         router.push('/')
       }, 2000)
       
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error('Error updating password:', err)
-      setError(err.message || 'Failed to update password. Please try again.')
+      const errorMessage = err instanceof Error ? err.message : 'Failed to update password. Please try again.'
+      setError(errorMessage)
     } finally {
       setIsLoading(false)
     }
@@ -118,7 +119,7 @@ export default function ResetPassword() {
       <div className={styles.container}>
         <div className={styles.authCard}>
           <div className={styles.logoContainer}>
-            <img src="/lofistudy.png" alt="LoFi Study" width={200} height={60} />
+            <Image src="/lofistudy.png" alt="LoFi Study" width={200} height={60} />
           </div>
           <h1 className={styles.title}>Verifying Reset Link...</h1>
           <p className={styles.subtitle}>Please wait while we verify your password reset link.</p>
@@ -132,7 +133,7 @@ export default function ResetPassword() {
       <div className={styles.container}>
         <div className={styles.authCard}>
           <div className={styles.logoContainer}>
-            <img src="/lofistudy.png" alt="LoFi Study" width={200} height={60} />
+            <Image src="/lofistudy.png" alt="LoFi Study" width={200} height={60} />
           </div>
           <div className={styles.messageContainer}>
             <div className={styles.successMessage}>
@@ -151,12 +152,12 @@ export default function ResetPassword() {
       
       <div className={styles.authCard}>
         <div className={styles.logoContainer}>
-          <img src="/lofistudy.png" alt="LoFi Study" width={200} height={60} />
+          <Image src="/lofistudy.png" alt="LoFi Study" width={200} height={60} />
         </div>
         
         <h1 className={styles.title}>Reset Your Password</h1>
         <p className={styles.subtitle}>
-          Enter your new password below. Make sure it's strong and secure.
+          Enter your new password below. Make sure it&apos;s strong and secure.
         </p>
         
         {error && (
