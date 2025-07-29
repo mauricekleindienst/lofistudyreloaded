@@ -4,6 +4,7 @@ import React, { useState } from 'react';
 import { X, Mail, Lock, Github } from 'lucide-react';
 import { FaDiscord, FaGoogle } from 'react-icons/fa';
 import { useAuth } from '../contexts/AuthContext';
+import { createClient } from '../utils/supabase/client';
 import styles from '../../styles/Auth.module.css';
 
 interface AuthModalProps {
@@ -17,8 +18,10 @@ const AuthModal: React.FC<AuthModalProps> = ({ isVisible, onClose }) => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const [resetEmailSent, setResetEmailSent] = useState(false);
 
   const { signIn, signUp, signInWithProvider, isConfigured } = useAuth();
+  const supabase = createClient();
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -28,7 +31,9 @@ const AuthModal: React.FC<AuthModalProps> = ({ isVisible, onClose }) => {
     try {
       const { error } = isSignUp 
         ? await signUp(email, password)
-        : await signIn(email, password);      if (error) {
+        : await signIn(email, password);
+      
+      if (error) {
         setError(typeof error === 'object' && error && 'message' in error ? (error as { message: string }).message : 'Authentication failed');
       } else {
         if (isSignUp) {
@@ -36,17 +41,50 @@ const AuthModal: React.FC<AuthModalProps> = ({ isVisible, onClose }) => {
         } else {
           onClose();
         }
-      }    } catch {
+      }
+    } catch {
       setError('An unexpected error occurred');
     } finally {
       setLoading(false);
     }
-  };  const handleOAuthSignIn = async (provider: 'discord' | 'github' | 'google') => {
+  };
+
+  const handleForgotPassword = async () => {
+    if (!email) {
+      setError('Please enter your email address first');
+      return;
+    }
+
     setLoading(true);
     setError('');
     
     try {
-      const { error } = await signInWithProvider(provider);      if (error) {
+      const { error } = await supabase.auth.resetPasswordForEmail(email, {
+        redirectTo: `${window.location.origin}/auth/recovery`,
+      });
+      
+      if (error) {
+        setError(error.message || 'Failed to send reset email');
+      } else {
+        setResetEmailSent(true);
+        setError('Password reset email sent! Check your inbox.');
+      }
+    } catch (err) {
+      console.error('Error sending password reset:', err);
+      setError('Failed to send password reset email. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleOAuthSignIn = async (provider: 'discord' | 'github' | 'google') => {
+    setLoading(true);
+    setError('');
+    
+    try {
+      const { error } = await signInWithProvider(provider);
+      
+      if (error) {
         console.error(`${provider} OAuth error:`, error);
         
         // Provide user-friendly error messages
@@ -82,7 +120,9 @@ const AuthModal: React.FC<AuthModalProps> = ({ isVisible, onClose }) => {
           <button onClick={onClose} className={styles.closeButton}>
             <X size={20} />
           </button>
-        </div>        <div className={styles.authContent}>
+        </div>
+        
+        <div className={styles.authContent}>
           {!isConfigured ? (
             <div className={styles.configWarning}>
               <h3>⚙️ Authentication Setup Required</h3>
@@ -104,84 +144,105 @@ const AuthModal: React.FC<AuthModalProps> = ({ isVisible, onClose }) => {
               </p>
 
               {error && (
-                <div className={styles.errorMessage}>
+                <div className={resetEmailSent ? styles.successMessage : styles.errorMessage}>
                   {error}
                 </div>
               )}
 
-          <form onSubmit={handleSubmit} className={styles.authForm}>
-            <div className={styles.inputGroup}>
-              <Mail size={18} className={styles.inputIcon} />
-              <input
-                type="email"
-                placeholder="Email address"
-                value={email}
-                onChange={(e) => setEmail(e.target.value)}
-                className={styles.authInput}
-                required
-              />
-            </div>
+              <form onSubmit={handleSubmit} className={styles.authForm}>
+                <div className={styles.inputGroup}>
+                  <Mail size={18} className={styles.inputIcon} />
+                  <input
+                    type="email"
+                    placeholder="Email address"
+                    value={email}
+                    onChange={(e) => setEmail(e.target.value)}
+                    className={styles.authInput}
+                    required
+                  />
+                </div>
 
-            <div className={styles.inputGroup}>
-              <Lock size={18} className={styles.inputIcon} />
-              <input
-                type="password"
-                placeholder="Password"
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                className={styles.authInput}
-                required
-                minLength={6}
-              />
-            </div>
+                <div className={styles.inputGroup}>
+                  <Lock size={18} className={styles.inputIcon} />
+                  <input
+                    type="password"
+                    placeholder="Password"
+                    value={password}
+                    onChange={(e) => setPassword(e.target.value)}
+                    className={styles.authInput}
+                    required
+                    minLength={6}
+                  />
+                </div>
 
-            <button
-              type="submit"
-              className={styles.authButton}
-              disabled={loading}
-            >
-              {loading ? 'Loading...' : (isSignUp ? 'Sign Up' : 'Sign In')}
-            </button>
-          </form>          <div className={styles.divider}>
-            <span>or continue with</span>
-          </div>          <div className={styles.oauthButtons}>
-            <button
-              onClick={() => handleOAuthSignIn('discord')}
-              className={styles.oauthButton}
-              disabled={loading}
-            >
-              <FaDiscord size={18} />
-              Discord
-            </button>
-            <button
-              onClick={() => handleOAuthSignIn('github')}
-              className={styles.oauthButton}
-              disabled={loading}
-            >
-              <Github size={18} />
-              GitHub
-            </button>
-            <button
-              onClick={() => handleOAuthSignIn('google')}
-              className={styles.oauthButton}
-              disabled={loading}
-            >
-              <FaGoogle size={18} />
-              Google
-            </button>
-          </div><div className={styles.authSwitch}>
-            {isSignUp ? 'Already have an account?' : "Don't have an account?"}{' '}
-            <button
-              onClick={() => {
-                setIsSignUp(!isSignUp);
-                setError('');
-              }}
-              className={styles.switchButton}
-            >
-              {isSignUp ? 'Sign In' : 'Sign Up'}
-            </button>
-            <p>By signing up, you agree to our <a href="/legal" target="_blank" rel="noopener noreferrer">Terms of Service</a> and <a href="/privacy" target="_blank" rel="noopener noreferrer">Privacy Policy</a>.</p>
-          </div>
+                {!isSignUp && (
+                  <div style={{ textAlign: 'right', marginBottom: '16px' }}>
+                    <button
+                      type="button"
+                      onClick={handleForgotPassword}
+                      className={styles.switchButton}
+                      disabled={loading}
+                      style={{ fontSize: '0.85rem', padding: '0' }}
+                    >
+                      Forgot Password?
+                    </button>
+                  </div>
+                )}
+
+                <button
+                  type="submit"
+                  className={styles.authButton}
+                  disabled={loading}
+                >
+                  {loading ? 'Loading...' : (isSignUp ? 'Sign Up' : 'Sign In')}
+                </button>
+              </form>
+              
+              <div className={styles.divider}>
+                <span>or continue with</span>
+              </div>
+              
+              <div className={styles.oauthButtons}>
+                <button
+                  onClick={() => handleOAuthSignIn('discord')}
+                  className={styles.oauthButton}
+                  disabled={loading}
+                >
+                  <FaDiscord size={18} />
+                  Discord
+                </button>
+                <button
+                  onClick={() => handleOAuthSignIn('github')}
+                  className={styles.oauthButton}
+                  disabled={loading}
+                >
+                  <Github size={18} />
+                  GitHub
+                </button>
+                <button
+                  onClick={() => handleOAuthSignIn('google')}
+                  className={styles.oauthButton}
+                  disabled={loading}
+                >
+                  <FaGoogle size={18} />
+                  Google
+                </button>
+              </div>
+
+              <div className={styles.authSwitch}>
+                {isSignUp ? 'Already have an account?' : "Don't have an account?"}{' '}
+                <button
+                  onClick={() => {
+                    setIsSignUp(!isSignUp);
+                    setError('');
+                    setResetEmailSent(false);
+                  }}
+                  className={styles.switchButton}
+                >
+                  {isSignUp ? 'Sign In' : 'Sign Up'}
+                </button>
+                <p>By signing up, you agree to our <a href="/legal" target="_blank" rel="noopener noreferrer">Terms of Service</a> and <a href="/privacy" target="_blank" rel="noopener noreferrer">Privacy Policy</a>.</p>
+              </div>
             </>
           )}
         </div>

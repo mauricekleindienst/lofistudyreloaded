@@ -44,7 +44,9 @@ export async function GET(request: Request) {
       })
       return NextResponse.redirect(`${origin}/auth/auth-code-error?${errorParams}`)
     }
-  }  // No code parameter provided
+  }
+  
+  // No code parameter provided
   const errorParams = new URLSearchParams({
     error: 'missing_code',
     error_description: 'Authorization code is missing from the callback URL.'
