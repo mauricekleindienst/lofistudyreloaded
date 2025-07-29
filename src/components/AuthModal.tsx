@@ -12,6 +12,7 @@ interface AuthModalProps {
   onClose: () => void;
 }
 
+// Add this at the top of the component to debug
 const AuthModal: React.FC<AuthModalProps> = ({ isVisible, onClose }) => {
   const [isSignUp, setIsSignUp] = useState(false);
   const [email, setEmail] = useState('');
@@ -22,6 +23,8 @@ const AuthModal: React.FC<AuthModalProps> = ({ isVisible, onClose }) => {
 
   const { signIn, signUp, signInWithProvider, isConfigured } = useAuth();
   const supabase = createClient();
+  
+
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,6 +53,8 @@ const AuthModal: React.FC<AuthModalProps> = ({ isVisible, onClose }) => {
   };
 
   const handleForgotPassword = async () => {
+    console.log('handleForgotPassword called with email:', email);
+    
     if (!email) {
       setError('Please enter your email address first');
       return;
@@ -59,11 +64,17 @@ const AuthModal: React.FC<AuthModalProps> = ({ isVisible, onClose }) => {
     setError('');
     
     try {
+      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
+      console.log('Sending reset email with redirectTo:', `${siteUrl}/auth/recovery`);
+      
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${window.location.origin}/auth/recovery`,
+        redirectTo: `${siteUrl}/auth/recovery`,
       });
       
+      console.log('Reset password response:', { error });
+      
       if (error) {
+        console.error('Reset password error:', error);
         setError(error.message || 'Failed to send reset email');
       } else {
         setResetEmailSent(true);
@@ -179,7 +190,10 @@ const AuthModal: React.FC<AuthModalProps> = ({ isVisible, onClose }) => {
                   <div style={{ textAlign: 'right', marginBottom: '16px' }}>
                     <button
                       type="button"
-                      onClick={handleForgotPassword}
+                      onClick={() => {
+                        console.log('Forgot password button clicked');
+                        handleForgotPassword();
+                      }}
                       className={styles.switchButton}
                       disabled={loading}
                       style={{ fontSize: '0.85rem', padding: '0' }}
