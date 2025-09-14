@@ -15,7 +15,6 @@ import {
   Briefcase,
   MoreHorizontal,
   RefreshCw,
-  Users,
   Timer,
   Calendar,
   Settings
@@ -469,12 +468,6 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
               <RefreshCw size={32} className={`${styles.loadingIcon} animate-spin`} />
               <span>Loading stats...</span>
             </div>
-          ) : !stats || stats.length === 0 ? (
-            <div className={styles.noData}>
-              <BarChart3 size={40} />
-              <h3>No Data Available</h3>
-              <p>Complete some Pomodoro sessions to see your stats here.</p>
-            </div>
           ) : (
             <>
               <div className={styles.timeFilter}>
@@ -533,7 +526,7 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
                   </div>
                   
                   <div className={styles.activityHeatmap}>
-                    <ActivityHeatmap stats={stats} />
+                    <ActivityHeatmap stats={stats || []} />
                   </div>
                 </div>
 
@@ -585,12 +578,6 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
                     <div className={styles.loadingContainer} style={{ padding: '2rem 0' }}>
                       <RefreshCw size={24} className={`${styles.loadingIcon} animate-spin`} />
                       <span>Loading leaderboard...</span>
-                    </div>
-                  ) : leaderboardUsers.length === 0 ? (
-                    <div className={styles.noData} style={{ padding: '2rem 0' }}>
-                      <Users size={32} />
-                      <h3>No Leaderboard Data</h3>
-                      <p>Be the first to complete Pomodoro sessions!</p>
                     </div>
                   ) : (
                     <ul className={styles.leaderboard}>

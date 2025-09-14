@@ -70,6 +70,46 @@ const ChatApp: React.FC = () => {
     return date.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
   };
 
+  const formatDateSeparator = (timestamp: string) => {
+    const date = new Date(timestamp);
+    const today = new Date();
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
+    
+    const isToday = date.toDateString() === today.toDateString();
+    const isYesterday = date.toDateString() === yesterday.toDateString();
+    
+    if (isToday) return 'Today';
+    if (isYesterday) return 'Yesterday';
+    
+    return date.toLocaleDateString([], { 
+      weekday: 'long', 
+      year: 'numeric', 
+      month: 'long', 
+      day: 'numeric' 
+    });
+  };
+
+  const groupMessagesByDate = (messages: Array<{ id: string; created_at: string; user_id: string; username: string; message: string }>) => {
+    const grouped: { date: string; messages: Array<{ id: string; created_at: string; user_id: string; username: string; message: string }> }[] = [];
+    
+    messages.forEach((message) => {
+      const messageDate = new Date(message.created_at).toDateString();
+      const lastGroup = grouped[grouped.length - 1];
+      
+      if (lastGroup && lastGroup.date === messageDate) {
+        lastGroup.messages.push(message);
+      } else {
+        grouped.push({
+          date: messageDate,
+          messages: [message]
+        });
+      }
+    });
+    
+    return grouped;
+  };
+
   const generateRandomUsername = () => {
     const randomUsername = `User_${Math.floor(Math.random() * 10000)}`;
     setUsernameInput(randomUsername);
@@ -117,19 +157,30 @@ const ChatApp: React.FC = () => {
           </div>
         ) : (
           <>
-            {messages.map((msg) => (
-              <div 
-                key={msg.id} 
-                className={`${styles.message} ${msg.user_id === user?.id ? styles.ownMessage : ''}`}
-              >
-                <div className={styles.messageHeader}>
-                  <span className={styles.username}>
-                    {msg.user_id === user?.id ? 'You' : msg.username}
+            {groupMessagesByDate(messages).map((group, groupIndex) => (
+              <React.Fragment key={groupIndex}>
+                <div className={styles.dateSeparator}>
+                  <div className={styles.dateLine}></div>
+                  <span className={styles.dateText}>
+                    {formatDateSeparator(group.messages[0].created_at)}
                   </span>
-                  <span className={styles.timestamp}>{formatTime(msg.created_at)}</span>
+                  <div className={styles.dateLine}></div>
                 </div>
-                <div className={styles.messageContent}>{msg.message}</div>
-              </div>
+                {group.messages.map((msg) => (
+                  <div 
+                    key={msg.id} 
+                    className={`${styles.message} ${msg.user_id === user?.id ? styles.ownMessage : ''}`}
+                  >
+                    <div className={styles.messageHeader}>
+                      <span className={styles.username}>
+                        {msg.user_id === user?.id ? 'You' : msg.username}
+                      </span>
+                      <span className={styles.timestamp}>{formatTime(msg.created_at)}</span>
+                    </div>
+                    <div className={styles.messageContent}>{msg.message}</div>
+                  </div>
+                ))}
+              </React.Fragment>
             ))}
             <div ref={messagesEndRef} />
           </>
@@ -192,4 +243,4 @@ const ChatApp: React.FC = () => {
   );
 };
 
-export default ChatApp; 
+export default ChatApp;

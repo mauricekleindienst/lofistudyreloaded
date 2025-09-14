@@ -74,10 +74,12 @@
   max-width: 80%;
   padding: 10px 14px;
   border-radius: 16px;
-  background-color: var(--card-bg-color);
-  box-shadow: 0 1px 2px rgba(0, 0, 0, 0.1);
+  background-color: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15), 0 1px 3px rgba(0, 0, 0, 0.1);
   animation: fadeIn 0.3s ease-out;
   align-self: flex-start;
+  backdrop-filter: blur(10px);
 }
 
 .ownMessage {
@@ -192,13 +194,38 @@
   font-style: italic;
 }
 
+.dateSeparator {
+  display: flex;
+  align-items: center;
+  margin: 20px 0 16px 0;
+  gap: 12px;
+}
+
+.dateLine {
+  flex: 1;
+  height: 1px;
+  background-color: var(--border-color);
+  opacity: 0.5;
+}
+
+.dateText {
+  font-size: 0.8rem;
+  color: var(--text-secondary);
+  font-weight: 500;
+  padding: 4px 12px;
+  background-color: var(--bg-color);
+  border-radius: 12px;
+  border: 1px solid var(--border-color);
+  white-space: nowrap;
+}
+
 .modal {
   position: absolute;
   top: 0;
   left: 0;
   right: 0;
   bottom: 0;
-  background-color: rgba(0, 0, 0, 0.5);
+  background-color: rgba(0, 0, 0, 0.918);
   display: flex;
   align-items: center;
   justify-content: center;
