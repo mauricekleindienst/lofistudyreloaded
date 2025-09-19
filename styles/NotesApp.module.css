@@ -170,7 +170,9 @@
 }
 
 .notesList {
-  flex: 0 0 350px;
+  flex: 0 0 40%;
+  min-width: 280px;
+  max-width: 400px;
   padding: 20px;
   overflow-y: auto;
   border-right: 1px solid var(--border-color);
@@ -178,7 +180,7 @@
 
 .gridView {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
   gap: 16px;
 }
 
@@ -316,7 +318,7 @@
   display: flex;
   flex-direction: column;
   background: var(--bg-primary);
-  min-width: 500px;
+  min-width: 300px;
 }
 
 .editorHeader {
@@ -852,8 +854,123 @@
   }
 }
 
-/* Responsive modal */
+/* Responsive Styles */
+@media (max-width: 768px) {
+  .mainContent {
+    flex-direction: column;
+  }
+  
+  .notesList {
+    flex: none;
+    max-height: 40vh;
+    border-right: none;
+    border-bottom: 1px solid var(--border-color);
+    min-width: unset;
+    max-width: unset;
+  }
+  
+  .noteEditor {
+    min-width: unset;
+    flex: 1;
+  }
+  
+  .gridView {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 12px;
+  }
+  
+  .header {
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+  }
+  
+  .headerLeft,
+  .headerRight {
+    justify-content: space-between;
+  }
+  
+  .toolbar {
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+  }
+  
+  .searchContainer {
+    max-width: unset;
+  }
+}
+
 @media (max-width: 480px) {
+  .container {
+    border-radius: 0;
+  }
+  
+  .header,
+  .toolbar {
+    padding: 12px 16px;
+  }
+  
+  .notesList {
+    padding: 16px;
+    max-height: 35vh;
+  }
+  
+  .gridView {
+    grid-template-columns: 1fr;
+    gap: 8px;
+  }
+  
+  .noteCard {
+    padding: 12px;
+  }
+  
+  .editorHeader {
+    padding: 16px;
+    flex-direction: column;
+    gap: 12px;
+    align-items: stretch;
+  }
+  
+  .editorActions {
+    justify-content: stretch;
+  }
+  
+  .saveButton,
+  .editButton,
+  .cancelButton {
+    flex: 1;
+    justify-content: center;
+  }
+  
+  .titleInput {
+    font-size: 16px;
+  }
+  
+  .contentTextarea {
+    font-size: 16px;
+    min-height: 200px;
+  }
+  
+  .formattingToolbar {
+    padding: 6px 8px;
+    gap: 2px;
+  }
+  
+  .toolbarButton {
+    width: 28px;
+    height: 28px;
+  }
+  
+  .newNoteButton {
+    padding: 6px 12px;
+    font-size: 14px;
+  }
+  
+  .appTitle h2 {
+    font-size: 16px;
+  }
+  
   .modal {
     width: calc(100% - 16px);
     margin: 8px;
