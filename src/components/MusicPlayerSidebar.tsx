@@ -5,6 +5,7 @@ import { Music, X, SkipBack, SkipForward, Play, Pause, Volume2, VolumeX, Shuffle
 import { useAppState } from '../contexts/AppStateContext';
 import styles from '../../styles/MusicPlayerSidebar.module.css';
 import Image from 'next/image';
+import Snowfall from 'react-snowfall';
 
 // Type declaration for YouTube iframe API
 declare global {
@@ -24,22 +25,23 @@ interface Track {
 
 // Initial music tracks list
 const initialTracks: Track[] = [
-  { id: 1, title: 'Lofi hip hop radio 📚', videoId: 'jfKfPfyJRdk', channelName: 'LofiGirl', channelUrl: 'https://www.youtube.com/@LofiGirl' },
-  { id: 2, title: 'Medieval lofi radio 🏰', videoId: '_uMuuHk_KkQ', channelName: 'LofiGirl', channelUrl: 'https://www.youtube.com/@LofiGirl' },
-  { id: 3, title: 'Jazz lofi radio 🎷', videoId: 'HuFYqnbVbzY', channelName: 'LofiGirl', channelUrl: 'https://www.youtube.com/@LofiGirl' },
-  { id: 4, title: 'Sad lofi radio ☔', videoId: 'P6Segk8cr-c', channelName: 'LofiGirl', channelUrl: 'https://www.youtube.com/@LofiGirl' },
-  { id: 5, title: 'Asian lofi radio ⛩️', videoId: 'Na0w3Mz46GA', channelName: 'LofiGirl', channelUrl: 'https://www.youtube.com/@LofiGirl' },
-  { id: 6, title: 'Peaceful piano radio 🎹', videoId: '4oStw0r33so', channelName: 'LofiGirl', channelUrl: 'https://www.youtube.com/@LofiGirl' },
-  { id: 7, title: 'Synthwave radio 🌌', videoId: '4xDzrJKXOOY', channelName: 'LofiGirl', channelUrl: 'https://www.youtube.com/@LofiGirl' },
-  { id: 8, title: 'Dark ambient radio 🌃', videoId: 'S_MOd40zlYU', channelName: 'LofiGirl', channelUrl: 'https://www.youtube.com/@LofiGirl' },
-  { id: 9, title: 'Dark academia 🌓', videoId: 'SllpB3W5f6s', channelName: 'Toxic Drunker', channelUrl: 'https://www.youtube.com/@ToxicDrunker_' },
-  { id: 10, title: 'Jazz music ☕', videoId: 'MYPVQccHhAQ', channelName: 'Relaxing Jazz Piano', channelUrl: 'https://www.youtube.com/@relaxingjazzpiano6491' },
-  { id: 11, title: 'Lofi Pokemon mix 🏝️', videoId: '6CjpgFOOtuI', channelName: 'STUDIO MATCHA US', channelUrl: 'https://www.youtube.com/@LoFi_Pokemon_Matcha' },
-  { id: 12, title: 'Skyrim soundtrack ❄️', videoId: '_Z1VzsE1GVg', channelName: 'Aaronmn7', channelUrl: 'https://www.youtube.com/@AeronN7' },
-  { id: 13, title: 'Animal crossing 🌳', videoId: 'V6GUhCxMDLg', channelName: 'RemDaBom', channelUrl: 'https://www.youtube.com/@RemDaBom' },
-  { id: 14, title: 'Minecraft Soundtrack 🏰', videoId: 'ZUIT_rQIR5M', channelName: 'Minecraft', channelUrl: 'https://www.youtube.com/@Minecraft' },
-  { id: 15, title: 'Harry Potter study musik 📚', videoId: 'pQdTu0IeVho', channelName: 'AmbientWorlds', channelUrl: 'https://www.youtube.com/@AmbientWorlds' },
-  { id: 16, title: 'Morning Work Chill Mix ☀️', videoId: 'XXkXvTR7IL8', channelName: 'BLUME', channelUrl: 'https://www.youtube.com/@BLUME_Music' }
+  { id: 1, title: 'Lofi Christmas 🎄', videoId: '1YBtzAAChU8', channelName: 'LofiGirl', channelUrl: 'https://www.youtube.com/@LofiGirl' },
+  { id: 2, title: 'Lofi hip hop radio 📚', videoId: 'jfKfPfyJRdk', channelName: 'LofiGirl', channelUrl: 'https://www.youtube.com/@LofiGirl' },
+  { id: 3, title: 'Medieval lofi radio 🏰', videoId: '_uMuuHk_KkQ', channelName: 'LofiGirl', channelUrl: 'https://www.youtube.com/@LofiGirl' },
+  { id: 4, title: 'Jazz lofi radio 🎷', videoId: 'HuFYqnbVbzY', channelName: 'LofiGirl', channelUrl: 'https://www.youtube.com/@LofiGirl' },
+  { id: 5, title: 'Sad lofi radio ☔', videoId: 'P6Segk8cr-c', channelName: 'LofiGirl', channelUrl: 'https://www.youtube.com/@LofiGirl' },
+  { id: 6, title: 'Asian lofi radio ⛩️', videoId: 'Na0w3Mz46GA', channelName: 'LofiGirl', channelUrl: 'https://www.youtube.com/@LofiGirl' },
+  { id: 7, title: 'Peaceful piano radio 🎹', videoId: '4oStw0r33so', channelName: 'LofiGirl', channelUrl: 'https://www.youtube.com/@LofiGirl' },
+  { id: 8, title: 'Synthwave radio 🌌', videoId: '4xDzrJKXOOY', channelName: 'LofiGirl', channelUrl: 'https://www.youtube.com/@LofiGirl' },
+  { id: 9, title: 'Dark ambient radio 🌃', videoId: 'S_MOd40zlYU', channelName: 'LofiGirl', channelUrl: 'https://www.youtube.com/@LofiGirl' },
+  { id: 10, title: 'Dark academia 🌓', videoId: 'SllpB3W5f6s', channelName: 'Toxic Drunker', channelUrl: 'https://www.youtube.com/@ToxicDrunker_' },
+  { id: 11, title: 'Jazz music ☕', videoId: 'MYPVQccHhAQ', channelName: 'Relaxing Jazz Piano', channelUrl: 'https://www.youtube.com/@relaxingjazzpiano6491' },
+  { id: 12, title: 'Lofi Pokemon mix 🏝️', videoId: '6CjpgFOOtuI', channelName: 'STUDIO MATCHA US', channelUrl: 'https://www.youtube.com/@LoFi_Pokemon_Matcha' },
+  { id: 13, title: 'Skyrim soundtrack ❄️', videoId: '_Z1VzsE1GVg', channelName: 'Aaronmn7', channelUrl: 'https://www.youtube.com/@AeronN7' },
+  { id: 14, title: 'Animal crossing 🌳', videoId: 'V6GUhCxMDLg', channelName: 'RemDaBom', channelUrl: 'https://www.youtube.com/@RemDaBom' },
+  { id: 15, title: 'Minecraft Soundtrack 🏰', videoId: 'ZUIT_rQIR5M', channelName: 'Minecraft', channelUrl: 'https://www.youtube.com/@Minecraft' },
+  { id: 16, title: 'Harry Potter study musik 📚', videoId: 'pQdTu0IeVho', channelName: 'AmbientWorlds', channelUrl: 'https://www.youtube.com/@AmbientWorlds' },
+  { id: 17, title: 'Morning Work Chill Mix ☀️', videoId: 'XXkXvTR7IL8', channelName: 'BLUME', channelUrl: 'https://www.youtube.com/@BLUME_Music' }
 ];
 
 interface MusicPlayerSidebarProps {
@@ -62,6 +64,13 @@ const MusicPlayerSidebar: React.FC<MusicPlayerSidebarProps> = ({ isOpen, onToggl
   const [isShuffled, setIsShuffled] = useState(false);
   const [isRepeating, setIsRepeating] = useState(false);
   const playerRef = useRef<YouTubeEvent['target'] | null>(null);
+
+  // Christmas seasonal theme (auto-enabled Nov–Feb)
+  const isChristmasActive = (() => {
+    const m = new Date().getMonth();
+    // November (10), December (11), January (0), February (1)
+    return m === 10 || m === 11 || m === 0 || m === 1;
+  })();
 
   const currentTrack = tracks[currentTrackIndex];
 
@@ -132,6 +141,8 @@ const MusicPlayerSidebar: React.FC<MusicPlayerSidebarProps> = ({ isOpen, onToggl
     localStorage.setItem('musicSidebar_currentTrackIndex', currentTrackIndex.toString());
     localStorage.setItem('musicSidebar_volume', volume.toString());
   }, [tracks, currentTrackIndex, volume]);
+
+  // No user toggle; theme auto-activates in season
 
   // Update context with current music state
   useEffect(() => {
@@ -318,7 +329,16 @@ const MusicPlayerSidebar: React.FC<MusicPlayerSidebarProps> = ({ isOpen, onToggl
       </button>
       
       {/* Sidebar */}
-      <div className={`${styles.sidebar} ${isOpen ? styles.sidebarOpen : ''}`}>
+      <div className={`${styles.sidebar} ${isOpen ? styles.sidebarOpen : ''} ${isChristmasActive ? styles.christmasTheme : ''}`}>
+        {isChristmasActive && (
+          <div className={styles.snowfallOverlay}>
+            <Snowfall
+              color="#ffffff"
+              snowflakeCount={60}
+              style={{ pointerEvents: 'none' }}
+            />
+          </div>
+        )}
         <div className={styles.sidebarContent}>
           {/* Header */}
           <div className={styles.header}>
@@ -326,7 +346,7 @@ const MusicPlayerSidebar: React.FC<MusicPlayerSidebarProps> = ({ isOpen, onToggl
             <div className={styles.headerTitle}>
               <Music size={20} />
               <span>Music Player</span>
-            </div>
+          </div>
             <button 
               className={styles.closeButton} 
               onClick={onToggle}
@@ -380,7 +400,15 @@ const MusicPlayerSidebar: React.FC<MusicPlayerSidebarProps> = ({ isOpen, onToggl
                 </div>
                 <div className={styles.trackInfo}>
                   <h3 className={styles.trackTitle}>{currentTrack.title}</h3>
-                  <p className={styles.channelName}>{currentTrack.channelName}</p>
+                  <a
+                    href={currentTrack.channelUrl}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className={styles.channelLink}
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    {currentTrack.channelName}
+                  </a>
                 </div>
               </>
             ) : (

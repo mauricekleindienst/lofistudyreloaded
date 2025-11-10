@@ -8,8 +8,7 @@ import {
   Settings,
   Volume2,
   StickyNote,
-  MessageSquare,
-  Cloud
+  MessageSquare
 } from 'lucide-react';
 import { backgrounds, DEFAULT_BACKGROUND } from '@/data/backgrounds';
 import desktopStyles from '../../styles/Desktop.module.css';
@@ -29,13 +28,14 @@ import MusicPlayerSidebar from './MusicPlayerSidebar';
 import StatsModal from './StatsModal';
 import SoundPlayer from './apps/SoundPlayer';
 import ChatApp from './apps/ChatApp';
-import Weather from './apps/Weather';
+// Removed Weather app
 
 // Import desktop components
 import TopBar from './desktop/TopBar';
 import BottomBar from './desktop/BottomBar';
 import WindowManager from './desktop/WindowManager';
 import BackgroundSelector from './desktop/BackgroundSelector';
+import VideoErrorBoundary from './desktop/VideoErrorBoundary';
 import NotificationManager from './desktop/NotificationManager';
 import { type DesktopProps, type ModernApp, type ModernWindow, type ModernNotification, type Background } from './desktop/types';
 
@@ -94,15 +94,6 @@ const modernApps: ModernApp[] = [
     color: 'yellow',
     description: 'Write and organize your notes',
     category: 'productivity'
-  },
-  {
-    id: 'weather',
-    name: 'Weather',
-    icon: Cloud,
-    component: Weather,
-    color: 'purple',
-    description: 'Get the latest weather updates',
-    category: 'entertainment'
   },
   {
     id: 'account-settings',
@@ -686,13 +677,6 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
         minWidth: 350,
         minHeight: 450,
         aspectRatio: 0.7
-      },
-      'weather': {
-        width: 350,
-        height: 400,
-        minWidth: 300,
-        minHeight: 350,
-        aspectRatio: 0.875
       }
     };
 
@@ -961,8 +945,9 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
 
   return (
     <div className={desktopStyles.desktop}>
-      {/* Background Video with Enhanced Buffering */}
-      <div >
+      {/* Background Video with Enhanced Buffering wrapped in ErrorBoundary */}
+      <VideoErrorBoundary fallback={<div className={desktopStyles.backgroundFallback}><div className={desktopStyles.fallbackContent}><p>Background system unavailable</p></div></div>}>
+      <div>
         {currentBackground?.src && (
           <>
             {animationDisabled ? (
@@ -1024,6 +1009,7 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
         
        
       </div>
+      </VideoErrorBoundary>
 
       {/* Desktop UI Components */}
       <TopBar 

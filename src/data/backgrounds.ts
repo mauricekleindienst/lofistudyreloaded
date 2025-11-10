@@ -1,5 +1,6 @@
 // Simplified backgrounds data
 import { Background } from '../components/desktop/types';
+import { buildVideoUrl } from '../utils/cdnConfig';
 
 // Helper function to create background object
 const createBackground = (
@@ -13,7 +14,7 @@ const createBackground = (
 ): Background => {
   return {
     id,
-    src: `https://lofistudy.fra1.cdn.digitaloceanspaces.com/backgrounds/${filename}`,
+    src: buildVideoUrl(filename),
     filename,
     alt,
     note,
@@ -33,7 +34,6 @@ export const backgrounds: Background[] = [
   createBackground(7, "Train2.mp4", "Train2", "Train2", "Lo-Fi.study", false, "urban"),
   createBackground(8, "Chillroom.mp4", "Chillroom", "Chillroom", "Lo-Fi.study", false, "cozy"),
   createBackground(9, "cables.mp4", "Cables", "Cables", "Lo-Fi.study", false, "urban"),
-  createBackground(10, "winter.mp4", "Winter", "Winter", "Lo-Fi.study", false, "nature"),
   createBackground(11, "study_girl.mp4", "StudyGirl", "StudyGirl", "Lo-Fi.study", false, "cozy"),
   createBackground(12, "coffee.mp4", "Coffee", "Coffee", "Lo-Fi.study", false, "cozy"),
   createBackground(13, "Minecraft.mp4", "Minecraft", "Minecraft", "Mojang", false, "gaming"),

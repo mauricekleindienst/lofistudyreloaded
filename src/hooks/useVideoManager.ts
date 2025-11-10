@@ -1,6 +1,12 @@
 import { useRef, useCallback } from 'react';
 import { Background } from '@/components/desktop/types';
-import { getFallbackUrl } from '@/utils/cdnConfig';
+import { CDN_CONFIG, getFallbackUrl } from '@/utils/cdnConfig';
+
+// Minimal NetworkInformation interface to avoid dependency on lib.dom typing
+// Covers only properties we actually use
+interface NetworkInformation {
+  effectiveType?: 'slow-2g' | '2g' | '3g' | '4g' | string;
+}
 
 interface VideoManager {
   preloadVideo: (background: Background) => Promise<HTMLVideoElement>;
@@ -27,14 +33,41 @@ export const useVideoManager = (): VideoManager => {
     }
 
     // Create new loading promise with CDN fallback support
-    const loadingPromise = new Promise<HTMLVideoElement>((resolve, reject) => {
+    const loadingPromise = new Promise<HTMLVideoElement>((resolve: (value: HTMLVideoElement) => void, reject: (reason?: unknown) => void) => {
       let currentFallbackIndex = 0;
-      
-      const tryLoadVideo = (videoUrl: string) => {
+      let attempt = 0;
+
+      const isOnline = typeof navigator !== 'undefined' ? navigator.onLine : true;
+      if (!isOnline) {
+        console.warn(`Skipping video preload for ${background.alt} (offline)`);
+        loadingPromises.current.delete(videoId);
+        reject(new Error('Offline: cannot preload video'));
+        return;
+      }
+
+      type NavigatorWithNetwork = Navigator & {
+        connection?: NetworkInformation;
+        mozConnection?: NetworkInformation;
+        webkitConnection?: NetworkInformation;
+      };
+
+      const getPreloadMode = (): 'metadata' | 'auto' => {
+        const nav = navigator as NavigatorWithNetwork;
+        const connection: NetworkInformation | undefined =
+          nav.connection ?? nav.mozConnection ?? nav.webkitConnection;
+        const effectiveType = connection?.effectiveType ?? '';
+        // Use conservative preload on slow connections
+        if (effectiveType === 'slow-2g' || effectiveType === '2g') return 'metadata';
+        return 'auto';
+      };
+
+      const delay = (ms: number): Promise<void> => new Promise<void>(res => setTimeout(res, ms));
+
+      const tryLoadVideo = async (videoUrl: string): Promise<void> => {
         const video = document.createElement('video');
         video.muted = true;
         video.loop = true;
-        video.preload = 'metadata';
+        video.preload = getPreloadMode();
         video.playsInline = true;
         video.crossOrigin = 'anonymous';
         video.disablePictureInPicture = true;
@@ -42,6 +75,7 @@ export const useVideoManager = (): VideoManager => {
         // Add performance optimizations
         video.setAttribute('playsinline', 'true');
         video.setAttribute('webkit-playsinline', 'true');
+        video.setAttribute('crossorigin', 'anonymous');
 
         const cleanup = () => {
           video.removeEventListener('canplaythrough', onLoad);
@@ -56,17 +90,19 @@ export const useVideoManager = (): VideoManager => {
           resolve(video);
         };
 
-        const onError = () => {
+        const onError = async () => {
           cleanup();
-          console.warn(`Failed to load video from: ${videoUrl} (attempt ${currentFallbackIndex + 1})`);
+          console.warn(`Failed to load video from: ${videoUrl} (attempt ${attempt + 1})`);
           
           // Try fallback URL if available and we haven't exceeded max attempts
-          if (background.filename && currentFallbackIndex < 2) {
+          if (background.filename && currentFallbackIndex < CDN_CONFIG.fallbacks.length) {
             const fallbackUrl = getFallbackUrl(background.filename, currentFallbackIndex);
             if (fallbackUrl && fallbackUrl !== videoUrl) { // Prevent infinite loops
               currentFallbackIndex++;
               console.log(`Trying fallback ${currentFallbackIndex}: ${fallbackUrl}`);
               video.src = '';
+              await delay(Math.min(1000 * Math.pow(2, attempt), 8000));
+              attempt++;
               tryLoadVideo(fallbackUrl);
               return;
             }
@@ -77,7 +113,7 @@ export const useVideoManager = (): VideoManager => {
           video.src = '';
           video.remove();
           loadingPromises.current.delete(videoId);
-         
+          reject(new Error(`All sources failed for ${background.alt}`));
         };
 
         const onLoadStart = () => {
@@ -90,6 +126,7 @@ export const useVideoManager = (): VideoManager => {
 
         // Set source and start loading
         video.src = videoUrl;
+        attempt++;
         video.load();
       };
 

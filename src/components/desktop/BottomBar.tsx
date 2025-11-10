@@ -130,6 +130,13 @@ export default function BottomBar({
 }: BottomBarProps) {
   const [isClient, setIsClient] = useState(false);
 
+  // Christmas seasonal theme (auto-enabled Nov–Feb)
+  const isChristmasActive = (() => {
+    const m = new Date().getMonth();
+    // November (10), December (11), January (0), February (1)
+    return m === 10 || m === 11 || m === 0 || m === 1;
+  })();
+
   useEffect(() => {
     setIsClient(true);
   }, []);
@@ -155,7 +162,7 @@ export default function BottomBar({
   };
 
   return (
-    <div className={styles.selectionBar}>
+    <div className={`${styles.selectionBar} ${isChristmasActive ? styles.christmasTheme : ''}`}>
       {/* Time and Date */}
       <div className={desktopStyles.appBarSection}>        <button
           onClick={onOpenCalendar}
