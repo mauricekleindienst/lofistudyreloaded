@@ -120,42 +120,15 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
     setLeaderboardLoading(true);
 
     try {
-      // First, get all users to have their profile info
-      const { data: usersData, error: usersError } = await supabase
-        .from('users')
-        .select('id, email, full_name, username');
-      
-      if (usersError) {
-        console.error('[StatsModal] Failed to load users:', usersError);
-      }
-
-      // Create a map of user IDs to user info
-      const userInfoMap = new Map<string, {email: string; name: string; username?: string}>();
-      if (usersData) {
-        (usersData as UserData[]).forEach((userData) => {
-          userInfoMap.set(userData.id, {
-            email: userData.email || 'User',
-            name: userData.full_name || userData.email?.split('@')[0] || `User #${userData.id.slice(-4)}`,
-            username: userData.username
-          });
-        });
-      }
-      
-      // Get date range for filtering
-      let dateFilter = '';
-      if (leaderboardTimeRange !== 'all') {
-        const startDate = new Date();
-        startDate.setDate(startDate.getDate() - leaderboardTimeRange);
-        dateFilter = startDate.toISOString().split('T')[0];
-      }
-      
-      // Get pomodoro stats with appropriate date filter
-      const query = supabase
+      // 1. Fetch stats first (aggregated by user would be better on DB side, but for now we optimize the user fetching)
+      let query = supabase
         .from('pomodoro_stats')
         .select('user_id, pomodoro_count, total_focus_time_minutes, date, username');
       
       if (leaderboardTimeRange !== 'all') {
-        query.gte('date', dateFilter);
+        const startDate = new Date();
+        startDate.setDate(startDate.getDate() - leaderboardTimeRange);
+        query = query.gte('date', startDate.toISOString().split('T')[0]);
       }
       
       const { data: statsData, error: statsError } = await query;
@@ -166,7 +139,7 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
         return;
       }
 
-      // Process and aggregate the data by user
+      // 2. Process and aggregate the data by user
       const userStatsMap = new Map<string, { 
         id: string; 
         totalSessions: number; 
@@ -197,21 +170,66 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
         const userStats = userStatsMap.get(userId)!;
         userStats.totalSessions += record.pomodoro_count || 0;
         userStats.totalFocusTime += record.total_focus_time_minutes || 0;
-        // Keep the username if we have it
+        // Keep the username if we have it (latest one ideally, but any is better than none)
         if (record.username && !userStats.username) {
           userStats.username = record.username;
         }
       });
 
-      // Combine user info with stats
-      const combinedUsers = Array.from(userStatsMap.entries()).map(([userId, stats]) => {
-        const userInfo = userInfoMap.get(userId) || { 
-          email: `User #${userId.slice(-4)}`,
-          name: `User #${userId.slice(-4)}`,
+      // 3. Sort and limit to top 50 BEFORE fetching user details
+      const sortedStats = Array.from(userStatsMap.values())
+        .sort((a, b) => {
+          if (leaderboardFilter === 'sessions') {
+            return b.totalSessions - a.totalSessions;
+          } else {
+            return b.totalFocusTime - a.totalFocusTime;
+          }
+        })
+        .slice(0, 50); // Optimization: Only handle top 50 users
+
+      // 4. Fetch user details ONLY for the top users
+      const userIds = sortedStats.map(s => s.id);
+      
+      // Always include current user if not in top 50, so they see themselves
+      if (user && !userIds.includes(user.id)) {
+        // Check if current user has stats
+        const currentUserStats = userStatsMap.get(user.id);
+        if (currentUserStats) {
+            userIds.push(user.id);
+            sortedStats.push(currentUserStats);
+        }
+      }
+
+      const { data: usersData, error: usersError } = await supabase
+        .from('users')
+        .select('id, email, full_name, username')
+        .in('id', userIds);
+      
+      if (usersError) {
+        console.error('[StatsModal] Failed to load users:', usersError);
+      }
+
+      // Create a map of user IDs to user info
+      const userInfoMap = new Map<string, {email: string; name: string; username?: string}>();
+      if (usersData) {
+        (usersData as UserData[]).forEach((userData) => {
+          userInfoMap.set(userData.id, {
+            email: userData.email || 'User',
+            name: userData.full_name || userData.email?.split('@')[0] || `User #${userData.id.slice(-4)}`,
+            username: userData.username
+          });
+        });
+      }
+
+      // 5. Combine and finalize
+      const combinedUsers = sortedStats.map((stats) => {
+        const userInfo = userInfoMap.get(stats.id) || { 
+          email: `User #${stats.id.slice(-4)}`,
+          name: `User #${stats.id.slice(-4)}`,
           username: undefined
         };
         return {
-          id: userId,
+          id: stats.id,
           email: userInfo.email,
           // Prioritize username from stats (pomodoro_stats table) over userInfo (users table)
           username: stats.username || userInfo.username,
@@ -220,14 +238,14 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
         };
       });
       
-      // Sort by sessions or time based on filter
-      const sortedUsers = leaderboardFilter === 'sessions' 
+      // Re-sort because adding current user might have disrupted order if they were appended
+      const finalSortedUsers = leaderboardFilter === 'sessions' 
         ? combinedUsers.sort((a, b) => b.totalSessions - a.totalSessions)
         : combinedUsers.sort((a, b) => b.totalFocusTime - a.totalFocusTime);
 
       // Add rank
-      const rankedUsers = sortedUsers.map((user, index) => ({
-        ...user,
+      const rankedUsers = finalSortedUsers.map((u, index) => ({
+        ...u,
         rank: index + 1
       }));
 
@@ -508,20 +526,39 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
                   <div className={styles.categoryBreakdown}>
                     <h3>Category Breakdown</h3>
                     <ul>
-                      {Object.entries(categoryStats)
-                        .sort(([, a], [, b]) => b.sessions - a.sessions)
-                        .map(([category, data]) => (
-                        <li key={category}>
-                          <div className={styles.categoryInfo}>
-                            {getCategoryIcon(category)}
-                            <span className={styles.categoryName}>{category}</span>
-                          </div>
-                          <div className={styles.categoryStats}>
-                            <span>{data.sessions} sessions</span>
-                            <span>{formatTime(data.time)}</span>
-                          </div>
-                        </li>
-                      ))}
+                      {Object.entries(categoryStats).length > 0 ? (
+                        Object.entries(categoryStats)
+                          .sort(([, a], [, b]) => b.sessions - a.sessions)
+                          .map(([category, data]) => {
+                            const maxSessions = Math.max(...Object.values(categoryStats).map(d => d.sessions), 1);
+                            const percentage = (data.sessions / maxSessions) * 100;
+                            
+                            return (
+                              <li key={category}>
+                                <div className={styles.categoryRow}>
+                                  <div className={styles.categoryHeader}>
+                                    <div className={styles.categoryInfo}>
+                                      {getCategoryIcon(category)}
+                                      <span className={styles.categoryName}>{category}</span>
+                                    </div>
+                                    <div className={styles.categoryStats}>
+                                      <span className={styles.sessionCount}>{data.sessions} sessions</span>
+                                      <span className={styles.timeLabel}>{formatTime(data.time)}</span>
+                                    </div>
+                                  </div>
+                                  <div className={styles.categoryBarContainer}>
+                                    <div 
+                                      className={styles.categoryBar} 
+                                      style={{ width: `${percentage}%` }}
+                                    />
+                                  </div>
+                                </div>
+                              </li>
+                            );
+                          })
+                      ) : (
+                        <div className={styles.emptyState}>No activity yet</div>
+                      )}
                     </ul>
                   </div>
                   

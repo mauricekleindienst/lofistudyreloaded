@@ -108,7 +108,7 @@ export const AppStateProvider: React.FC<{ children: ReactNode }> = ({ children }
   }, []);
 
   return (
-    <AppStateContext.Provider value={{
+    <AppStateContext value={{
       appStates,
       updatePomodoroState,
       updateTodoState,
@@ -117,7 +117,7 @@ export const AppStateProvider: React.FC<{ children: ReactNode }> = ({ children }
       updateNotesState
     }}>
       {children}
-    </AppStateContext.Provider>
+    </AppStateContext>
   );
 };
 

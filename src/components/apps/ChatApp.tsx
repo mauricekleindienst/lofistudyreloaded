@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, RefreshCw, User, Users, LogIn } from 'lucide-react';
+import { Send, RefreshCw, User, Users, LogIn, MessageSquare } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useRealtimeChat } from '../../hooks/useRealtimeChat';
 import styles from '../../../styles/ChatbotApp.module.css';
@@ -27,10 +27,10 @@ const ChatApp: React.FC = () => {
 
   // Show username dialog if user doesn't have a username
   useEffect(() => {
-    if (user && !hasUsername) {
+    if (user && !hasUsername && !loading) {
       setUsernameDialogOpen(true);
     }
-  }, [user, hasUsername]);
+  }, [user, hasUsername, loading]);
 
   // Auto scroll to bottom when new messages arrive
   useEffect(() => {
@@ -111,7 +111,9 @@ const ChatApp: React.FC = () => {
   };
 
   const generateRandomUsername = () => {
-    const randomUsername = `User_${Math.floor(Math.random() * 10000)}`;
+    const adjectives = ['Happy', 'Lucky', 'Sunny', 'Cozy', 'Calm', 'Focus', 'Chill', 'Quiet'];
+    const nouns = ['Student', 'Learner', 'Coder', 'Writer', 'Reader', 'Thinker', 'Mind', 'Soul'];
+    const randomUsername = `${adjectives[Math.floor(Math.random() * adjectives.length)]}${nouns[Math.floor(Math.random() * nouns.length)]}${Math.floor(Math.random() * 100)}`;
     setUsernameInput(randomUsername);
   };
 
@@ -131,18 +133,24 @@ const ChatApp: React.FC = () => {
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <h2>Anonymous Chat</h2>
-        <div className={styles.onlineUsers}>
-          <Users size={16} />
-          <span>{onlineUsers} online</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <MessageSquare size={20} />
+          <h2>Community Chat</h2>
         </div>
-        <button 
-          onClick={refreshMessages} 
-          className={styles.refreshButton}
-          disabled={loading}
-        >
-          <RefreshCw size={16} className={loading ? styles.spinning : ''} />
-        </button>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <div className={styles.onlineUsers}>
+            <Users size={14} />
+            <span>{onlineUsers} online</span>
+          </div>
+          <button 
+            onClick={refreshMessages} 
+            className={styles.refreshButton}
+            disabled={loading}
+            title="Refresh messages"
+          >
+            <RefreshCw size={16} className={loading ? styles.spinning : ''} />
+          </button>
+        </div>
       </div>
 
       <div className={styles.messagesContainer}>
