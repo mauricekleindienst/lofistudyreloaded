@@ -4,6 +4,7 @@ import { AuthProvider } from "@/contexts/AuthContext";
 import { WebVitals } from "@/components/WebVitals";
 import { GoogleAnalytics } from "@/components/Analytics";
 import Script from 'next/script';
+import { SpeedInsights } from "@vercel/speed-insights/next"
 import "./globals.css";
 
 const geistSans = Geist({
@@ -115,8 +116,9 @@ export default function RootLayout({
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}
       >
+        <SpeedInsights />
         <AuthProvider>
-            <h1 className="sr-only" aria-hidden="true" >Lo-Fi.Study - Focus & Productivity App</h1>
+          <h1 className="sr-only" aria-hidden="true" >Lo-Fi.Study - Focus & Productivity App</h1>
           {children}
         </AuthProvider>
         <WebVitals />

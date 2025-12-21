@@ -10,8 +10,6 @@ import {
   X
 } from 'lucide-react';
 import { FaDiscord } from "react-icons/fa";
-import { sendMessage } from '../../lib/chat';
-import { useAppState } from '../../contexts/AppStateContext';
 import InfoModal from '../InfoModal';
 import DiscordModal from '../DiscordModal';
 import AuthModal from '../AuthModal';
@@ -42,7 +40,6 @@ interface TopBarProps {
 }
 
 export default function TopBar({ user, onToggleStats }: TopBarProps) {
-  const { updateChatState } = useAppState();
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [showDiscordModal, setShowDiscordModal] = useState(false);
   const [showClock, setShowClock] = useState(false);
