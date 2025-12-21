@@ -4,22 +4,28 @@
   position: fixed;
   bottom: 24px;
   left: 50%;
-  transform: translateX(-50%);
+  transform: translate3d(-50%, 0, 0); /* Use translate3d to fix sub-pixel blur */
   display: flex;
   align-items: center;
   gap: 16px;
   padding: 18px 24px;
-  background: var(--bg-primary);
-  backdrop-filter: blur(20px);
+  background: var(--glass-bg);
+  backdrop-filter: blur(16px); /* Reduced blur for crispness */
+  -webkit-backdrop-filter: blur(16px);
   border: 1px solid var(--border-color);
   border-radius: 24px;
-  box-shadow: var(--shadow-medium);
+  box-shadow: 
+    0 4px 6px -1px rgba(0, 0, 0, 0.1),
+    0 2px 4px -1px rgba(0, 0, 0, 0.06),
+    0 0 0 1px rgba(255, 255, 255, 0.05); /* Crisp inner border */
   z-index: 1000;
   opacity: 1;
   visibility: visible;
   transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
   max-width: calc(100vw - 48px);
   overflow: visible;
+  -webkit-font-smoothing: antialiased; /* Sharpen text */
+  -moz-osx-font-smoothing: grayscale;
 }
 
 .selectionBar.hidden {
@@ -27,20 +33,6 @@
   visibility: hidden;
   pointer-events: none;
   transform: translate(-50%, 100%);
-}
-
-/* Christmas Theme for BottomBar */
-.christmasTheme {
-  --accent-color: #e63946; /* festive red */
-  --text-primary: #fffaf0; /* warm off-white */
-  --text-secondary: #f0e6d6;
-  --theme-green: #2a9d8f;
-  --theme-gold: #ffd166;
-  background: linear-gradient(145deg,
-    rgba(24, 28, 40, 0.95) 0%,
-    rgba(24, 28, 40, 0.98) 100%);
-  border: 1px solid rgba(255, 209, 102, 0.25);
-  transition: background 0.4s ease, border-color 0.4s ease;
 }
 
 /* Icon Button Styles */
@@ -55,11 +47,12 @@
   backdrop-filter: blur(12px);
   color: var(--text-secondary);
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.2s ease;
   position: relative;
   border: 1px solid var(--border-color);
   box-sizing: border-box;
   flex-shrink: 0;
+  overflow: visible; /* Allow tooltips to be visible */
 }
 
 .iconButton::before {
@@ -69,50 +62,48 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(135deg, var(--accent-color), var(--accent-light));
+  background: linear-gradient(135deg, #ff7b00, #ff9533);
   opacity: 0;
-  transition: opacity 0.3s ease;
+  transition: opacity 0.2s ease;
   border-radius: 13px;
   z-index: -1;
 }
 
-.iconButton:hover::before,
-.iconButton.active::before {
-  opacity: 1;
-}
-
-.iconButton:hover,
-.iconButton.active {
+.iconButton:hover {
+  transform: translateY(-1px);
   color: var(--text-primary);
-  transform: translateY(-2px);
-  box-shadow: var(--shadow-accent);
-  border-color: var(--accent-color);
+  background: var(--glass-button-hover, rgba(255, 255, 255, 0.1));
 }
 
-.iconButton.dragging {
-  transform: scale(1.05) translateY(-2px);
-  box-shadow: 0 8px 24px rgba(255, 123, 0, 0.4);
+.iconButton.active {
+  transform: translateY(-1px);
+  color: var(--text-primary);
+  border-color: #ff7b00; /* Orange outline for active apps */
+  background: var(--glass-bg-light); /* Slightly lighter active state */
+  box-shadow: 0 4px 16px rgba(255, 123, 0, 0.3);
 }
 
-.iconButton:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  transform: none;
+.iconButton.active::before {
+  opacity: 0.1;
+  background: linear-gradient(135deg, #ff7b00, #ff9533);
 }
 
-.iconButton:disabled:hover::before {
-  opacity: 0;
+/* Time Button Hover */
+.timeButton:hover {
+  transform: translateY(-1px);
+  background: var(--glass-button-hover, rgba(255, 255, 255, 0.1));
+  color: var(--text-primary);
 }
 
 /* Tooltip Styles */
 .tooltip {
   position: absolute;
-  bottom: calc(100% + 12px);
+  bottom: calc(100% + 16px); /* Increased gap for better separation */
   left: 50%;
-  transform: translateX(-50%);
+  transform: translateX(-50%) scale(0.9); /* Start slightly smaller */
   padding: 8px 12px;
-  background: var(--glass-bg);
-  backdrop-filter: blur(16px);
+  background: var(--bg-primary); /* Darker, more opaque background */
+  backdrop-filter: blur(12px);
   color: var(--text-primary);
   font-size: 13px;
   font-weight: 500;
@@ -120,11 +111,14 @@
   white-space: nowrap;
   opacity: 0;
   visibility: hidden;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  box-shadow: var(--shadow-light);
-  border: 1px solid var(--border-color);
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1); /* Snappy easing */
+  box-shadow: 
+    0 10px 25px -5px rgba(0, 0, 0, 0.5),
+    0 0 0 1px rgba(255, 255, 255, 0.1);
+  border: none;
   pointer-events: none;
   z-index: 10000;
+  transform-origin: bottom center;
 }
 
 .tooltip::after {
@@ -135,13 +129,14 @@
   transform: translateX(-50%);
   border-width: 6px;
   border-style: solid;
-  border-color: var(--glass-bg) transparent transparent transparent;
+  border-color: var(--bg-primary) transparent transparent transparent;
 }
 
-.iconButton:hover .tooltip {
+.iconButton:hover .tooltip,
+.timeButton:hover .tooltip {
   opacity: 1;
   visibility: visible;
-  transform: translateX(-50%) translateY(-4px);
+  transform: translateX(-50%) scale(1) translateY(0); /* Pop into place */
 }
 
 /* Material Icons */
@@ -162,7 +157,7 @@
   right: -2px;
   width: 10px;
   height: 10px;
-  background: var(--accent-color);
+  background: #ff7b00;
   border-radius: 50%;
   border: 2px solid var(--bg-primary);
   animation: pulse 2s infinite;
@@ -176,7 +171,7 @@
   min-width: 20px;
   height: 20px;
   padding: 0 6px;
-  background: var(--accent-color);
+  background: #ff7b00;
   color: var(--text-primary);
   border-radius: 10px;
   font-size: 12px;
@@ -242,7 +237,7 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(135deg, var(--accent-color), var(--accent-light));
+  background: linear-gradient(135deg, #ff7b00, #ff9533);
   opacity: 0;
   transition: opacity 0.3s ease;
   border-radius: 13px;
@@ -256,8 +251,8 @@
 .timeButton:hover {
   color: var(--text-primary);
   transform: translateY(-2px);
-  box-shadow: var(--shadow-accent);
-  border-color: var(--accent-color);
+  box-shadow: 0 4px 16px rgba(255, 123, 0, 0.3);
+  border-color: #ff7b00;
 }
 
 .timeDisplay {
@@ -292,8 +287,8 @@
 /* Special Button States */
 .adminIcon {
   background: rgba(255, 123, 0, 0.12) !important;
-  border: 1px solid var(--accent-color) !important;
-  color: var(--accent-color) !important;
+  border: 1px solid #ff7b00 !important;
+  color: #ff7b00 !important;
 }
 
 .adminIcon:hover {
@@ -333,7 +328,7 @@
   position: absolute;
   top: -8px;
   right: -8px;
-  background: var(--accent-color);
+  background: #ff7b00;
   color: var(--text-primary);
   border-radius: 8px;
   padding: 2px 6px;

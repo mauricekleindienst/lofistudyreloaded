@@ -20,7 +20,7 @@
   --bg-primary: #1a202c;
   --bg-secondary: #2d3748;
   --bg-tertiary: #1c1e22;
-  --bg-overlay: rgba(0, 0, 0, 0.4);
+  --bg-overlay: rgba(0, 0, 0, 0.75);
   
   /* Border Colors */
   --border-color: rgba(255, 255, 255, 0.1);
@@ -28,8 +28,8 @@
   --border-hover: rgba(255, 255, 255, 0.2);
   
   /* Glass Morphism */
-  --glass-bg: rgba(26, 32, 44, 0.8);
-  --glass-bg-light: rgba(26, 32, 44, 0.6);
+  --glass-bg: rgba(26, 32, 44, 0.95);
+  --glass-bg-light: rgba(26, 32, 44, 0.85);
   --glass-border: #2d3748;
   --glass-button: rgba(255, 255, 255, 0.05);
   --glass-button-hover: rgba(255, 255, 255, 0.1);

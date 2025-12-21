@@ -2,11 +2,12 @@
 
 import React, { useEffect, useState } from 'react';
 import Image from 'next/image';
-import { 
-  Clock, 
-  User, 
+import {
+  Clock,
+  User,
   Image as ImageIcon,
-  LogIn
+  LogIn,
+  MessageSquareDot
 } from 'lucide-react';
 import { User as SupabaseUser } from '@supabase/supabase-js';
 import styles from '../../../styles/SelectionBar.module.css';
@@ -61,54 +62,53 @@ interface BottomBarProps {
 
 // Helper function to get app runtime info
 const getAppRuntimeInfo = (app: ModernApp, window: ModernWindow | undefined, appStates: AppStates) => {
-  if (!window) return null;
-  
   if (app.id === 'pomodoro') {
+    if (!window) return null; // Pomodoro timer only makes sense if app is open
     // Show timer when running OR when time is not at default values
     if (appStates.pomodoro.isRunning || appStates.pomodoro.minutes !== 25 || appStates.pomodoro.seconds !== 0) {
       return `${appStates.pomodoro.minutes.toString().padStart(2, '0')}:${appStates.pomodoro.seconds.toString().padStart(2, '0')}`;
     }
     return null;
   }
-  
+
   if (app.id === 'music') {
     if (appStates.music.isPlaying) {
       return '♪';
     }
     return null;
   }
-  
+
   if (app.id === 'todo') {
     if (appStates.todo.pendingCount > 0) {
       return appStates.todo.pendingCount.toString();
     }
     return null;
   }
-  
-  if (app.id === 'notes') {
-    if (appStates.notes.totalCount > 0) {
-      return appStates.notes.totalCount.toString();
+
+  if (app.id === 'chat') {
+    if (appStates.chat.unreadCount > 0) {
+      return appStates.chat.unreadCount.toString();
     }
     return null;
   }
-  
+
   return null;
 };
 
 // Helper function to get avatar URL from user object
 const getUserAvatarUrl = (user: ExtendedUser | null): string | null => {
   if (!user) return null;
-  
+
   // Check custom users table avatar_url first
   if (user.avatar_url) return user.avatar_url;
-  
+
   // Check Supabase auth user metadata
   if (user.user_metadata?.avatar_url) return user.user_metadata.avatar_url;
-  
+
   // Check other common OAuth avatar fields
   if (user.user_metadata?.picture) return user.user_metadata.picture;
   if (user.user_metadata?.avatar) return user.user_metadata.avatar;
-  
+
   return null;
 };
 
@@ -130,13 +130,6 @@ export default function BottomBar({
 }: BottomBarProps) {
   const [isClient, setIsClient] = useState(false);
 
-  // Christmas seasonal theme (auto-enabled Nov–Feb)
-  const isChristmasActive = (() => {
-    const m = new Date().getMonth();
-    // November (10), December (11), January (0), February (1)
-    return m === 10 || m === 11 || m === 0 || m === 1;
-  })();
-
   useEffect(() => {
     setIsClient(true);
   }, []);
@@ -148,7 +141,7 @@ export default function BottomBar({
   // Handle app button click - minimize if open, restore if minimized, open if closed
   const handleAppButtonClick = (app: ModernApp) => {
     const openWindow = openWindows.find(w => w.app.id === app.id);
-    
+
     if (!openWindow) {
       // App is not open, so open it
       onOpenApp(app);
@@ -162,26 +155,26 @@ export default function BottomBar({
   };
 
   return (
-    <div className={`${styles.selectionBar} ${isChristmasActive ? styles.christmasTheme : ''}`}>
+    <div className={styles.selectionBar}>
       {/* Time and Date */}
       <div className={desktopStyles.appBarSection}>        <button
-          onClick={onOpenCalendar}
-          className={styles.timeButton}
-          title="Open Calendar"
-        >
-          
-          <Clock size={20} />
-          <div className={styles.timeDisplay}>
-            <div className={styles.timeText}>{displayTime}</div>
-            <div className={styles.dateText}>
-              {displayDate}
-            </div>
+        onClick={onOpenCalendar}
+        className={styles.timeButton}
+        title="Open Calendar"
+      >
+
+        <Clock size={20} />
+        <div className={styles.timeDisplay}>
+          <div className={styles.timeText}>{displayTime}</div>
+          <div className={styles.dateText}>
+            {displayDate}
           </div>
-          <div className={styles.tooltip}>
-            <div className="font-semibold">Calendar</div>
-            <div className={desktopStyles.tooltipDescription}>View calendar and current time</div>
-          </div>
-        </button>
+        </div>
+        <div className={styles.tooltip}>
+          <div className="font-semibold">Calendar</div>
+          <div className={desktopStyles.tooltipDescription}>View calendar and current time</div>
+        </div>
+      </button>
       </div>
 
       {/* Apps */}
@@ -189,7 +182,7 @@ export default function BottomBar({
         {modernApps
           .filter(app => {
             if (app.id === 'account-settings') {
-              return !!user;
+              return false; // Hide from main app list, accessible via account button
             }
             return true;
           })
@@ -197,16 +190,28 @@ export default function BottomBar({
             const openWindow = openWindows.find(w => w.app.id === app.id);
             const isOpen = !!openWindow;
             const isMinimized = openWindow?.isMinimized || false;
+
+            // Determine the icon to use
+            let CurrentIcon = app.icon;
+
+            // Special case for chat: show dot icon if there was recent activity (last 5 mins)
+            if (app.id === 'chat') {
+              const isRecentlyActive = appStates.chat.lastMessageTimestamp && (Date.now() - appStates.chat.lastMessageTimestamp < 5 * 60 * 1000);
+              if (isRecentlyActive) {
+                CurrentIcon = MessageSquareDot;
+              }
+            }
+
             const runtimeInfo = getAppRuntimeInfo(app, openWindow, appStates);
-            
+
             return (
               <div key={app.id} className={desktopStyles.appContainer}>
                 <button
                   onClick={() => handleAppButtonClick(app)}
                   className={`${styles.iconButton} ${isOpen ? styles.active : ''} ${isMinimized ? styles.minimized : ''}`}
                 >
-                  <app.icon size={22} />
-             
+                  <CurrentIcon size={22} />
+
                   {isOpen && !isMinimized && <div className={styles.notificationDot} />}
                   {isMinimized && <div className={styles.minimizedIndicator} />}
                   {runtimeInfo && (
@@ -214,16 +219,14 @@ export default function BottomBar({
                       {runtimeInfo}
                     </div>
                   )}
-                   <div className={styles.tooltip}>
-            <div className="font-semibold">{app.name}</div>
-            <div className={desktopStyles.tooltipDescription}>{isMinimized ? 'Click to restore' : app.description}</div>
-          </div>
                 </button>
-                
+
                 <div className={styles.tooltip}>
                   <div className="font-semibold">{app.name}</div>
                   <div className={desktopStyles.tooltipDescription}>
-                    {isMinimized ? 'Click to restore' : app.description}
+                    {isOpen
+                      ? (isMinimized ? 'Click to restore' : 'Click to minimize')
+                      : app.description}
                   </div>
                 </div>
               </div>
@@ -233,6 +236,8 @@ export default function BottomBar({
 
       {/* Right Section */}
       <div className={desktopStyles.appBarSection}>
+        <div className={desktopStyles.divider} />
+
         <button
           onClick={onOpenBackgrounds}
           className={styles.iconButton}
@@ -252,8 +257,8 @@ export default function BottomBar({
           {user ? (
             <div className={styles.userAvatar}>
               {getUserAvatarUrl(user) ? (
-                <Image 
-                  src={getUserAvatarUrl(user)!} 
+                <Image
+                  src={getUserAvatarUrl(user)!}
                   alt="User Avatar"
                   width={32}
                   height={32}
@@ -268,8 +273,8 @@ export default function BottomBar({
                   }}
                 />
               ) : null}
-              <User 
-                size={18} 
+              <User
+                size={18}
                 style={{ display: getUserAvatarUrl(user) ? 'none' : 'flex' }}
                 className={styles.fallbackIcon}
               />
@@ -287,10 +292,10 @@ export default function BottomBar({
               {!isConfigured ? 'Auth Disabled' : user ? 'Account' : 'Sign In'}
             </div>
             <div className={desktopStyles.tooltipDescription}>
-              {!isConfigured 
-                ? 'Authentication not configured' 
-                : user 
-                  ? `Signed in as ${user.full_name || user.user_metadata?.full_name || user.email} • Click for account settings` 
+              {!isConfigured
+                ? 'Authentication not configured'
+                : user
+                  ? `Signed in as ${user.full_name || user.user_metadata?.full_name || user.email}`
                   : 'Save your progress & sync data'
               }
             </div>

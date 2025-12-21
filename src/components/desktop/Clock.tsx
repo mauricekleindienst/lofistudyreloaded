@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
+import { createPortal } from 'react-dom';
 import { Clock as ClockIcon, Play, Pause, Square, Volume2 } from 'lucide-react';
 import styles from '../../../styles/Clock.module.css';
 import desktopStyles from '../../../styles/Desktop.module.css';
@@ -175,9 +176,10 @@ export default function Clock({ isExpanded, onToggle, onClose }: ClockProps) {
     );
   }
 
-  return (
-    <div className={styles.clockModal}>
-      <div className={styles.clockContainer}>
+  // Use createPortal to render the modal outside the TopBar DOM hierarchy
+  return createPortal(
+    <div className={styles.clockModal} onClick={onClose}>
+      <div className={styles.clockContainer} onClick={e => e.stopPropagation()}>
         {/* Header */}
         <div className={styles.header}>
           <div className={styles.titleSection}>
@@ -188,8 +190,6 @@ export default function Clock({ isExpanded, onToggle, onClose }: ClockProps) {
             ×
           </button>
         </div>
-
-        
 
         {/* Timer Section */}
         <div className={styles.timerSection}>
@@ -311,6 +311,7 @@ export default function Clock({ isExpanded, onToggle, onClose }: ClockProps) {
           </div>
         </div>
       </div>
-    </div>
+    </div>,
+    document.body
   );
 }

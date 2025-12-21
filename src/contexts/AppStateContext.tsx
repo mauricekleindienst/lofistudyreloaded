@@ -28,21 +28,28 @@ interface NotesState {
   totalCount: number;
 }
 
+interface ChatState {
+  unreadCount: number;
+  lastMessageTimestamp: number | null;
+}
+
 export interface AppStates {
   pomodoro: PomodoroState;
   todo: TodoState;
   music: MusicState;
   focus: FocusState;
   notes: NotesState;
+  chat: ChatState;
 }
 
 interface AppStateContextType {
   appStates: AppStates;
-  updatePomodoroState: (state: Partial<PomodoroState>) => void;
-  updateTodoState: (state: Partial<TodoState>) => void;
-  updateMusicState: (state: Partial<MusicState>) => void;
-  updateFocusState: (state: Partial<FocusState>) => void;
-  updateNotesState: (state: Partial<NotesState>) => void;
+  updatePomodoroState: (state: Partial<PomodoroState> | ((prev: PomodoroState) => Partial<PomodoroState>)) => void;
+  updateTodoState: (state: Partial<TodoState> | ((prev: TodoState) => Partial<TodoState>)) => void;
+  updateMusicState: (state: Partial<MusicState> | ((prev: MusicState) => Partial<MusicState>)) => void;
+  updateFocusState: (state: Partial<FocusState> | ((prev: FocusState) => Partial<FocusState>)) => void;
+  updateNotesState: (state: Partial<NotesState> | ((prev: NotesState) => Partial<NotesState>)) => void;
+  updateChatState: (state: Partial<ChatState> | ((prev: ChatState) => Partial<ChatState>)) => void;
 }
 
 const defaultAppStates: AppStates = {
@@ -56,7 +63,7 @@ const defaultAppStates: AppStates = {
   },
   todo: {
     pendingCount: 0
-  },  music: {
+  }, music: {
     isPlaying: false,
     currentTrack: null
   },
@@ -65,6 +72,10 @@ const defaultAppStates: AppStates = {
   },
   notes: {
     totalCount: 0
+  },
+  chat: {
+    unreadCount: 0,
+    lastMessageTimestamp: null
   }
 };
 
@@ -72,38 +83,45 @@ const AppStateContext = createContext<AppStateContextType | undefined>(undefined
 
 export const AppStateProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [appStates, setAppStates] = useState<AppStates>(defaultAppStates);
-  const updatePomodoroState = useCallback((state: Partial<PomodoroState>) => {
+  const updatePomodoroState = useCallback((state: Partial<PomodoroState> | ((prev: PomodoroState) => Partial<PomodoroState>)) => {
     setAppStates(prev => ({
       ...prev,
-      pomodoro: { ...prev.pomodoro, ...state }
+      pomodoro: { ...prev.pomodoro, ...(typeof state === 'function' ? state(prev.pomodoro) : state) }
     }));
   }, []);
 
-  const updateTodoState = useCallback((state: Partial<TodoState>) => {
+  const updateTodoState = useCallback((state: Partial<TodoState> | ((prev: TodoState) => Partial<TodoState>)) => {
     setAppStates(prev => ({
       ...prev,
-      todo: { ...prev.todo, ...state }
+      todo: { ...prev.todo, ...(typeof state === 'function' ? state(prev.todo) : state) }
     }));
   }, []);
 
-  const updateMusicState = useCallback((state: Partial<MusicState>) => {
+  const updateMusicState = useCallback((state: Partial<MusicState> | ((prev: MusicState) => Partial<MusicState>)) => {
     setAppStates(prev => ({
       ...prev,
-      music: { ...prev.music, ...state }
+      music: { ...prev.music, ...(typeof state === 'function' ? state(prev.music) : state) }
     }));
   }, []);
 
-  const updateFocusState = useCallback((state: Partial<FocusState>) => {
+  const updateFocusState = useCallback((state: Partial<FocusState> | ((prev: FocusState) => Partial<FocusState>)) => {
     setAppStates(prev => ({
       ...prev,
-      focus: { ...prev.focus, ...state }
+      focus: { ...prev.focus, ...(typeof state === 'function' ? state(prev.focus) : state) }
     }));
   }, []);
 
-  const updateNotesState = useCallback((state: Partial<NotesState>) => {
+  const updateNotesState = useCallback((state: Partial<NotesState> | ((prev: NotesState) => Partial<NotesState>)) => {
     setAppStates(prev => ({
       ...prev,
-      notes: { ...prev.notes, ...state }
+      notes: { ...prev.notes, ...(typeof state === 'function' ? state(prev.notes) : state) }
+    }));
+  }, []);
+
+  const updateChatState = useCallback((state: Partial<ChatState> | ((prev: ChatState) => Partial<ChatState>)) => {
+    setAppStates(prev => ({
+      ...prev,
+      chat: { ...prev.chat, ...(typeof state === 'function' ? state(prev.chat) : state) }
     }));
   }, []);
 
@@ -114,7 +132,8 @@ export const AppStateProvider: React.FC<{ children: ReactNode }> = ({ children }
       updateTodoState,
       updateMusicState,
       updateFocusState,
-      updateNotesState
+      updateNotesState,
+      updateChatState
     }}>
       {children}
     </AppStateContext>

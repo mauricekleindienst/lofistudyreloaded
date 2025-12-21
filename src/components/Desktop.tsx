@@ -1,15 +1,16 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from 'react';
-import { 
-  Timer, 
-  CheckSquare, 
+import {
+  Timer,
+  CheckSquare,
   Calculator as CalculatorIcon,
   Settings,
   Volume2,
   StickyNote,
   MessageSquare
 } from 'lucide-react';
+import { subscribeToMessages } from '../lib/chat';
 import { backgrounds, DEFAULT_BACKGROUND } from '@/data/backgrounds';
 import desktopStyles from '../../styles/Desktop.module.css';
 import { useAppState } from '../contexts/AppStateContext';
@@ -104,20 +105,20 @@ const modernApps: ModernApp[] = [
     description: 'Manage your account and preferences',
     category: 'study'
   }
- 
+
 ];
 
 // Main Modern Desktop Component
 const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
   // Access app state context
-  const { appStates } = useAppState();
+  const { appStates, updateChatState } = useAppState();
   const { user, isConfigured } = useAuth();
-  const { 
-    isAuthenticated, 
-    saveSelectedBackground, 
-    loadSelectedBackground 
+  const {
+    isAuthenticated,
+    saveSelectedBackground,
+    loadSelectedBackground
   } = useDataPersistence();
-  
+
   // Responsive utilities
   const { getResponsiveSize: getResponsiveSizeUtil, breakpointInfo, isClient: isResponsiveClient } = useResponsive();
 
@@ -134,9 +135,8 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
   const [backgroundSaveLoading, setBackgroundSaveLoading] = useState(false);
   const [isMusicSidebarOpen, setIsMusicSidebarOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('all');
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  const [animationDisabled, setAnimationDisabled] = useState(false);
   const [showStats, setShowStats] = useState(false);
+  const [isTransitioning, setIsTransitioning] = useState(false);
 
   // Enhanced video buffering state
   const [videoLoadError, setVideoLoadError] = useState(false);
@@ -144,7 +144,7 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
   const [preloadedVideos, setPreloadedVideos] = useState<Map<string, HTMLVideoElement>>(new Map());
   const [currentlyBuffering, setCurrentlyBuffering] = useState<string[]>([]);
   const [bufferHealths, setBufferHealths] = useState<Map<string, number>>(new Map());
-  
+
   // Refs for event handling
   const videoRef = useRef<HTMLVideoElement>(null);
   const bufferCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
@@ -159,20 +159,7 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
   // Initialize client-side rendering flag
   useEffect(() => {
     setIsClient(true);
-    
-    // Load animation disabled preference from localStorage
-    const savedAnimationDisabled = localStorage.getItem('desktop_animationDisabled');
-    if (savedAnimationDisabled !== null) {
-      setAnimationDisabled(savedAnimationDisabled === 'true');
-    }
   }, []);
-
-  // Save animation disabled preference to localStorage
-  useEffect(() => {
-    if (isClient) {
-      localStorage.setItem('desktop_animationDisabled', animationDisabled.toString());
-    }
-  }, [animationDisabled, isClient]);
 
   // Advanced Video Buffer Management System
   useEffect(() => {
@@ -194,18 +181,18 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
           video.loop = true;
           video.playsInline = true;
           video.crossOrigin = 'anonymous';
-          
+
           let progressTimer: NodeJS.Timeout | null = null;
           let timeoutTimer: NodeJS.Timeout | null = null;
-          
+
           const updateProgress = () => {
             if (video.buffered.length > 0) {
               const bufferedEnd = video.buffered.end(video.buffered.length - 1);
               const duration = video.duration || 0;
               const progress = duration > 0 ? bufferedEnd / duration : 0;
-              
+
               setBufferHealths(prev => new Map(prev.set(background.id.toString(), progress)));
-              
+
               if (progress >= MIN_BUFFER_HEALTH) {
                 if (progressTimer) clearInterval(progressTimer);
                 resolve(video);
@@ -231,7 +218,7 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
               newMap.delete(background.id.toString());
               return newMap;
             });
-          
+
           };
 
           const onCanPlay = () => {
@@ -242,7 +229,7 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
           video.addEventListener('error', onError);
           video.addEventListener('canplay', onCanPlay);
           video.addEventListener('progress', updateProgress);
-          
+
           video.src = background.src;
           video.load();
 
@@ -310,16 +297,16 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
 
       for (const background of priorityBackgrounds) {
         const backgroundId = background.id.toString();
-        
+
         // Skip if already processing or already preloaded
-        if (processingBackgroundsRef.current.has(backgroundId) || 
-            preloadedVideos.has(backgroundId)) {
+        if (processingBackgroundsRef.current.has(backgroundId) ||
+          preloadedVideos.has(backgroundId)) {
           continue;
         }
 
         processingBackgroundsRef.current.add(backgroundId);
         setCurrentlyBuffering(prev => [...prev, backgroundId]);
-        
+
         try {
           await preloadManagerRef.current!.preloadVideo(background);
         } catch (error) {
@@ -339,13 +326,13 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
   // Update time and date every second
   useEffect(() => {
     if (!isClient) return;
-    
+
     const updateDateTime = () => {
       const now = new Date();
       setCurrentTime(now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }));
       setCurrentDate(now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }));
     };
-    
+
     updateDateTime();
     const timer = setInterval(updateDateTime, 1000);
     return () => clearInterval(timer);
@@ -356,53 +343,48 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
     if (videoRef.current) {
       setVideoLoadError(false);
       setRetryCount(0);
-      
+
       // Start buffer health monitoring
       if (bufferCheckIntervalRef.current) {
         clearInterval(bufferCheckIntervalRef.current);
       }
-      
+
       bufferCheckIntervalRef.current = setInterval(() => {
         if (videoRef.current && videoRef.current.buffered.length > 0) {
           const bufferedEnd = videoRef.current.buffered.end(videoRef.current.buffered.length - 1);
           const duration = videoRef.current.duration || 0;
           const progress = duration > 0 ? bufferedEnd / duration : 0;
-          
+
           // Update buffer health for current background
           setBufferHealths(prev => new Map(prev.set(currentBackground.id.toString(), progress)));
         }
       }, 1000);
-      
-      // Only play the video if animation is not disabled
-      if (!animationDisabled) {
-        videoRef.current.play().catch(console.error);
-      } else {
-        // Set to first frame when animation is disabled
-        videoRef.current.currentTime = 0;
-      }
+
+      // Only play the video
+      videoRef.current.play().catch(console.error);
     }
   }, [currentBackground.id]);
 
   const handleVideoError = useCallback(() => {
     console.error('Video failed to load:', currentBackground.src);
     setVideoLoadError(true);
-    
+
     // Stop buffer monitoring
     if (bufferCheckIntervalRef.current) {
       clearInterval(bufferCheckIntervalRef.current);
     }
-    
+
     // Try using preloaded version first
     if (preloadManagerRef.current) {
       const bufferedVideo = preloadManagerRef.current.getBufferedVideo(currentBackground.id.toString());
       if (bufferedVideo && videoRef.current) {
-        console.log('Using preloaded video as fallback');
+        // Using preloaded video as fallback
         videoRef.current.src = bufferedVideo.src;
         videoRef.current.load();
         return;
       }
     }
-    
+
     // Retry mechanism - try up to 3 times
     if (retryCount < 3 && currentBackground.id !== DEFAULT_BACKGROUND.id) {
       setTimeout(() => {
@@ -423,14 +405,14 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
   // Enhanced video loading with preload hint and buffer management
   const handleVideoLoadStart = useCallback(() => {
     setVideoLoadError(false);
-    
+
     // Check if we have this video preloaded
     if (preloadManagerRef.current) {
       const bufferedVideo = preloadManagerRef.current.getBufferedVideo(currentBackground.id.toString());
       const bufferHealth = preloadManagerRef.current.getBufferHealth(currentBackground.id.toString());
-      
+
       if (bufferedVideo && bufferHealth > 0.3) {
-        console.log(`Using preloaded video for background ${currentBackground.id} (${Math.round(bufferHealth * 100)}% buffered)`);
+        // Using preloaded video
       }
     }
   }, [currentBackground.id]);
@@ -439,42 +421,38 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
   useEffect(() => {
     setRetryCount(0); // Reset retry count when background changes
     setVideoLoadError(false);
-    
+
     // Clear any existing buffer monitoring
     if (bufferCheckIntervalRef.current) {
       clearInterval(bufferCheckIntervalRef.current);
     }
-    
+
     // Check if we have this video preloaded and ready
     if (preloadManagerRef.current) {
       const bufferedVideo = preloadManagerRef.current.getBufferedVideo(currentBackground.id.toString());
       const bufferHealth = preloadManagerRef.current.getBufferHealth(currentBackground.id.toString());
-      
+
       if (bufferedVideo && bufferHealth > 0.3) {
-        console.log(`Instantly switching to preloaded background ${currentBackground.id}`);
-        
+        // Instantly switching to preloaded background
+
         if (videoRef.current) {
           videoRef.current.src = bufferedVideo.src;
           videoRef.current.currentTime = bufferedVideo.currentTime;
-          if (!animationDisabled) {
-            videoRef.current.play().catch(() => {
-              // Video autoplay was prevented
-            });
-          }
+          videoRef.current.play().catch(() => {
+            // Video autoplay was prevented
+          });
         }
         return;
       }
     }
-    
+
     // Fallback to normal loading
     if (videoRef.current) {
-      if (!animationDisabled) {
-        videoRef.current.play().catch(() => {
-          // Video autoplay was prevented
-        });
-      }
+      videoRef.current.play().catch(() => {
+        // Video autoplay was prevented
+      });
     }
-  }, [currentBackground, animationDisabled]);
+  }, [currentBackground]);
 
   // Separate effect for preloading videos to avoid infinite loops
   useEffect(() => {
@@ -483,10 +461,10 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
     }
 
     const backgroundId = currentBackground.id.toString();
-    
+
     // Skip if already processing or already preloaded
-    if (processingBackgroundsRef.current.has(backgroundId) || 
-        preloadedVideos.has(backgroundId)) {
+    if (processingBackgroundsRef.current.has(backgroundId) ||
+      preloadedVideos.has(backgroundId)) {
       return;
     }
 
@@ -495,7 +473,7 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
         processingBackgroundsRef.current.add(backgroundId);
         setCurrentlyBuffering(prev => [...prev, backgroundId]);
         await preloadManagerRef.current!.preloadVideo(currentBackground);
-        console.log(`Successfully preloaded background ${currentBackground.id}`);
+        // Successfully preloaded background
       } catch (error) {
         console.warn(`Failed to preload background ${currentBackground.id}:`, error);
       } finally {
@@ -527,21 +505,44 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
     loadSavedBackground();
   }, [isAuthenticated, loadSelectedBackground]);
 
-  // Control video playback based on animation disabled state
+  // Control video playback
   useEffect(() => {
     if (videoRef.current && currentBackground?.src) {
-      if (animationDisabled) {
-        // Pause the video and show first frame when animation is disabled
-        videoRef.current.pause();
-        videoRef.current.currentTime = 0;
-      } else {
-        // Play the video when animation is enabled
-        videoRef.current.play().catch((error) => {
-          console.error('Failed to play background video:', error);
-        });
-      }
+      // Play the video when background changes
+      videoRef.current.play().catch((error) => {
+        console.error('Failed to play background video:', error);
+      });
     }
-  }, [animationDisabled, currentBackground?.src]);
+  }, [currentBackground?.src]);
+
+  // Reset unread count when chat is opened or restored
+  useEffect(() => {
+    if (!isClient) return;
+    const isChatVisible = openWindows.some(w => w.app.id === 'chat' && !w.isMinimized);
+    if (isChatVisible && appStates.chat.unreadCount > 0) {
+      updateChatState({ unreadCount: 0 });
+    }
+  }, [openWindows, appStates.chat.unreadCount, updateChatState, isClient]);
+
+  // Global chat listener for unread count
+  useEffect(() => {
+    if (!isClient) return;
+
+    const unsubscribe = subscribeToMessages((message) => {
+      // Always update last message timestamp for any activity
+      updateChatState({ lastMessageTimestamp: Date.now() });
+
+      // Don't count own messages for the unread badge, except for our test bot
+      if (user && message.user_id === user.id && message.username !== 'Lofi Bot 🤖') return;
+
+      const isChatVisible = openWindows.some(w => w.app.id === 'chat' && !w.isMinimized);
+      if (!isChatVisible) {
+        updateChatState(prev => ({ unreadCount: prev.unreadCount + 1 }));
+      }
+    });
+
+    return () => unsubscribe();
+  }, [isClient, openWindows, updateChatState, user]);
 
   // Handle background change with database persistence and intelligent preloading
   const handleBackgroundChange = useCallback(async (background: Background) => {
@@ -550,12 +551,19 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
       const bufferedVideo = preloadManagerRef.current.getBufferedVideo(background.id.toString());
       const bufferHealth = preloadManagerRef.current.getBufferHealth(background.id.toString());
       const isInstantSwitch = bufferedVideo !== null && bufferHealth > 0.3;
-      console.log(`Background switch - instant: ${isInstantSwitch}`);
+      if (isInstantSwitch) {
+        // Instant switch
+      } else {
+        setIsTransitioning(true);
+        setTimeout(() => {
+          setIsTransitioning(false);
+        }, 500);
+      }
     }
-    
+
     setCurrentBackground(background);
-    
-   
+
+
 
     // Save to localStorage for non-authenticated users
     try {
@@ -578,11 +586,11 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
         setBackgroundSaveLoading(false);
       }
     }
-    
+
     // Clean up old buffers and preload nearby backgrounds
     if (preloadManagerRef.current) {
       preloadManagerRef.current.clearOldBuffers(5);
-      
+
       // Preload next and previous backgrounds for smooth navigation
       const currentIndex = backgrounds.findIndex(bg => bg.id === background.id);
       const nextBackgrounds = [
@@ -590,14 +598,14 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
         backgrounds[currentIndex - 1],
         backgrounds[currentIndex + 2]
       ].filter(Boolean);
-      
+
       nextBackgrounds.forEach(nextBg => {
-        if (!currentlyBuffering.includes(nextBg.id.toString()) && 
-            !preloadedVideos.has(nextBg.id.toString())) {
+        if (!currentlyBuffering.includes(nextBg.id.toString()) &&
+          !preloadedVideos.has(nextBg.id.toString())) {
           setCurrentlyBuffering(prev => [...prev, nextBg.id.toString()]);
           preloadManagerRef.current!.preloadVideo(nextBg)
             .then(() => {
-              console.log(`Preloaded nearby background ${nextBg.id}`);
+              // Preloaded nearby background
             })
             .catch(error => {
               console.warn(`Failed to preload nearby background ${nextBg.id}:`, error);
@@ -615,59 +623,59 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
     if (!isClient) return { width: 350, height: 300, minWidth: 300, minHeight: 250 };
 
     // Enhanced base sizes with better mobile considerations
-    const baseSizes: Record<string, { 
-      width: number; 
-      height: number; 
-      minWidth: number; 
+    const baseSizes: Record<string, {
+      width: number;
+      height: number;
+      minWidth: number;
       minHeight: number;
       aspectRatio?: number; // Optional aspect ratio for responsive scaling
     }> = {
-      'pomodoro': { 
-        width: 320, 
-        height: 450, 
-        minWidth: 280, 
+      'pomodoro': {
+        width: 320,
+        height: 450,
+        minWidth: 280,
         minHeight: 360,
         aspectRatio: 0.71 // width/height
       },
-      'todo': { 
-        width: 350, 
-        height: 600, 
-        minWidth: 320, 
+      'todo': {
+        width: 350,
+        height: 600,
+        minWidth: 320,
         minHeight: 400,
         aspectRatio: 0.56
       },
-      'music': { 
-        width: 300, 
-        height: 240, 
-        minWidth: 280, 
+      'music': {
+        width: 300,
+        height: 240,
+        minWidth: 280,
         minHeight: 200,
         aspectRatio: 1.25
       },
-      'notes': { 
-        width: 800, 
-        height: 600, 
-        minWidth: 400, 
+      'notes': {
+        width: 800,
+        height: 600,
+        minWidth: 400,
         minHeight: 300,
         aspectRatio: 1.33
       },
-      'calculator': { 
-        width: 280, 
-        height: 380, 
-        minWidth: 240, 
+      'calculator': {
+        width: 280,
+        height: 380,
+        minWidth: 240,
         minHeight: 320,
         aspectRatio: 0.74
       },
-      'sound-player': { 
-        width: 280, 
-        height: 400, 
-        minWidth: 280, 
+      'sound-player': {
+        width: 280,
+        height: 400,
+        minWidth: 280,
         minHeight: 300,
         aspectRatio: 0.79
       },
-      'account-settings': { 
-        width: 400, 
-        height: 500, 
-        minWidth: 340, 
+      'account-settings': {
+        width: 400,
+        height: 500,
+        minWidth: 340,
         minHeight: 400,
         aspectRatio: 0.8
       },
@@ -680,10 +688,10 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
       }
     };
 
-    const baseSize = baseSizes[appId] || { 
-      width: 380, 
-      height: 450, 
-      minWidth: 320, 
+    const baseSize = baseSizes[appId] || {
+      width: 380,
+      height: 450,
+      minWidth: 320,
       minHeight: 350,
       aspectRatio: 0.84
     };
@@ -701,11 +709,11 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
   // App management functions
   const openApp = useCallback((app: ModernApp) => {
     const existingWindow = openWindows.find(w => w.app.id === app.id);
-    
+
     if (existingWindow) {
       // Bring to front if already open
-      setOpenWindows(prev => prev.map(w => 
-        w.id === existingWindow.id 
+      setOpenWindows(prev => prev.map(w =>
+        w.id === existingWindow.id
           ? { ...w, zIndex: highestZIndex + 1, isMinimized: false }
           : w
       ));
@@ -715,7 +723,7 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
 
     const windowCount = openWindows.length;
     const size = getResponsiveSize(app.id);
-    
+
     // Responsive positioning logic
     const getResponsivePosition = () => {
       if (!isResponsiveClient) {
@@ -762,7 +770,7 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
         const resetCount = Math.floor(windowCount / 4); // Reset every 4 windows
         x = baseOffsetX + (resetCount * cascadeOffset * 2);
         y = baseOffsetY + ((windowCount % 4) * cascadeOffset);
-        
+
         // Final bounds check
         x = Math.min(Math.max(x, 10), maxX);
         y = Math.min(Math.max(y, 10), maxY);
@@ -776,7 +784,7 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
 
       return { x, y };
     };
-    
+
     const newWindow: ModernWindow = {
       id: `${app.id}-${Date.now()}`,
       app,
@@ -795,20 +803,20 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
   }, [openWindows]);
 
   const minimizeWindow = useCallback((windowId: string) => {
-    setOpenWindows(prev => prev.map(w => 
+    setOpenWindows(prev => prev.map(w =>
       w.id === windowId ? { ...w, isMinimized: true } : w
     ));
   }, []);
 
   const restoreWindow = useCallback((windowId: string) => {
-    setOpenWindows(prev => prev.map(w => 
+    setOpenWindows(prev => prev.map(w =>
       w.id === windowId ? { ...w, isMinimized: false, zIndex: highestZIndex + 1 } : w
     ));
     setHighestZIndex(prev => prev + 1);
   }, [highestZIndex]);
 
   const bringToFront = useCallback((windowId: string) => {
-    setOpenWindows(prev => prev.map(w => 
+    setOpenWindows(prev => prev.map(w =>
       w.id === windowId ? { ...w, zIndex: highestZIndex + 1 } : w
     ));
     setHighestZIndex(prev => prev + 1);
@@ -925,50 +933,14 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
     );
   }
 
-          {/* Smooth progress indicator */}
-          <div className={desktopStyles.loadingProgress}>
-            <div
-              className={desktopStyles.progressBar}
-              style={{
-                width: `${Math.min(
-                  100,
-                  Math.round(
-                    (preloadManagerRef.current?.getBufferHealth(
-                      currentBackground.id.toString()
-                    ) ?? 0) * 100
-                  )
-                )}%`,
-              }}
-            ></div>
-          </div>
-
-
   return (
     <div className={desktopStyles.desktop}>
       {/* Background Video with Enhanced Buffering wrapped in ErrorBoundary */}
       <VideoErrorBoundary fallback={<div className={desktopStyles.backgroundFallback}><div className={desktopStyles.fallbackContent}><p>Background system unavailable</p></div></div>}>
-      <div>
-        {currentBackground?.src && (
-          <>
-            {animationDisabled ? (
-              // Still image when animation is disabled
-              <video
-                ref={videoRef}
-                className={desktopStyles.backgroundVideo}
-                src={currentBackground.src}
-                muted
-                preload="metadata"
-                onLoadStart={handleVideoLoadStart}
-                onCanPlay={handleVideoLoad}
-                onError={handleVideoError}
-                style={{
-                  opacity: videoLoadError ? 0 : 1,
-                  transition: 'opacity 0.3s ease'
-                }}
-                poster={`${currentBackground.src}#t=0.1`}
-              />
-            ) : (
-              // Animated video when animation is enabled
+        <div>
+          {currentBackground?.src && (
+            <>
+              {/* Animated video */}
               <video
                 ref={videoRef}
                 className={desktopStyles.backgroundVideo}
@@ -986,42 +958,48 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
                   transition: 'opacity 0.3s ease'
                 }}
               />
-            )}
-          </>
-        )}
-        
-       
+            </>
+          )}
 
-        {/* Fallback for video errors */}
-        {videoLoadError && (
-          <div className={desktopStyles.backgroundFallback}>
-            <div className={desktopStyles.fallbackContent}>
-              <p>Background video unavailable</p>
-              <button 
-                onClick={() => setCurrentBackground(DEFAULT_BACKGROUND)}
-                className={desktopStyles.fallbackButton}
-              >
-                Use Default Background
-              </button>
+
+
+          {/* Fallback for video errors */}
+          {videoLoadError && (
+            <div className={desktopStyles.backgroundFallback}>
+              <div className={desktopStyles.fallbackContent}>
+                <p>Background video unavailable</p>
+                <button
+                  onClick={() => setCurrentBackground(DEFAULT_BACKGROUND)}
+                  className={desktopStyles.fallbackButton}
+                >
+                  Use Default Background
+                </button>
+              </div>
             </div>
-          </div>
-        )}
-        
-       
-      </div>
+          )}
+
+
+        </div>
       </VideoErrorBoundary>
 
       {/* Desktop UI Components */}
-      <TopBar 
+      <TopBar
         user={user}
         onToggleStats={() => setShowStats(!showStats)}
-        onShare={() => { } } // Empty function for now
-        onAccountAction={function (): void {
-          throw new Error('Function not implemented.');
-        } }        
+        onShare={() => { }} // Empty function for now
+        onAccountAction={() => {
+          if (!user) {
+            onShowAuth();
+          } else {
+            const accountSettingsApp = modernApps.find(app => app.id === 'account-settings');
+            if (accountSettingsApp) {
+              openApp(accountSettingsApp);
+            }
+          }
+        }}
       />
 
-      <BottomBar 
+      <BottomBar
         currentTime={currentTime}
         currentDate={currentDate}
         modernApps={modernApps}
@@ -1047,7 +1025,7 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
         }}
       />
 
-      <WindowManager 
+      <WindowManager
         openWindows={openWindows}
         onMinimize={minimizeWindow}
         onClose={closeWindow}
@@ -1059,24 +1037,18 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
         <BackgroundSelector
           showBackgrounds={showBackgrounds}
           currentBackground={currentBackground}
-         
           selectedCategory={selectedCategory}
-          animationDisabled={animationDisabled}
           onClose={() => {
             setShowBackgrounds(false);
-            
           }}
           onBackgroundChange={handleBackgroundChange}
           onCategoryChange={setSelectedCategory}
-          onAnimationToggle={setAnimationDisabled}
-        
-        
         />
       )}
 
       {/* Calendar Modal */}
       {showCalendar && (
-        <Calendar 
+        <Calendar
           isVisible={showCalendar}
           onClose={() => setShowCalendar(false)}
         />
@@ -1084,21 +1056,21 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
 
       {/* Stats Modal */}
       {showStats && (
-        <StatsModal 
+        <StatsModal
           isOpen={showStats}
-          onClose={() => setShowStats(false)} 
+          onClose={() => setShowStats(false)}
         />
       )}
 
       {/* Music Player Sidebar */}
-      <MusicPlayerSidebar 
+      <MusicPlayerSidebar
         isOpen={isMusicSidebarOpen}
         onToggle={() => setIsMusicSidebarOpen(!isMusicSidebarOpen)}
       />
 
       {/* Notification System */}
-      <NotificationManager 
-        notifications={notifications} 
+      <NotificationManager
+        notifications={notifications}
         onRemoveNotification={(id: string) => {
           setNotifications(prev => prev.filter(n => n.id !== id));
         }}

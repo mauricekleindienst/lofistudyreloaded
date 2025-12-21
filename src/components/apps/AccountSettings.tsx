@@ -116,10 +116,10 @@ const AccountSettings: React.FC = () => {
       ]);
 
       // Log any errors but continue with available data
-      if (todosRes.error) console.log('Todos table not found or accessible:', todosRes.error);
-      if (notesRes.error) console.log('Notes table not found or accessible:', notesRes.error);
-      if (sessionsRes.error) console.log('Sessions table not found or accessible:', sessionsRes.error);
-      if (profileRes.error) console.log('Profiles table not found or accessible:', profileRes.error);
+      if (todosRes.error) console.error('Todos table not found or accessible:', todosRes.error);
+      if (notesRes.error) console.error('Notes table not found or accessible:', notesRes.error);
+      if (sessionsRes.error) console.error('Sessions table not found or accessible:', sessionsRes.error);
+      if (profileRes.error) console.error('Profiles table not found or accessible:', profileRes.error);
 
       const userData = {
         account_info: {
@@ -179,24 +179,24 @@ const AccountSettings: React.FC = () => {
       try {
         deletePromises.push(supabase.from('todos').delete().eq('user_id', user.id));
       } catch {
-        console.log('Todos table not accessible for deletion');
+        // Todos table not accessible for deletion
       }
       
       try {
         deletePromises.push(supabase.from('notes').delete().eq('user_id', user.id));      } catch {
-        console.log('Notes table not accessible for deletion');
+        // Notes table not accessible for deletion
       }
       
       try {
         deletePromises.push(supabase.from('pomodoro_sessions').delete().eq('user_id', user.id));
       } catch {
-        console.log('Sessions table not accessible for deletion');
+        // Sessions table not accessible for deletion
       }
       
       try {
         deletePromises.push(supabase.from('profiles').delete().eq('id', user.id));
       } catch {
-        console.log('Profiles table not accessible for deletion');
+        // Profiles table not accessible for deletion
       }
 
       // Execute all deletion promises

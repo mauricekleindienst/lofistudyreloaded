@@ -18,15 +18,15 @@ export async function sendMessage(message: Omit<ChatMessage, 'id' | 'created_at'
       .insert([message])
       .select()
       .single();
-    
+
     if (error) {
-      console.error('Error sending message:', error);
+      console.error('Error sending message:', JSON.stringify(error, null, 2));
       return null;
     }
-    
+
     return data;
   } catch (error) {
-    console.error('Failed to send message:', error);
+    console.error('Failed to send message:', error); // Log the full error object
     return null;
   }
 }
@@ -38,12 +38,12 @@ export async function getMessages(limit = 50): Promise<ChatMessage[]> {
       .select('*')
       .order('created_at', { ascending: false })
       .limit(limit);
-    
+
     if (error) {
       console.error('Error loading messages:', error);
       return [];
     }
-    
+
     return data?.reverse() || [];
   } catch (error) {
     console.error('Failed to load messages:', error);
@@ -66,7 +66,7 @@ export function subscribeToMessages(callback: (message: ChatMessage) => void): (
       }
     )
     .subscribe();
-  
+
   return () => {
     supabase.removeChannel(channel);
   };
@@ -83,7 +83,7 @@ export function trackPresence(userId: string): () => void {
         await presenceChannel.track({ user_id: userId });
       }
     });
-  
+
   return () => {
     supabase.removeChannel(presenceChannel);
   };

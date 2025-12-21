@@ -47,14 +47,14 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(0, 0, 0, 0.7);
-  backdrop-filter: blur(8px);
-  z-index: 1000;
+  background: rgba(0, 0, 0, 0.5); /* Slightly darker overlay for better focus */
+  backdrop-filter: blur(4px);
+  z-index: 99999; /* Ensure it sits on top of everything, including TopBar */
   display: flex;
   align-items: center;
   justify-content: center;
   padding: 20px;
-  animation: fadeIn 0.3s ease-out;
+  animation: fadeIn 0.2s ease-out;
 }
 
 .clockContainer {
@@ -63,11 +63,23 @@
   border-radius: 16px;
   border: 1px solid var(--border-color);
   width: 100%;
-  max-width: 360px;
+  max-width: 320px; /* Slightly narrower for a cleaner look */
   max-height: 80vh;
   overflow-y: auto;
-  box-shadow: var(--shadow-heavy);
-  animation: slideUp 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5); /* Stronger shadow for "pop-out" effect */
+  animation: scaleIn 0.3s cubic-bezier(0.16, 1, 0.3, 1); /* Bouncy scale animation */
+  transform-origin: center center;
+}
+
+@keyframes scaleIn {
+  from {
+    opacity: 0;
+    transform: scale(0.95) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
 }
 
 /* Header */

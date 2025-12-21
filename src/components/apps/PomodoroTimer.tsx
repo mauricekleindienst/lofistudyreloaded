@@ -23,6 +23,7 @@ import {
   Armchair,
   X
 } from "lucide-react";
+import { trackPomodoroSession } from '../Analytics';
 import styles from "../../../styles/PomodoroTimer.module.css";
 import { createClient } from "../../utils/supabase/client";
 
@@ -234,7 +235,7 @@ export default function PomodoroTimer() {  const [state, dispatch] = useReducer(
   // Simple timer completion handler
   useEffect(() => {
     if (state.timeLeft === 0 && state.isTimerRunning) {
-      console.log('Timer hit 0! Current mode:', state.currentMode, 'Pomodoro count:', state.pomodoroCount);
+      // Timer hit 0
       
       // Stop the timer
       dispatch({ type: "TOGGLE_TIMER" });
@@ -243,7 +244,10 @@ export default function PomodoroTimer() {  const [state, dispatch] = useReducer(
       if (state.currentMode === "pomodoro") {
         // Completed a focus session
         const newCount = state.pomodoroCount + 1;
-        console.log('Completed focus session, new count:', newCount);
+        
+        // Track session completion in analytics
+        const durationMinutes = Math.round(state.pomodoroDurations.pomodoro / 60);
+        trackPomodoroSession(durationMinutes, true);
         
         // Save to database if authenticated
         if (isAuthenticated && user?.email) {
@@ -292,19 +296,19 @@ export default function PomodoroTimer() {  const [state, dispatch] = useReducer(
         
         // Switch to break (long break every 4th pomodoro)
         if (newCount % 4 === 0) {
-          console.log('Switching to long break');
+          // Switching to long break
           dispatch({ type: "SET_MODE", payload: "longBreak", autoStart: true });
           playSound(soundRefs.longPause);
           showNotification("Great session!", "Time for a long break.");
         } else {
-          console.log('Switching to short break');
+          // Switching to short break
           dispatch({ type: "SET_MODE", payload: "shortBreak", autoStart: true });
           playSound(soundRefs.pomodoroEnd);
           showNotification("Nice work!", "Time for a short break.");
         }
       } else {
         // Completed a break session
-        console.log('Completed break, switching to focus');
+        // Switching to focus
         dispatch({ type: "SET_MODE", payload: "pomodoro", autoStart: true });
         playSound(soundRefs.pomodoroStart);
         showNotification("Break's Over!", "Time to get back to focus.");

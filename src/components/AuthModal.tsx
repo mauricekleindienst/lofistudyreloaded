@@ -53,8 +53,6 @@ const AuthModal: React.FC<AuthModalProps> = ({ isVisible, onClose }) => {
   };
 
   const handleForgotPassword = async () => {
-    console.log('handleForgotPassword called with email:', email);
-    
     if (!email) {
       setError('Please enter your email address first');
       return;
@@ -65,23 +63,18 @@ const AuthModal: React.FC<AuthModalProps> = ({ isVisible, onClose }) => {
     
     try {
       const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
-      console.log('Sending reset email with redirectTo:', `${siteUrl}/auth/recovery`);
       
       const { error } = await supabase.auth.resetPasswordForEmail(email, {
         redirectTo: `${siteUrl}/auth/recovery`,
       });
       
-      console.log('Reset password response:', { error });
-      
       if (error) {
-        console.error('Reset password error:', error);
         setError(error.message || 'Failed to send reset email');
       } else {
         setResetEmailSent(true);
         setError('Password reset email sent! Check your inbox.');
       }
     } catch (err) {
-      console.error('Error sending password reset:', err);
       setError('Failed to send password reset email. Please try again.');
     } finally {
       setLoading(false);
@@ -187,16 +180,15 @@ const AuthModal: React.FC<AuthModalProps> = ({ isVisible, onClose }) => {
                 </div>
 
                 {!isSignUp && (
-                  <div style={{ textAlign: 'right', marginBottom: '16px' }}>
+                  <div className={styles.forgotPassword}>
                     <button
                       type="button"
                       onClick={() => {
-                        console.log('Forgot password button clicked');
+                        // Forgot password button clicked
                         handleForgotPassword();
                       }}
-                      className={styles.switchButton}
+                      className={styles.forgotPasswordButton}
                       disabled={loading}
-                      style={{ fontSize: '0.85rem', padding: '0' }}
                     >
                       Forgot Password?
                     </button>

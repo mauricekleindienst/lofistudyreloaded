@@ -1,4 +1,4 @@
-/* SoundPlayer - Minimalistic Design */
+/* SoundPlayer - Minimalistic Glass Design */
 
 /* Container */
 .container {
@@ -16,19 +16,28 @@
   display: flex;
   align-items: center;
   gap: 12px;
-  padding: 8px 12px;
-  background: rgba(255, 255, 255, 0.04);
-  border-radius: 8px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  padding: 12px 16px;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 12px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
   flex-shrink: 0;
+  backdrop-filter: blur(8px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  transition: all 0.3s ease;
+}
+
+.masterControls:hover {
+  background: rgba(255, 255, 255, 0.05);
+  border-color: rgba(255, 255, 255, 0.1);
+  transform: translateY(-1px);
 }
 
 .masterMuteButton {
-  width: 28px;
-  height: 28px;
-  border: 1px solid rgba(255, 255, 255, 0.15);
-  border-radius: 6px;
-  background: transparent;
+  width: 32px;
+  height: 32px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.05);
   color: var(--text-secondary);
   display: flex;
   align-items: center;
@@ -40,8 +49,9 @@
 
 .masterMuteButton:hover {
   color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  transform: scale(1.05);
 }
 
 .masterVolumeSlider {
@@ -56,39 +66,49 @@
 
 .masterVolumeSlider::-webkit-slider-thumb {
   appearance: none;
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   background: var(--accent-color);
   border-radius: 50%;
   cursor: pointer;
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.3);
+  transition: transform 0.2s ease;
+}
+
+.masterVolumeSlider::-webkit-slider-thumb:hover {
+  transform: scale(1.1);
 }
 
 .masterVolumeSlider::-moz-range-thumb {
-  width: 14px;
-  height: 14px;
+  width: 16px;
+  height: 16px;
   background: var(--accent-color);
   border-radius: 50%;
   cursor: pointer;
-  border: none;
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  box-shadow: 0 0 8px rgba(0, 0, 0, 0.3);
 }
 
 .masterVolumeValue {
-  font-size: 0.7rem;
+  font-size: 0.75rem;
   color: var(--text-secondary);
-  min-width: 28px;
+  min-width: 32px;
   text-align: right;
-  font-weight: 500;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
 }
 
 /* Sound Grid */
 .soundGrid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 8px;
+  gap: 12px;
   flex: 1;
   overflow-y: auto;
   scrollbar-width: none;
   -ms-overflow-style: none;
+  padding-bottom: 8px;
 }
 
 .soundGrid::-webkit-scrollbar {
@@ -97,25 +117,30 @@
 
 /* Sound Cards */
 .soundCard {
-  background: rgba(255, 255, 255, 0.04);
-  border-radius: 6px;
-  padding: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.08);
-  transition: all 0.2s ease;
+  background: rgba(255, 255, 255, 0.03);
+  border-radius: 12px;
+  padding: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   position: relative;
-  min-height: 60px;
+  min-height: 70px;
   display: flex;
   align-items: center;
+  backdrop-filter: blur(4px);
+  overflow: hidden;
 }
 
 .soundCard:hover {
-  background: rgba(255, 255, 255, 0.08);
-  border-color: rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.1);
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .soundCard.playing {
   border-color: var(--sound-color, var(--accent-color));
-  background: rgba(255, 123, 0, 0.08);
+  background: rgba(255, 255, 255, 0.08);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.2), inset 0 0 0 1px rgba(255, 255, 255, 0.05);
 }
 
 .soundCard.playing::before {
@@ -123,9 +148,10 @@
   position: absolute;
   top: 0;
   left: 0;
-  right: 0;
-  height: 2px;
+  bottom: 0;
+  width: 3px;
   background: var(--sound-color, var(--accent-color));
+  box-shadow: 0 0 8px var(--sound-color, var(--accent-color));
 }
 
 .soundCard.error {
@@ -137,27 +163,29 @@
 .soundInfo {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 12px;
   width: 100%;
 }
 
 .soundIcon {
-  font-size: 14px;
+  font-size: 20px;
   color: var(--sound-color, var(--text-secondary));
   flex-shrink: 0;
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
-  transition: all 0.2s ease;
+  transition: all 0.3s ease;
+  width: 32px;
+  height: 32px;
+  background: rgba(255, 255, 255, 0.05);
+  border-radius: 8px;
 }
 
-.soundIcon:hover {
-  color: var(--text-primary);
-}
+
 
 .soundName {
-  font-size: 0.8rem;
+  font-size: 0.9rem;
   color: var(--text-primary);
   font-weight: 500;
   flex: 1;
@@ -171,15 +199,15 @@
 .soundControls {
   display: flex;
   align-items: center;
-  gap: 8px;
+  gap: 10px;
   flex-shrink: 0;
 }
 
 .soundMuteButton {
-  width: 24px;
-  height: 24px;
+  width: 28px;
+  height: 28px;
   border: none;
-  border-radius: 4px;
+  border-radius: 6px;
   background: transparent;
   color: var(--text-secondary);
   display: flex;
@@ -196,8 +224,8 @@
 }
 
 .volumeSlider {
-  width: 60px;
-  height: 3px;
+  width: 100%;
+  height: 4px;
   background: rgba(255, 255, 255, 0.1);
   border-radius: 2px;
   outline: none;
@@ -212,6 +240,12 @@
   background: var(--sound-color, var(--accent-color));
   border-radius: 50%;
   cursor: pointer;
+  border: 2px solid rgba(255, 255, 255, 0.8);
+  transition: transform 0.2s ease;
+}
+
+.volumeSlider::-webkit-slider-thumb:hover {
+  transform: scale(1.2);
 }
 
 .volumeSlider::-moz-range-thumb {
@@ -220,17 +254,27 @@
   background: var(--sound-color, var(--accent-color));
   border-radius: 50%;
   cursor: pointer;
-  border: none;
+  border: 2px solid rgba(255, 255, 255, 0.8);
 }
 
 .volumeValue {
-  font-size: 0.65rem;
+  font-size: 0.7rem;
   color: var(--text-secondary);
-  min-width: 24px;
+  min-width: 28px;
   text-align: right;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.8;
 }
 
 /* Loading State */
+.loadingContainer {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  width: 100%;
+}
+
 .loading {
   display: flex;
   align-items: center;
@@ -239,34 +283,61 @@
 }
 
 .spinner {
-  width: 12px;
-  height: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-top: 1px solid var(--accent-color);
+  width: 16px;
+  height: 16px;
+  border: 2px solid rgba(255, 255, 255, 0.1);
+  border-top: 2px solid var(--accent-color);
   border-radius: 50%;
   animation: spin 1s linear infinite;
 }
 
 .errorIndicator {
-  font-size: 0.7rem;
+  font-size: 0.8rem;
   color: #ef4444;
 }
 
 .errorMessage {
-  font-size: 0.65rem;
+  font-size: 0.7rem;
   color: #ef4444;
-  padding: 2px 6px;
+  padding: 4px 8px;
   background: rgba(239, 68, 68, 0.1);
-  border-radius: 3px;
+  border-radius: 4px;
   border: 1px solid rgba(239, 68, 68, 0.2);
+  margin-top: 8px;
+  width: 100%;
+}
+
+.noSoundsContainer {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  color: var(--text-secondary);
+  gap: 8px;
+  padding: 20px;
+  text-align: center;
+}
+
+.noSoundsText {
+  font-size: 1rem;
+  font-weight: 500;
+  color: var(--text-primary);
+}
+
+.noSoundsSubtext {
+  font-size: 0.8rem;
+  opacity: 0.7;
 }
 
 /* Animations */
 @keyframes spin {
-  to { transform: rotate(360deg); }
+  to {
+    transform: rotate(360deg);
+  }
 }
 
-/* Responsive Design - Minimal */
+/* Responsive Design */
 @media (max-width: 480px) {
   .container {
     padding: 6px;
@@ -274,26 +345,32 @@
   }
 
   .soundGrid {
-    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-    gap: 6px;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+    gap: 8px;
   }
 
   .soundCard {
-    padding: 10px;
-    min-height: 50px;
+    padding: 12px;
+    min-height: 60px;
+  }
+
+  .soundIcon {
+    width: 28px;
+    height: 28px;
+    font-size: 16px;
   }
 
   .soundName {
-    font-size: 0.75rem;
+    font-size: 0.8rem;
   }
 
   .volumeSlider {
-    width: 60px;
+    width: 50px;
   }
 
   .volumeValue {
-    font-size: 0.6rem;
-    min-width: 20px;
+    font-size: 0.65rem;
+    min-width: 24px;
   }
 }
 
@@ -303,11 +380,11 @@
   }
 
   .masterControls {
-    padding: 6px 8px;
+    padding: 8px 12px;
     gap: 8px;
   }
 
   .soundInfo {
-    gap: 6px;
+    gap: 8px;
   }
 }

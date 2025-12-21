@@ -2,10 +2,10 @@
 
 import { useState, useEffect, useCallback } from 'react';
 import { useAuth } from '../contexts/AuthContext';
-import { 
-  ChatMessage, 
-  getMessages, 
-  sendMessage, 
+import {
+  ChatMessage,
+  getMessages,
+  sendMessage,
   subscribeToMessages,
   trackPresence
 } from '../lib/chat';
@@ -46,8 +46,9 @@ export function useRealtimeChat() {
         if (data?.full_name) {
           setUsername(data.full_name);
         } else {
-          // Generate random username if not set
-          setUsername(`User_${Math.floor(Math.random() * 10000)}`);
+          // Don't auto-save a name, just provide a temporary one for the session
+          // and keep hasUsername false so the prompt shows
+          setUsername('');
         }
 
         // Subscribe to new messages
@@ -60,7 +61,7 @@ export function useRealtimeChat() {
 
         // Setup presence channel for online users count
         const presenceChannel: RealtimeChannel = supabase.channel('online_users');
-        
+
         presenceChannel.on('presence', { event: 'sync' }, () => {
           const presenceState = presenceChannel.presenceState();
           const count = Object.keys(presenceState).length;

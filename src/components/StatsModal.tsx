@@ -1,13 +1,13 @@
 "use client";
 
-import React, { 
-  useState, useEffect, useCallback, useMemo 
+import React, {
+  useState, useEffect, useCallback, useMemo, useRef
 } from 'react';
-import { 
-  X, 
+import {
+  X,
   BarChart3,
-  Trophy, 
-  Clock, 
+  Trophy,
+  Clock,
   TrendingUp,
   BookOpen,
   Code,
@@ -15,9 +15,7 @@ import {
   Briefcase,
   MoreHorizontal,
   RefreshCw,
-  Timer,
-  Calendar,
-  Settings
+  Calendar
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
 import { useDataPersistence } from '../hooks/useDataPersistence';
@@ -65,72 +63,66 @@ const getCategoryIcon = (category: string) => {
   }
 };
 
-
 const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
   const { user } = useAuth();
   const { loadPomodoroStats } = useDataPersistence();
-  
+
+  // --- State Management ---
   const [stats, setStats] = useState<PomodoroStats[] | null>(null);
-  const [loading, setLoading] = useState(true);
+  const [statsLoading, setStatsLoading] = useState(false);
   const [days, setDays] = useState(7);
+
   const [leaderboardUsers, setLeaderboardUsers] = useState<LeaderboardUser[]>([]);
-  const [leaderboardLoading, setLeaderboardLoading] = useState(true);
+  const [leaderboardLoading, setLeaderboardLoading] = useState(false);
   const [leaderboardFilter, setLeaderboardFilter] = useState<'sessions' | 'time'>('sessions');
   const [leaderboardTimeRange, setLeaderboardTimeRange] = useState<7 | 30 | 'all'>(7);
-  
-  // Username management
+
   const [username, setUsername] = useState<string>('');
   const [showUsernameModal, setShowUsernameModal] = useState(false);
   const [usernameError, setUsernameError] = useState('');
   const [isUpdatingUsername, setIsUpdatingUsername] = useState(false);
 
+  // --- Data Loading Functions ---
 
-  const loadStats = useCallback(async (isInitialLoad = false) => {
+  const fetchStats = useCallback(async () => {
     if (!user) {
       setStats([]);
-      if (isInitialLoad) setLoading(false);
       return;
     }
 
-    // Set loading state only on manual refresh, not initial
-    setLoading(true);
-    
-    const minDisplayTime = 400;
-    const startTime = Date.now();
-
+    setStatsLoading(true);
     try {
+      // Pass 0 for 'All Time' if days is 0, otherwise pass the number of days
       const fetchedStats = await loadPomodoroStats(days);
       setStats(fetchedStats || []);
     } catch (error) {
       console.error('[StatsModal] Failed to load stats:', error);
       setStats([]);
     } finally {
-      const duration = Date.now() - startTime;
-      setTimeout(() => setLoading(false), Math.max(0, minDisplayTime - duration));
+      setStatsLoading(false);
     }
   }, [user, days, loadPomodoroStats]);
 
-  const loadLeaderboard = useCallback(async () => {
+  const fetchLeaderboard = useCallback(async () => {
     if (!user) {
       setLeaderboardUsers([]);
-      setLeaderboardLoading(false);
       return;
     }
 
     setLeaderboardLoading(true);
 
     try {
-      // 1. Fetch stats first (aggregated by user would be better on DB side, but for now we optimize the user fetching)
+      // 1. Fetch stats
       let query = supabase
         .from('pomodoro_stats')
         .select('user_id, pomodoro_count, total_focus_time_minutes, date, username');
-      
+
       if (leaderboardTimeRange !== 'all') {
         const startDate = new Date();
         startDate.setDate(startDate.getDate() - leaderboardTimeRange);
         query = query.gte('date', startDate.toISOString().split('T')[0]);
       }
-      
+
       const { data: statsData, error: statsError } = await query;
 
       if (statsError) {
@@ -139,10 +131,10 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
         return;
       }
 
-      // 2. Process and aggregate the data by user
-      const userStatsMap = new Map<string, { 
-        id: string; 
-        totalSessions: number; 
+      // 2. Aggregate data
+      const userStatsMap = new Map<string, {
+        id: string;
+        totalSessions: number;
         totalFocusTime: number;
         username?: string;
       }>();
@@ -157,7 +149,7 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
 
       (statsData as StatRecord[]).forEach((record) => {
         const userId = record.user_id;
-        
+
         if (!userStatsMap.has(userId)) {
           userStatsMap.set(userId, {
             id: userId,
@@ -170,13 +162,12 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
         const userStats = userStatsMap.get(userId)!;
         userStats.totalSessions += record.pomodoro_count || 0;
         userStats.totalFocusTime += record.total_focus_time_minutes || 0;
-        // Keep the username if we have it (latest one ideally, but any is better than none)
         if (record.username && !userStats.username) {
           userStats.username = record.username;
         }
       });
 
-      // 3. Sort and limit to top 50 BEFORE fetching user details
+      // 3. Sort and Limit
       const sortedStats = Array.from(userStatsMap.values())
         .sort((a, b) => {
           if (leaderboardFilter === 'sessions') {
@@ -185,65 +176,67 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
             return b.totalFocusTime - a.totalFocusTime;
           }
         })
-        .slice(0, 50); // Optimization: Only handle top 50 users
+        .slice(0, 50);
 
-      // 4. Fetch user details ONLY for the top users
+      // 4. Fetch User Details
       const userIds = sortedStats.map(s => s.id);
-      
-      // Always include current user if not in top 50, so they see themselves
+
+      // Ensure current user is in list if they have stats
       if (user && !userIds.includes(user.id)) {
-        // Check if current user has stats
         const currentUserStats = userStatsMap.get(user.id);
         if (currentUserStats) {
-            userIds.push(user.id);
-            sortedStats.push(currentUserStats);
+          userIds.push(user.id);
+          sortedStats.push(currentUserStats);
         }
       }
 
-      const { data: usersData, error: usersError } = await supabase
-        .from('users')
-        .select('id, email, full_name, username')
-        .in('id', userIds);
-      
-      if (usersError) {
-        console.error('[StatsModal] Failed to load users:', usersError);
+      let usersData: UserData[] | null = null;
+
+      if (userIds.length > 0) {
+        const { data, error } = await supabase
+          .from('users')
+          .select('id, full_name') // Exclude username as it might not be in the schema
+          .in('id', userIds);
+
+        if (error) {
+          console.error('[StatsModal] Failed to load users:', error);
+        } else {
+          usersData = data;
+        }
       }
 
-      // Create a map of user IDs to user info
-      const userInfoMap = new Map<string, {email: string; name: string; username?: string}>();
+      const userInfoMap = new Map<string, { name: string; username?: string }>();
       if (usersData) {
         (usersData as UserData[]).forEach((userData) => {
           userInfoMap.set(userData.id, {
-            email: userData.email || 'User',
-            name: userData.full_name || userData.email?.split('@')[0] || `User #${userData.id.slice(-4)}`,
-            username: userData.username
+            name: userData.full_name || `User #${userData.id.slice(-4)}`,
+            username: undefined // 'users' table doesn't have username
           });
         });
       }
 
-      // 5. Combine and finalize
+      // 5. Combine
       const combinedUsers = sortedStats.map((stats) => {
-        const userInfo = userInfoMap.get(stats.id) || { 
-          email: `User #${stats.id.slice(-4)}`,
+        const userInfo = userInfoMap.get(stats.id) || {
           name: `User #${stats.id.slice(-4)}`,
           username: undefined
         };
         return {
           id: stats.id,
-          email: userInfo.email,
-          // Prioritize username from stats (pomodoro_stats table) over userInfo (users table)
+          email: userInfo.name, // Using name as display text instead of email
           username: stats.username || userInfo.username,
           totalSessions: stats.totalSessions,
-          totalFocusTime: stats.totalFocusTime
+          totalFocusTime: stats.totalFocusTime,
+          rank: 0
         };
       });
-      
-      // Re-sort because adding current user might have disrupted order if they were appended
-      const finalSortedUsers = leaderboardFilter === 'sessions' 
+
+      // Final Sort
+      const finalSortedUsers = leaderboardFilter === 'sessions'
         ? combinedUsers.sort((a, b) => b.totalSessions - a.totalSessions)
         : combinedUsers.sort((a, b) => b.totalFocusTime - a.totalFocusTime);
 
-      // Add rank
+      // Add Rank
       const rankedUsers = finalSortedUsers.map((u, index) => ({
         ...u,
         rank: index + 1
@@ -251,30 +244,18 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
 
       setLeaderboardUsers(rankedUsers);
     } catch (error) {
-      console.error('[StatsModal] Unexpected error loading leaderboard:', error);
+      console.error('[StatsModal] Error loading leaderboard:', error);
       setLeaderboardUsers([]);
     } finally {
       setLeaderboardLoading(false);
     }
   }, [user, leaderboardFilter, leaderboardTimeRange]);
 
-  // Load stats only once when the modal is opened and user is available
-  useEffect(() => {
-    if (isOpen && user) {
-      loadStats(true);
-      loadLeaderboard();
-      checkUsername();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, user, leaderboardFilter, leaderboardTimeRange]);
-
-  // Check if user has a username
   const checkUsername = useCallback(async () => {
     if (!user) return;
-    
+
     try {
-      // First check if the username exists in pomodoro_stats
-      const { data: pomodoroData, error: pomodoroError } = await supabase
+      const { data: pomodoroData } = await supabase
         .from('pomodoro_stats')
         .select('username')
         .eq('user_id', user.id)
@@ -282,26 +263,18 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
         .order('updated_at', { ascending: false })
         .limit(1)
         .single();
-      
-      if (!pomodoroError && pomodoroData?.username) {
+
+      if (pomodoroData?.username) {
         setUsername(pomodoroData.username);
         return;
       }
-      
-      // If not found in pomodoro_stats, check if the user has a full_name in users table
-      const { data: userData, error: userError } = await supabase
+
+      const { data: userData } = await supabase
         .from('users')
         .select('full_name, email')
         .eq('id', user.id)
         .single();
-      
-      if (userError) {
-        console.error('[StatsModal] Failed to check user data:', userError);
-        return;
-      }
-      
-      // If user has no username in pomodoro_stats, show modal to set one
-      // Default the username field to their full_name or email username part
+
       if (userData) {
         const defaultUsername = userData.full_name || userData.email?.split('@')[0] || '';
         setUsername(defaultUsername);
@@ -312,56 +285,70 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
     }
   }, [user]);
 
-  // Update username
   const updateUsername = async () => {
     if (!user || !username.trim()) return;
-    
+
     setIsUpdatingUsername(true);
     setUsernameError('');
-    
+
     try {
-      // Check if username is already taken in pomodoro_stats
-      const { data: existingUser, error: checkError } = await supabase
+      const { data: existingUser } = await supabase
         .from('pomodoro_stats')
         .select('user_id')
         .eq('username', username.trim())
         .neq('user_id', user.id)
         .limit(1)
         .single();
-      
-      if (checkError && checkError.code !== 'PGRST116') { // PGRST116 means no rows returned
-        console.error('[StatsModal] Error checking username availability:', checkError);
-        setUsernameError('Error checking username availability');
-        return;
-      }
-      
+
       if (existingUser) {
         setUsernameError('Username already taken');
         return;
       }
-      
-      // Update username in pomodoro_stats table for all user's entries
+
       const { error: statsUpdateError } = await supabase
         .from('pomodoro_stats')
         .update({ username: username.trim() })
         .eq('user_id', user.id);
-      
-      if (statsUpdateError) {
-        console.error('[StatsModal] Failed to update username in stats:', statsUpdateError);
-        setUsernameError('Failed to update username');
-        return;
-      }
-      
-      // Update successful
+
+      if (statsUpdateError) throw statsUpdateError;
+
       setShowUsernameModal(false);
-      loadLeaderboard(); // Refresh leaderboard to show new username
+      fetchLeaderboard();
     } catch (error) {
       console.error('[StatsModal] Error updating username:', error);
-      setUsernameError('An unexpected error occurred');
+      setUsernameError('Failed to update username');
     } finally {
       setIsUpdatingUsername(false);
     }
   };
+
+  // --- Effects ---
+
+  // Trigger stats load
+  useEffect(() => {
+    if (isOpen && user) {
+      fetchStats();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, user, days]); // Exclude fetchStats/loadPomodoroStats to prevent loops
+
+  // Trigger leaderboard load
+  useEffect(() => {
+    if (isOpen && user) {
+      fetchLeaderboard();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, user, leaderboardFilter, leaderboardTimeRange]); // Exclude fetchLeaderboard
+
+  // Trigger username check
+  useEffect(() => {
+    if (isOpen && user) {
+      checkUsername();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isOpen, user]); // Exclude checkUsername
+
+  // --- Calculations ---
 
   const { totalSessions, totalFocusTime, avgSessionsPerDay, categoryStats } = useMemo(() => {
     if (!stats) {
@@ -370,7 +357,7 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
 
     const totalSessions = stats.reduce((acc, s) => acc + (s.pomodoro_count || 0), 0);
     const totalFocusTime = stats.reduce((acc, s) => acc + (s.total_focus_time_minutes || 0), 0);
-    
+
     const categoryStats = stats.reduce((acc, s) => {
       const category = s.category || 'Other';
       if (!acc[category]) {
@@ -381,27 +368,33 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
       return acc;
     }, {} as Record<string, { sessions: number; time: number }>);
 
+    let daysCount = days;
+    if (days === 0) { // All Time
+      if (stats.length > 0) {
+        const dates = stats.map(s => new Date(s.date).getTime());
+        const oldest = Math.min(...dates);
+        const newest = Date.now();
+        const diffTime = Math.abs(newest - oldest);
+        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        daysCount = Math.max(diffDays, 1);
+      } else {
+        daysCount = 1;
+      }
+    }
+
     return {
       totalSessions,
       totalFocusTime,
-      avgSessionsPerDay: totalSessions > 0 ? (totalSessions / days) : 0,
+      avgSessionsPerDay: totalSessions > 0 ? (totalSessions / daysCount) : 0,
       categoryStats
     };
   }, [stats, days]);
-  
-  // Format time in hours and minutes
+
   const formatTime = (minutes: number): string => {
-    if (minutes < 60) {
-      return `${minutes} min`;
-    }
-    
+    if (minutes < 60) return `${minutes} min`;
     const hours = Math.floor(minutes / 60);
     const remainingMinutes = minutes % 60;
-    
-    if (remainingMinutes === 0) {
-      return `${hours}h`;
-    }
-    
+    if (remainingMinutes === 0) return `${hours}h`;
     return `${hours}h ${remainingMinutes}m`;
   };
 
@@ -416,23 +409,17 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
             <div className={styles.usernameModal}>
               <div className={styles.usernameModalHeader}>
                 <h3>{username ? 'Edit Username' : 'Set Username'}</h3>
-                {/* Only allow closing if user already has a username */}
                 {username && (
-                  <button 
-                    onClick={() => setShowUsernameModal(false)} 
+                  <button
+                    onClick={() => setShowUsernameModal(false)}
                     className={styles.closeButton}
-                    aria-label="Close modal"
                   >
                     <X size={18} />
                   </button>
                 )}
               </div>
               <div className={styles.usernameModalContent}>
-                <p>
-                  {username 
-                    ? 'Change your display name on the leaderboard.' 
-                    : 'Please set a username to appear on the leaderboard.'}
-                </p>
+                <p>{username ? 'Change your display name on the leaderboard.' : 'Please set a username to appear on the leaderboard.'}</p>
                 <input
                   type="text"
                   value={username}
@@ -445,7 +432,7 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
                 {usernameError && <div className={styles.usernameError}>{usernameError}</div>}
               </div>
               <div className={styles.usernameModalActions}>
-                <button 
+                <button
                   onClick={updateUsername}
                   className={styles.saveButton}
                   disabled={!username.trim() || isUpdatingUsername}
@@ -457,31 +444,31 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
           </div>
         )}
 
+        {/* Main Header */}
         <div className={styles.header}>
           <div className={styles.headerTitle}>
             <BarChart3 size={20} />
             <h2>Statistics</h2>
           </div>
           <div className={styles.headerActions}>
-            <button 
+            <button
               onClick={() => {
-                loadStats(false);
-                loadLeaderboard();
-              }} 
+                fetchStats();
+                fetchLeaderboard();
+              }}
               className={styles.refreshButton}
-              aria-label="Refresh stats"
-              disabled={loading || leaderboardLoading}
+              disabled={statsLoading || leaderboardLoading}
             >
-              <RefreshCw size={16} className={(loading || leaderboardLoading) ? 'animate-spin' : ''} />
+              <RefreshCw size={16} className={(statsLoading || leaderboardLoading) ? 'animate-spin' : ''} />
             </button>
-            <button onClick={onClose} className={styles.closeButton} aria-label="Close modal">
+            <button onClick={onClose} className={styles.closeButton}>
               <X size={18} />
             </button>
           </div>
         </div>
-        
+
         <div className={styles.content}>
-          {loading ? (
+          {statsLoading ? (
             <div className={styles.loadingContainer}>
               <RefreshCw size={32} className={`${styles.loadingIcon} animate-spin`} />
               <span>Loading stats...</span>
@@ -489,36 +476,15 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
           ) : (
             <>
               <div className={styles.timeFilter}>
-                <button 
-                  className={days === 7 ? styles.active : ''}
-                  onClick={() => setDays(7)}
-                >
-                  Last 7 Days
-                </button>
-                <button 
-                  className={days === 30 ? styles.active : ''}
-                  onClick={() => setDays(30)}
-                >
-                  Last 30 Days
-                </button>
+                <button className={days === 7 ? styles.active : ''} onClick={() => setDays(7)}>Last 7 Days</button>
+                <button className={days === 30 ? styles.active : ''} onClick={() => setDays(30)}>Last 30 Days</button>
+                <button className={days === 0 ? styles.active : ''} onClick={() => setDays(0)}>All Time</button>
               </div>
 
               <div className={styles.statsGrid}>
-                <StatCard 
-                  icon={<Trophy size={20} />}
-                  label="Total Sessions"
-                  value={totalSessions} 
-                />
-                <StatCard 
-                  icon={<Clock size={20} />}
-                  label="Total Focus Time"
-                  value={formatTime(totalFocusTime)}
-                />
-                <StatCard 
-                  icon={<TrendingUp size={20} />}
-                  label="Avg. Daily Sessions"
-                  value={avgSessionsPerDay.toFixed(1)}
-                />
+                <StatCard icon={<Trophy size={20} />} label="Total Sessions" value={totalSessions} />
+                <StatCard icon={<Clock size={20} />} label="Total Focus Time" value={formatTime(totalFocusTime)} />
+                <StatCard icon={<TrendingUp size={20} />} label="Avg. Daily Sessions" value={avgSessionsPerDay.toFixed(1)} />
               </div>
 
               <div className={styles.mainContent}>
@@ -532,7 +498,6 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
                           .map(([category, data]) => {
                             const maxSessions = Math.max(...Object.values(categoryStats).map(d => d.sessions), 1);
                             const percentage = (data.sessions / maxSessions) * 100;
-                            
                             return (
                               <li key={category}>
                                 <div className={styles.categoryRow}>
@@ -547,10 +512,7 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
                                     </div>
                                   </div>
                                   <div className={styles.categoryBarContainer}>
-                                    <div 
-                                      className={styles.categoryBar} 
-                                      style={{ width: `${percentage}%` }}
-                                    />
+                                    <div className={styles.categoryBar} style={{ width: `${percentage}%` }} />
                                   </div>
                                 </div>
                               </li>
@@ -561,7 +523,7 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
                       )}
                     </ul>
                   </div>
-                  
+
                   <div className={styles.activityHeatmap}>
                     <ActivityHeatmap stats={stats || []} />
                   </div>
@@ -572,21 +534,21 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
                     <h3>Leaderboard</h3>
                     <div className={styles.scoreboardFilters}>
                       <div className={styles.timeRangeFilter}>
-                        <button 
+                        <button
                           className={leaderboardTimeRange === 7 ? styles.active : ''}
                           onClick={() => setLeaderboardTimeRange(7)}
                           title="Last 7 days"
                         >
                           <Calendar size={12} /> 7d
                         </button>
-                        <button 
+                        <button
                           className={leaderboardTimeRange === 30 ? styles.active : ''}
                           onClick={() => setLeaderboardTimeRange(30)}
                           title="Last 30 days"
                         >
                           <Calendar size={12} /> 30d
                         </button>
-                        <button 
+                        <button
                           className={leaderboardTimeRange === 'all' ? styles.active : ''}
                           onClick={() => setLeaderboardTimeRange('all')}
                           title="All time"
@@ -595,13 +557,13 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
                         </button>
                       </div>
                       <div className={styles.sortFilter}>
-                        <button 
+                        <button
                           className={leaderboardFilter === 'sessions' ? styles.active : ''}
                           onClick={() => setLeaderboardFilter('sessions')}
                         >
                           Sessions
                         </button>
-                        <button 
+                        <button
                           className={leaderboardFilter === 'time' ? styles.active : ''}
                           onClick={() => setLeaderboardFilter('time')}
                         >
@@ -619,8 +581,8 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
                   ) : (
                     <ul className={styles.leaderboard}>
                       {leaderboardUsers.map((leaderboardUser) => (
-                        <li 
-                          key={leaderboardUser.id} 
+                        <li
+                          key={leaderboardUser.id}
                           className={`${styles.leaderboardItem} ${user && leaderboardUser.id === user.id ? styles.currentUser : ''}`}
                         >
                           {leaderboardUser.rank <= 3 ? (
@@ -632,40 +594,33 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
                               {leaderboardUser.rank}
                             </div>
                           )}
-                          
-                          <div className={styles.userInfo}>
+
+                          <div
+                            className={styles.userInfo}
+                            onClick={() => {
+                              if (user && leaderboardUser.id === user.id) {
+                                setUsername(leaderboardUser.username || leaderboardUser.email.split('@')[0]);
+                                setShowUsernameModal(true);
+                              }
+                            }}
+                            style={{ cursor: user && leaderboardUser.id === user.id ? 'pointer' : 'default' }}
+                          >
                             <div className={styles.userName}>
                               {leaderboardUser.username || leaderboardUser.email.split('@')[0]}
                               {user && leaderboardUser.id === user.id && (
-                                <>
-                                  <span className={styles.currentUserTag}> (You)</span>
-                                  <button 
-                                    className={styles.settingsButton}
-                                    onClick={(e) => {
-                                      e.stopPropagation();
-                                      setUsername(leaderboardUser.username || leaderboardUser.email.split('@')[0]);
-                                      setShowUsernameModal(true);
-                                    }}
-                                    aria-label="Edit username"
-                                  >
-                                    <Settings size={14} />
-                                  </button>
-                                </>
+                                <span className={styles.currentUserTag} title="Click to edit username">YOU</span>
                               )}
                             </div>
                             <div className={styles.userStats}>
-                              <span>
-                                <Trophy size={12} /> {leaderboardUser.totalSessions} sessions
-                              </span>
-                              <span>
-                                <Timer size={12} /> {formatTime(leaderboardUser.totalFocusTime)}
-                              </span>
+                              <span>{leaderboardUser.totalSessions} sessions</span>
+                              <span>•</span>
+                              <span>{formatTime(leaderboardUser.totalFocusTime)}</span>
                             </div>
                           </div>
-                          
-                          <div className={styles.scoreValue}>
-                            {leaderboardFilter === 'sessions' 
-                              ? `${leaderboardUser.totalSessions} 🔥`
+
+                          <div className={`${styles.scoreValue} ${leaderboardUser.rank <= 3 ? styles.highlight : ''}`}>
+                            {leaderboardFilter === 'sessions'
+                              ? leaderboardUser.totalSessions
                               : formatTime(leaderboardUser.totalFocusTime)
                             }
                           </div>
@@ -696,11 +651,9 @@ const StatCard = ({ icon, label, value }: { icon: React.ReactNode, label: string
 const ActivityHeatmap = ({ stats }: { stats: PomodoroStats[] }) => {
   const { days, maxCount } = useMemo(() => {
     const endDate = new Date();
-    // Go back 29 days to get a total of 30 days
     const startDate = new Date();
     startDate.setDate(endDate.getDate() - 29);
 
-    // Create array of dates
     const days = Array.from({ length: 30 }, (_, i) => {
       const date = new Date(startDate);
       date.setDate(startDate.getDate() + i);
@@ -723,11 +676,11 @@ const ActivityHeatmap = ({ stats }: { stats: PomodoroStats[] }) => {
       }
     });
 
-    return { days, maxCount: maxCount || 4 }; // Use at least 4 as max to avoid division by zero
+    return { days, maxCount: maxCount || 4 };
   }, [stats]);
 
   const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
-  
+
   return (
     <div className={styles.heatmapContainer}>
       <h3>Last 30 Days Activity</h3>
@@ -742,7 +695,7 @@ const ActivityHeatmap = ({ stats }: { stats: PomodoroStats[] }) => {
             <div
               key={index}
               className={styles.dayCell}
-              style={{ 
+              style={{
                 '--intensity': day.count / maxCount,
                 gridRow: day.dayOfWeek + 1,
                 gridColumn: day.column + 1

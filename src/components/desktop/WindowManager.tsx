@@ -96,8 +96,8 @@ const useDraggable = (nodeRef: React.RefObject<HTMLElement | null>) => {
     const boundedX = Math.max(0, Math.min(newX, maxX));
     const boundedY = Math.max(0, Math.min(newY, maxY));
     
-    nodeRef.current.style.left = `${boundedX}px`;
-    nodeRef.current.style.top = `${boundedY}px`;
+    // Use translate3d for better performance
+    nodeRef.current.style.transform = `translate3d(${boundedX}px, ${boundedY}px, 0)`;
 
     // Prevent default behavior
     e.preventDefault();
@@ -147,8 +147,8 @@ const CustomDraggable: React.FC<DraggableProps> = ({
 
   React.useEffect(() => {
     if (nodeRef.current && defaultPosition) {
-      nodeRef.current.style.left = `${defaultPosition.x}px`;
-      nodeRef.current.style.top = `${defaultPosition.y}px`;
+      // Use inline styles only for dynamic positioning to ensure performance
+      nodeRef.current.style.transform = `translate3d(${defaultPosition.x}px, ${defaultPosition.y}px, 0)`;
     }
   }, [defaultPosition]);
 

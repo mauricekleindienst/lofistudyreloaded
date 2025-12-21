@@ -10,8 +10,7 @@
   box-sizing: border-box;
   overflow: hidden;
   
-  backdrop-filter: blur(12px);
-  border-radius: 12px;
+  background: transparent;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
   min-height: 350px;
 }
@@ -57,12 +56,13 @@
   align-items: center;
   gap: 4px;
   padding: 4px 8px;
-  background: var(--bg-secondary, #1A202C);
+  background: rgba(255, 255, 255, 0.05);
   border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
   border-radius: 8px;
   font-size: 10px;
   flex-shrink: 0;
   color: var(--text-secondary, #e2e8f0);
+  backdrop-filter: blur(8px);
 }
 
 /* Responsive header adjustments */
@@ -113,11 +113,11 @@
 
 /* Progress Section */
 .progressSection {
-  background: var(--bg-secondary, #1A202C);
+  background: rgba(0, 0, 0, 0.2);
   border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
   border-radius: 6px;
   padding: 6px;
-  backdrop-filter: blur(15px);
+  backdrop-filter: blur(12px);
 }
 
 .progressInfo {
@@ -142,7 +142,7 @@
 .progressBar {
   width: 100%;
   height: 4px;
-  background: var(--border-color, rgba(255, 255, 255, 0.1));
+  background: rgba(255, 255, 255, 0.1);
   border-radius: 2px;
   overflow: hidden;
   position: relative;
@@ -163,18 +163,18 @@
   left: 0;
   right: 0;
   bottom: 0;
-  background: linear-gradient(45deg, transparent 40%, rgba(255, 255, 255, 0.1) 50%, transparent 60%);
+  background: linear-gradient(45deg, transparent 40%, rgba(255, 255, 255, 0.2) 50%, transparent 60%);
 }
 
 
 
 /* Add Task Section */
 .addSection {
-  background: var(--bg-secondary, #1A202C);
+  background: rgba(0, 0, 0, 0.2);
   border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
   border-radius: 6px;
   padding: 6px;
-  backdrop-filter: blur(15px);
+  backdrop-filter: blur(12px);
 }
 
 .inputGroup {
@@ -186,71 +186,70 @@
 .taskInput {
   flex: 1;
   padding: 8px 12px;
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.04));
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 10px;
   color: var(--text-primary, #ffffff);
   font-size: 12px;
   font-weight: 400;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  backdrop-filter: blur(15px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
+  backdrop-filter: blur(4px);
+  box-shadow: none;
 }
 
 .taskInput::placeholder {
   color: var(--text-secondary, #e2e8f0);
-  opacity: 0.7;
+  opacity: 0.5;
 }
 
 .taskInput:hover {
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.06));
-  border-color: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
   transform: translateY(-1px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
 }
 
 .taskInput:focus {
   outline: none;
   border-color: var(--accent-color, #ff7b00);
-  background: linear-gradient(145deg, rgba(255, 123, 0, 0.1), rgba(255, 123, 0, 0.05));
-  box-shadow: 0 0 0 3px rgba(255, 123, 0, 0.2), 0 4px 16px rgba(0, 0, 0, 0.15);
+  background: rgba(0, 0, 0, 0.2);
+  box-shadow: 0 0 0 2px rgba(255, 123, 0, 0.1);
   transform: translateY(-1px);
 }
 
 .addButton {
   padding: 8px 12px;
-  background: linear-gradient(135deg, var(--accent-color, #ff7b00) 0%, #ff9533 100%);
-  border: 1px solid var(--accent-color, #ff7b00);
+  background: var(--accent-color);
+  border: 1px solid transparent;
   border-radius: 10px;
   color: var(--text-primary, #ffffff);
   cursor: pointer;
   display: flex;
   align-items: center;
   justify-content: center;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
   min-width: 36px;
   font-size: 12px;
   font-weight: 600;
-  box-shadow: 0 2px 8px rgba(255, 123, 0, 0.3);
-  backdrop-filter: blur(10px);
+  box-shadow: 0 2px 8px rgba(255, 123, 0, 0.2);
 }
 
 .addButton:hover:not(:disabled) {
-  background: linear-gradient(135deg, #ff9533 0%, var(--accent-color, #ff7b00) 100%);
-  transform: translateY(-2px);
-  box-shadow: 0 6px 20px rgba(255, 123, 0, 0.4);
-  border-color: #ff9533;
+  background: var(--accent-hover);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(255, 123, 0, 0.3);
 }
 
 .addButton:active {
   transform: translateY(0);
-  box-shadow: 0 2px 8px rgba(255, 123, 0, 0.3);
+  box-shadow: 0 1px 4px rgba(255, 123, 0, 0.2);
 }
 
 .addButton:disabled {
   opacity: 0.5;
   cursor: not-allowed;
   transform: none;
+  background: rgba(255, 255, 255, 0.1);
+  box-shadow: none;
 }
 
 .optionsRow {
@@ -262,15 +261,15 @@
 .prioritySelect {
   flex: 1;
   padding: 8px 12px;
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.08), rgba(255, 255, 255, 0.04));
-  border: 1px solid rgba(255, 255, 255, 0.15);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 10px;
   color: var(--text-primary, #ffffff);
   font-size: 12px;
   font-weight: 500;
   cursor: pointer;
-  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  backdrop-filter: blur(10px);
+  transition: all 0.2s ease;
+  backdrop-filter: blur(4px);
   appearance: none;
   -webkit-appearance: none;
   -moz-appearance: none;
@@ -279,40 +278,34 @@
   background-position: right 8px center;
   background-size: 16px;
   padding-right: 32px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .categorySelect:hover,
 .prioritySelect:hover {
-  background: linear-gradient(145deg, rgba(255, 255, 255, 0.12), rgba(255, 255, 255, 0.06));
-  border-color: rgba(255, 255, 255, 0.25);
+  background: rgba(255, 255, 255, 0.08);
+  border-color: rgba(255, 255, 255, 0.2);
   transform: translateY(-1px);
-  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.15);
 }
 
 .categorySelect:focus,
 .prioritySelect:focus {
   outline: none;
   border-color: var(--accent-color, #ff7b00);
-  background: linear-gradient(145deg, rgba(255, 123, 0, 0.1), rgba(255, 123, 0, 0.05));
-  box-shadow: 0 0 0 3px rgba(255, 123, 0, 0.2), 0 4px 16px rgba(0, 0, 0, 0.15);
-  transform: translateY(-1px);
+  background: rgba(0, 0, 0, 0.2);
 }
 
 .categorySelect:active,
 .prioritySelect:active {
   transform: translateY(0);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 /* Enhanced Select Option Styling */
 .categorySelect option,
 .prioritySelect option {
-  background: var(--bg-secondary, #2d3748);
+  background: #1A202C; /* Solid background for dropdowns */
   color: var(--text-primary, #ffffff);
-  padding: var(--spacing-xs, 4px) var(--spacing-sm, 8px);
+  padding: 8px;
   border: none;
-  font-weight: 500;
 }
 
 .categorySelect option:hover,
@@ -325,16 +318,16 @@
 .prioritySelect option:checked {
   background: var(--accent-color, #ff7b00);
   color: #ffffff;
-  font-weight: 600;
 }
 
 /* Filter Tabs */
 .filterTabs {
   display: flex;
-  background: rgba(255, 255, 255, 0.03);
+  background: rgba(0, 0, 0, 0.2);
   border-radius: 10px;
   padding: 3px;
   gap: 2px;
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .filterTab {
@@ -362,14 +355,14 @@
 .activeTab {
   background: var(--accent-color) !important;
   color: white !important;
-  box-shadow: 0 2px 8px rgba(var(--accent-rgb), 0.3);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
 .count {
   background: rgba(255, 255, 255, 0.2);
   padding: 2px 6px;
   border-radius: 10px;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 600;
   min-width: 18px;
   text-align: center;
@@ -395,26 +388,27 @@
   gap: 10px;
   padding: 12px;
   background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.05);
   border-radius: 10px;
   transition: all 0.2s ease;
-  backdrop-filter: blur(10px);
 }
 
 .taskItem:hover {
-  background: rgba(255, 255, 255, 0.05);
-  border-color: rgba(255, 255, 255, 0.12);
+  background: rgba(255, 255, 255, 0.06);
+  border-color: rgba(255, 255, 255, 0.1);
   transform: translateY(-1px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
 .taskCompleted {
   opacity: 0.6;
-  background: rgba(255, 255, 255, 0.02);
+  background: transparent;
+  border-color: transparent;
 }
 
 .taskCompleted:hover {
   opacity: 0.8;
+  background: rgba(255, 255, 255, 0.02);
 }
 
 .checkButton {

@@ -62,7 +62,7 @@ export function useRealtimeTodos() {
           filter: authContext?.user?.email ? `email=eq.${authContext.user.email}` : undefined
         },
         (payload) => {
-          console.log('Realtime todo change:', payload);
+          // Realtime todo change
           
           switch (payload.eventType) {
             case 'INSERT':
@@ -150,7 +150,7 @@ export function useRealtimePomodoroSessions() {
           filter: authContext?.user?.email ? `email=eq.${authContext.user.email}` : undefined
         },
         (payload) => {
-          console.log('Realtime pomodoro session change:', payload);
+          // Realtime pomodoro session change
           
           switch (payload.eventType) {
             case 'INSERT':
@@ -238,7 +238,7 @@ export function useRealtimePomodoroStats() {
           filter: authContext?.user?.email ? `email=eq.${authContext.user.email}` : undefined
         },
         (payload) => {
-          console.log('Realtime pomodoro stats change:', payload);
+          // Realtime pomodoro stats change
           
           switch (payload.eventType) {
             case 'INSERT':

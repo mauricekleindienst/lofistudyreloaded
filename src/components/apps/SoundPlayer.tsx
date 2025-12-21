@@ -1,17 +1,24 @@
 "use client";
 
 import React, { useState, useRef, useEffect, useCallback } from 'react';
-import { 
+import {
   Loader,
-  Volume2, 
-  VolumeX
+  Volume2,
+  VolumeX,
+  CloudRain,
+  Waves,
+  Droplets,
+  Snowflake,
+  Flame,
+  Keyboard,
+  Coffee
 } from 'lucide-react';
 import styles from '../../../styles/SoundPlayer.module.css';
 
 interface Sound {
   id: string;
   name: string;
-  icon: string;
+  icon: React.ElementType;
   url: string;
   category: 'nature' | 'ambient' | 'white-noise';
   color: string;
@@ -25,14 +32,15 @@ interface SoundState {
 
 const sounds: Sound[] = [
   // Nature sounds (available files)
-  { id: 'rain', name: 'Rain', icon: '🌧️', url: '/sounds/rain.mp3', category: 'nature', color: '#3b82f6' },
-  { id: 'ocean', name: 'Ocean', icon: '🌊', url: '/sounds/ocean.mp3', category: 'nature', color: '#06b6d4' },
-  { id: 'waterstream', name: 'Water Stream', icon: '💧', url: '/sounds/waterstream.mp3', category: 'nature', color: '#0891b2' },
-  { id: 'blizzard', name: 'Blizzard', icon: '❄️', url: '/sounds/blizzard.mp3', category: 'nature', color: '#6366f1' },
-  
+  { id: 'rain', name: 'Rain', icon: CloudRain, url: '/sounds/rain.mp3', category: 'nature', color: '#3b82f6' },
+  { id: 'ocean', name: 'Ocean', icon: Waves, url: '/sounds/ocean.mp3', category: 'nature', color: '#06b6d4' },
+  { id: 'waterstream', name: 'Water Stream', icon: Droplets, url: '/sounds/waterstream.mp3', category: 'nature', color: '#0891b2' },
+  { id: 'blizzard', name: 'Blizzard', icon: Snowflake, url: '/sounds/blizzard.mp3', category: 'nature', color: '#6366f1' },
+
   // Ambient sounds (available files)
-  { id: 'fire', name: 'Fireplace', icon: '🔥', url: '/sounds/fire.mp3', category: 'ambient', color: '#f97316' },
-  { id: 'keyboard', name: 'Typing', icon: '⌨️', url: '/sounds/keyboard.mp3', category: 'ambient', color: '#6b7280' },
+  { id: 'fire', name: 'Fireplace', icon: Flame, url: '/sounds/fire.mp3', category: 'ambient', color: '#f97316' },
+  { id: 'keyboard', name: 'Typing', icon: Keyboard, url: '/sounds/keyboard.mp3', category: 'ambient', color: '#6b7280' },
+  { id: 'coffee', name: 'Coffee Shop', icon: Coffee, url: '/sounds/coffee.mp3', category: 'ambient', color: '#78350f' },
 ];
 
 export default function SoundPlayer() {
@@ -50,7 +58,7 @@ export default function SoundPlayer() {
     return new Promise((resolve) => {
       const audio = new Audio();
       audio.preload = 'metadata';
-      
+
       const timeout = setTimeout(() => {
         console.warn(`Audio test timeout for ${sound.id}: ${sound.url}`);
         audio.src = '';
@@ -60,7 +68,7 @@ export default function SoundPlayer() {
       const onCanPlay = () => {
         clearTimeout(timeout);
         cleanup();
-        console.log(`✅ Audio test passed: ${sound.id} - ${sound.name}`);
+        // Audio test passed
         resolve(true);
       };
 
@@ -70,7 +78,7 @@ export default function SoundPlayer() {
         const target = e.target as HTMLAudioElement;
         const errorCode = target.error?.code;
         let errorMessage = 'Unknown error';
-        
+
         switch (errorCode) {
           case 1: errorMessage = 'Audio loading aborted'; break;
           case 2: errorMessage = 'Network error'; break;
@@ -78,7 +86,7 @@ export default function SoundPlayer() {
           case 4: errorMessage = 'Audio format not supported'; break;
           default: errorMessage = 'Audio file not found or corrupt';
         }
-        
+
         console.error(`❌ Audio test failed for ${sound.id}: ${errorMessage}`);
         setAudioErrors(prev => ({
           ...prev,
@@ -96,7 +104,7 @@ export default function SoundPlayer() {
       audio.addEventListener('canplaythrough', onCanPlay, { once: true });
       audio.addEventListener('loadedmetadata', onCanPlay, { once: true });
       audio.addEventListener('error', onError, { once: true });
-      
+
       audio.src = sound.url;
       audio.load();
     });
@@ -105,19 +113,19 @@ export default function SoundPlayer() {
   // Test all audio files on component mount
   useEffect(() => {
     const testAllAudioFiles = async () => {
-      console.log('🔍 Testing all audio files...');
+      // Testing all audio files...
       setIsTestingAudio(true);
-      
+
       const workingAudioFiles: Sound[] = [];
-      
+
       for (const sound of sounds) {
         const isWorking = await testAudioFile(sound);
         if (isWorking) {
           workingAudioFiles.push(sound);
         }
       }
-      
-      console.log(`✅ Found ${workingAudioFiles.length} working audio files out of ${sounds.length}`);
+
+      // Found working audio files
       setWorkingSounds(workingAudioFiles);
       setIsTestingAudio(false);
     };
@@ -126,16 +134,16 @@ export default function SoundPlayer() {
   }, [testAudioFile]);  // Initialize audio elements for working sounds only
   useEffect(() => {
     if (workingSounds.length === 0) return;
-    
+
     const currentAudioRefs = audioRefs.current;
-    
+
     workingSounds.forEach(sound => {
       if (!currentAudioRefs[sound.id]) {
         try {
           const audio = new Audio();
           audio.src = sound.url;
           audio.loop = true;
-          audio.preload = 'none';
+          audio.preload = 'metadata';
           audio.volume = 0;
 
           currentAudioRefs[sound.id] = audio;
@@ -157,11 +165,14 @@ export default function SoundPlayer() {
 
     return () => {
       // Cleanup audio elements using the captured ref
-      Object.values(currentAudioRefs).forEach(audio => {
+      // Cleanup audio elements using the captured ref
+      Object.keys(currentAudioRefs).forEach(key => {
         try {
+          const audio = currentAudioRefs[key];
           audio.pause();
           audio.src = '';
           audio.load();
+          delete currentAudioRefs[key];
         } catch (error) {
           console.error('Error cleaning up audio:', error);
         }
@@ -172,14 +183,14 @@ export default function SoundPlayer() {
     workingSounds.forEach(sound => {
       const audio = audioRefs.current[sound.id];
       const state = soundStates[sound.id];
-      
-      if (audio && state) {
+
+      if (audio && state && audio.src) { // Check that src exists before trying to play
         try {
-          const finalVolume = isMasterMuted || state.isMuted 
-            ? 0 
+          const finalVolume = isMasterMuted || state.isMuted
+            ? 0
             : (state.volume / 100) * (masterVolume / 100);
           audio.volume = Math.max(0, Math.min(1, finalVolume));
-          
+
           // Auto-play when volume > 0, auto-pause when volume = 0
           if (state.volume > 0 && !state.isMuted && !isMasterMuted) {
             if (audio.paused && !audioErrors[sound.id]) {
@@ -247,17 +258,15 @@ export default function SoundPlayer() {
           className={styles.masterVolumeSlider}
           title={`Master Volume: ${isMasterMuted ? 0 : masterVolume}%`}
         />
-        <span className={styles.masterVolumeValue}>
-          {isMasterMuted ? 0 : masterVolume}%
-        </span>
+
       </div>
 
       {/* Sound Grid */}
       <div className={styles.soundGrid}>
         {isTestingAudio ? (
-            <div className={styles.loadingContainer}>
+          <div className={styles.loadingContainer}>
             <Loader className="animate-spin w-12 h-12" style={{ color: '#ff7b00' }} />
-            </div>
+          </div>
         ) : workingSounds.length === 0 ? (
           <div className={styles.noSoundsContainer}>
             <p className={styles.noSoundsText}>No working audio files found</p>
@@ -269,22 +278,23 @@ export default function SoundPlayer() {
           getFilteredSounds().map(sound => {
             const state = soundStates[sound.id];
             const error = audioErrors[sound.id];
-            
+
             if (!state) return null;
 
             return (
-              
+
               <div
                 key={sound.id}
                 className={`${styles.soundCard} ${state.isPlaying ? styles.playing : ''} ${error ? styles.error : ''}`}
                 style={{ '--sound-color': sound.color } as React.CSSProperties}
               >
-                
+
                 <div className={styles.soundInfo}>
-                  <span className={styles.soundIcon}>{sound.icon}</span>
-                  <span className={styles.soundName}>{sound.name}</span>
+                  <span className={styles.soundIcon}>
+                    <sound.icon size={20} />
+                  </span>
                   {error && <span className={styles.errorIndicator}>⚠️</span>}
-                  
+
                   {!error && (
                     <div className={styles.soundControls}>
                       <button
@@ -294,7 +304,7 @@ export default function SoundPlayer() {
                       >
                         {state.isMuted ? <VolumeX size={14} /> : <Volume2 size={14} />}
                       </button>
-                      
+
                       <input
                         type="range"
                         min="0"
@@ -304,10 +314,8 @@ export default function SoundPlayer() {
                         className={styles.volumeSlider}
                         title={`Volume: ${state.isMuted ? 0 : state.volume}%`}
                       />
-                      
-                      <span className={styles.volumeValue}>
-                        {state.isMuted ? 0 : state.volume}%
-                      </span>
+
+
                     </div>
                   )}
                 </div>

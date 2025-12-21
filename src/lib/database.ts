@@ -126,11 +126,11 @@ export class DatabaseService {
     try {
       const user = await this.checkAuth();
       if (!user) {
-        console.log('No authenticated user found for loading todos');
+        // No authenticated user found for loading todos
         return [];
       }
 
-      console.log('Loading todos for user:', user.email);
+      // Loading todos for user
 
       const { data, error } = await supabase
         .from('todos')
@@ -143,7 +143,7 @@ export class DatabaseService {
         throw error;
       }
       
-      console.log('Todos loaded successfully from database:', data?.length || 0, 'items');
+      // Todos loaded successfully from database
       return data || [];
     } catch (error) {
       console.error('Error fetching todos:', error);
@@ -154,11 +154,11 @@ export class DatabaseService {
     try {
       const user = await this.checkAuth();
       if (!user) {
-        console.log('No authenticated user found for saving todo');
+        // No authenticated user found for saving todo
         return null;
       }
 
-      console.log('Saving todo for user:', user.email, 'Todo data:', todo);
+      // Saving todo for user
 
       const todoData = {
         ...todo,
@@ -166,7 +166,7 @@ export class DatabaseService {
         email: user.email
       };
 
-      console.log('Prepared todo data for database:', todoData);
+      // Prepared todo data for database
 
       const { data, error } = await supabase
         .from('todos')
@@ -179,7 +179,7 @@ export class DatabaseService {
         throw error;
       }
       
-      console.log('Todo saved successfully to database:', data);
+      // Todo saved successfully to database
       return data;
     } catch (error) {
       console.error('Error saving todo:', error);
@@ -190,11 +190,11 @@ export class DatabaseService {
     try {
       const user = await this.checkAuth();
       if (!user) {
-        console.log('No authenticated user found for updating todo');
+        // No authenticated user found for updating todo
         return null;
       }
 
-      console.log('Updating todo for user:', user.email, 'Todo ID:', id, 'Updates:', updates);
+      // Updating todo for user
 
       const { data, error } = await supabase
         .from('todos')
@@ -209,7 +209,7 @@ export class DatabaseService {
         throw error;
       }
       
-      console.log('Todo updated successfully in database:', data);
+      // Todo updated successfully in database
       return data;
     } catch (error) {
       console.error('Error updating todo:', error);
@@ -220,11 +220,11 @@ export class DatabaseService {
     try {
       const user = await this.checkAuth();
       if (!user) {
-        console.log('No authenticated user found for deleting todo');
+        // No authenticated user found for deleting todo
         return false;
       }
 
-      console.log('Deleting todo for user:', user.email, 'Todo ID:', id);
+      // Deleting todo for user
 
       const { error } = await supabase
         .from('todos')
@@ -237,7 +237,7 @@ export class DatabaseService {
         throw error;
       }
       
-      console.log('Todo deleted successfully from database');
+      // Todo deleted successfully from database
       return true;
     } catch (error) {
       console.error('Error deleting todo:', error);
@@ -341,11 +341,11 @@ export class DatabaseService {
     try {
       const user = await this.checkAuth();
       if (!user) {
-        console.log('❌ No authenticated user found for updating Pomodoro stats');
+        // No authenticated user found for updating Pomodoro stats
         return false;
       }
 
-      console.log('📊 Updating Pomodoro stats for user:', user.email, 'Stats:', stats);
+      // Updating Pomodoro stats for user
 
       const today = new Date().toISOString().split('T')[0];
       const category = stats.category || 'Other';
@@ -375,7 +375,7 @@ export class DatabaseService {
         .single();
 
       if (existingStats) {
-        console.log('📈 Found existing stats, updating:', existingStats);
+        // Found existing stats, updating
         // Update existing stats
         const { error } = await supabase
           .from('pomodoro_stats')
@@ -392,9 +392,9 @@ export class DatabaseService {
           console.error('❌ Error updating existing stats:', error);
           throw error;
         }
-        console.log('✅ Successfully updated existing Pomodoro stats');
+        // Successfully updated existing Pomodoro stats
       } else {
-        console.log('📝 No existing stats found, creating new record');
+        // No existing stats found, creating new record
         // Create new stats record
         const { error } = await supabase
           .from('pomodoro_stats')
@@ -413,7 +413,7 @@ export class DatabaseService {
           console.error('❌ Error creating new stats:', error);
           throw error;
         }
-        console.log('✅ Successfully created new Pomodoro stats record');
+        // Successfully created new Pomodoro stats record
       }
 
       return true;
@@ -672,7 +672,7 @@ export class DatabaseService {
     try {
       const user = await this.checkAuth();
       if (!user) {
-        console.log('No authenticated user found for loading appointments');
+        // No authenticated user found for loading appointments
         return [];
       }
 
@@ -698,7 +698,7 @@ export class DatabaseService {
     try {
       const user = await this.checkAuth();
       if (!user) {
-        console.log('No authenticated user found for saving appointment');
+        // No authenticated user found for saving appointment
         return null;
       }
 
@@ -732,7 +732,7 @@ export class DatabaseService {
     try {
       const user = await this.checkAuth();
       if (!user) {
-        console.log('No authenticated user found for updating appointment');
+        // No authenticated user found for updating appointment
         return null;
       }
 
@@ -765,7 +765,7 @@ export class DatabaseService {
     try {
       const user = await this.checkAuth();
       if (!user) {
-        console.log('No authenticated user found for deleting appointment');
+        // No authenticated user found for deleting appointment
         return false;
       }
 

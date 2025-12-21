@@ -239,10 +239,9 @@
   width: 380px;
   max-width: 380px;
   height: 100vh;
-  background: linear-gradient(145deg, 
-    rgba(26, 32, 44, 0.95) 0%, 
-    rgba(26, 32, 44, 0.98) 100%);
+  background: var(--glass-bg);
   backdrop-filter: blur(24px);
+  -webkit-backdrop-filter: blur(24px);
   border-right: 1px solid rgba(255, 255, 255, 0.12);
   z-index: 1000;
   transform: translateX(-100%);
@@ -255,20 +254,6 @@
 
 .sidebarOpen {
   transform: translateX(0);
-}
-
-/* Christmas Theme */
-.christmasTheme {
-  --accent-color: #e63946; /* festive red */
-  --text-primary: #fffaf0; /* warm off-white */
-  --text-secondary: #f0e6d6;
-  --theme-green: #2a9d8f;
-  --theme-gold: #ffd166;
-  background: linear-gradient(145deg,
-    rgba(24, 28, 40, 0.95) 0%,
-    rgba(24, 28, 40, 0.98) 100%);
-  border-right: 1px solid rgba(255, 209, 102, 0.25);
-  transition: background 0.4s ease, border-color 0.4s ease;
 }
 
 .snowfallOverlay {

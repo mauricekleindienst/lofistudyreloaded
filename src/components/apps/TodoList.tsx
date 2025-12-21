@@ -42,7 +42,7 @@ const TodoList: React.FC = () => {
   useEffect(() => {
     const loadUserTodos = async () => {
       if (isAuthenticated) {
-        console.log('Loading todos for authenticated user');
+        // Loading todos for authenticated user
         const userTodos = await loadTodos();
         const formattedTodos: Todo[] = userTodos.map(todo => ({
           id: todo.id!,
@@ -53,9 +53,8 @@ const TodoList: React.FC = () => {
           dueDate: todo.due_date
         }));
         setTodos(formattedTodos);
-        console.log('Loaded', formattedTodos.length, 'todos from database');
       } else {
-        console.log('Loading default todos for offline mode');
+        // Loading default todos for offline mode
         // Load default todos when not authenticated
         setTodos([
           { 
@@ -108,7 +107,6 @@ const TodoList: React.FC = () => {
         if (isAuthenticated) {
         setIsSaving(true);
         try {
-          console.log('Adding new todo:', newTodoItem);
           const savedTodo = await saveTodo({
             text: newTodo,
             completed: false,
@@ -122,7 +120,6 @@ const TodoList: React.FC = () => {
               todo.id === tempId 
                 ? { ...newTodoItem, id: savedTodo.id! }
                 : todo            ));
-            console.log('Todo saved successfully:', savedTodo);
           } else {
             throw new Error('Failed to save todo - no data returned');
           }
@@ -133,7 +130,7 @@ const TodoList: React.FC = () => {
           setIsSaving(false);
         }
       } else {
-        console.log('Todo added to local state (not authenticated)');
+        // Todo added to local state (not authenticated)
       }
     }
   };
@@ -150,10 +147,9 @@ const TodoList: React.FC = () => {
 
     if (isAuthenticated) {
       try {
-        console.log('Toggling todo completion:', id, 'to', !todo.completed);
         const result = await updateTodo(id, { completed: !todo.completed });
         if (result) {
-          console.log('Todo completion updated successfully:', result);
+          // Todo completion updated successfully
         }
       } catch (error) {
         // Revert on error
@@ -163,7 +159,7 @@ const TodoList: React.FC = () => {
         console.error('Failed to update todo completion:', error);
       }
     } else {
-      console.log('Todo completion toggled locally (not authenticated)');
+      // Todo completion toggled locally (not authenticated)
     }
   };
   const deleteTodo = async (id: number) => {
@@ -175,10 +171,9 @@ const TodoList: React.FC = () => {
 
     if (isAuthenticated) {
       try {
-        console.log('Deleting todo:', id, todoToDelete.text);
         const success = await deleteTodoFromDb(id);
         if (success) {
-          console.log('Todo deleted successfully from database');
+          // Todo deleted successfully from database
         } else {
           throw new Error('Failed to delete todo from database');
         }
@@ -188,7 +183,7 @@ const TodoList: React.FC = () => {
         console.error('Failed to delete todo:', error);
       }
     } else {
-      console.log('Todo deleted locally (not authenticated)');
+      // Todo deleted locally (not authenticated)
     }
   };
 

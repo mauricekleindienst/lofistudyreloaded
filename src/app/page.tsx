@@ -1,9 +1,8 @@
 "use client";
 
-import Desktop from '@/components/Desktop_modern_refactored';
+import Desktop from '@/components/Desktop';
 import { AppStateProvider } from '@/contexts/AppStateContext';
 import AuthModal from '@/components/AuthModal';
-import DatabaseDebugPanel from '@/components/DatabaseDebugPanel';
 import { useState } from 'react';
 import Script from 'next/script';
 
@@ -55,29 +54,9 @@ export default function Home() {
         }}
       />
       
-      {/* SEO Meta Tags for Homepage */}
-      <Script
-        id="seo-meta"
-        dangerouslySetInnerHTML={{
-          __html: `
-            if (typeof document !== 'undefined') {
-              // Add additional meta tags dynamically if needed
-              const keywords = document.querySelector('meta[name="keywords"]');
-              if (!keywords) {
-                const keywordsMeta = document.createElement('meta');
-                keywordsMeta.name = 'keywords';
-                keywordsMeta.content = 'pomodoro timer, focus app, productivity, study app, ambient sounds, lo-fi music, concentration, time management';
-                document.head.appendChild(keywordsMeta);
-              }
-            }
-          `,
-        }}
-      />
-
       <AppStateProvider>
         <Desktop onShowAuth={() => setShowAuthModal(true)} />
         <AuthModal isVisible={showAuthModal} onClose={() => setShowAuthModal(false)} />
-        <DatabaseDebugPanel />
       </AppStateProvider>
     </>
   );

@@ -21,7 +21,6 @@ function sendToAnalytics(name: string, value: number, id: string) {
   }
   
   // Log for debugging
-  console.log('Performance metric:', { name, value, id });
 }
 
 export function WebVitals() {
@@ -63,11 +62,6 @@ export function usePerformanceMonitoring() {
         list.getEntries().forEach((entry) => {
           if (entry.entryType === 'navigation') {
             const navEntry = entry as PerformanceNavigationTiming;
-            console.log('Navigation timing:', {
-              domContentLoaded: navEntry.domContentLoadedEventEnd - navEntry.fetchStart,
-              loadComplete: navEntry.loadEventEnd - navEntry.fetchStart,
-              firstPaint: navEntry.responseEnd - navEntry.fetchStart,
-            });
           }
         });
       });

@@ -8,12 +8,12 @@
   gap: clamp(8px, 2vw, 16px);
   color: var(--text-primary);
   
-  backdrop-filter: blur(12px);
-  border-radius: 12px;
+  /* Transparent container, handled by Window */
+  background: transparent;
+  border-radius: 0;
   overflow: hidden;
   box-sizing: border-box;
   min-height: 280px;
-  /* Responsive container */
   max-width: 100%;
 }
 
@@ -32,10 +32,10 @@
   width: clamp(18px, 3vw, 26px);
   height: clamp(18px, 3vw, 26px);
   padding: clamp(3px, 0.6vw, 5px);
-  border: 1px solid var(--border-color);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: clamp(9px, 1.5vw, 13px);
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(8px);
+  background: rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(4px);
   color: var(--text-secondary);
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
@@ -69,6 +69,7 @@
 .modeButton.active {
   border-color: var(--accent-color);
   transform: translateY(-1px);
+  color: white;
 }
 
 /* Enhanced Responsive Design */
@@ -203,11 +204,11 @@
   height: clamp(80px, 16vw, 120px);
   margin: clamp(8px, 2vw, 16px) auto;
   flex-shrink: 0;
-  background: var(--glass-bg);
-  backdrop-filter: blur(16px);
-  border: 1px solid var(--border-color);
+  background: rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(12px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: clamp(30px, 6vw, 50px);
-  box-shadow: var(--shadow-light);
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.1);
   overflow: hidden;
 }
 
@@ -300,16 +301,16 @@
 .settingsButton {
   width: clamp(28px, 4.5vw, 36px);
   height: clamp(28px, 4.5vw, 36px);
-  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: var(--radius-md);
-  background: var(--bg-secondary, #1A202C);
+  background: rgba(255, 255, 255, 0.05);
   color: var(--text-secondary, #e2e8f0);
   display: flex;
   align-items: center;
   justify-content: center;
   cursor: pointer;
   transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-  backdrop-filter: blur(15px);
+  backdrop-filter: blur(4px);
   flex-shrink: 0;
 }
 
@@ -321,17 +322,19 @@
 
 .resetButton:hover,
 .settingsButton:hover {
-  background: var(--accent-color, #ff7b00);
+  background: rgba(255, 255, 255, 0.1);
   color: var(--text-primary, #ffffff);
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(255, 123, 0, 0.2);
-  border-color: var(--accent-color, #ff7b00);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .resetButton:disabled {
   opacity: 0.4;
   cursor: not-allowed;
   transform: none;
+  background: transparent;
+  box-shadow: none;
 }
 
 /* Category Section - Enhanced Responsive Design */
@@ -361,15 +364,15 @@
 .categorySelect {
   width: 100%;
   padding: var(--spacing-sm) var(--spacing-md);
-  background: var(--glass-bg);
-  border: 1px solid var(--border-color);
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: var(--radius-md);
   color: var(--text-primary);
   font-size: clamp(0.7rem, 1.5vw, 0.85rem);
   font-weight: 500;
   cursor: pointer;
   transition: all 0.3s ease;
-  backdrop-filter: blur(16px);
+  backdrop-filter: blur(4px);
   appearance: none;
   -webkit-appearance: none;
   -moz-appearance: none;
@@ -385,25 +388,25 @@
 }
 
 .categorySelect:hover {
-  border-color: var(--accent-color);
-  background: rgba(255, 123, 0, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.08);
 }
 
 .categorySelect:focus {
   outline: none;
   border-color: var(--accent-color);
-  box-shadow: 0 0 0 2px rgba(255, 123, 0, 0.2);
+  background: rgba(0, 0, 0, 0.2);
 }
 
 .categorySelect:disabled {
   opacity: 0.5;
   cursor: not-allowed;
-  background: rgba(255, 255, 255, 0.05);
+  background: rgba(255, 255, 255, 0.02);
 }
 
 /* Fix dropdown options styling for better theme consistency */
 .categorySelect option {
-  background: var(--bg-secondary, #2d3748);
+  background: #1A202C;
   color: var(--text-primary, #ffffff);
   padding: var(--spacing-xs, 4px) var(--spacing-sm, 8px);
   border: none;
@@ -428,10 +431,10 @@
   gap: var(--spacing-xs);
   margin-top: var(--spacing-sm);
   padding: var(--spacing-sm);
-  background: var(--glass-bg);
+  background: rgba(255, 255, 255, 0.03);
   border-radius: var(--radius-md);
-  border: 1px solid var(--border-color);
-  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  backdrop-filter: blur(4px);
 }
 
 .statsGrid {
@@ -469,25 +472,20 @@
   align-items: center;
   justify-content: center;
   transition: color 0.3s ease;
-  background: var(--bg-secondary, #1A202C);
+  background: rgba(255, 255, 255, 0.05);
   border-radius: 4px;
   padding: 2px;
-  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+  border: 1px solid rgba(255, 255, 255, 0.1);
 }
 
 /* Statistics */
-.statsSection {
-  display: flex;
-  gap: 6px;
-}
-
 .statCard {
   flex: 1;
   padding: 8px;
-  background: var(--bg-secondary, #1A202C);
+  background: rgba(255, 255, 255, 0.03);
   border-radius: 8px;
-  backdrop-filter: blur(15px);
-  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+  backdrop-filter: blur(4px);
+  border: 1px solid rgba(255, 255, 255, 0.05);
   display: flex;
   align-items: center;
   gap: 6px;
@@ -495,11 +493,11 @@
 
 .statIcon {
   color: var(--accent-color, #ff7b00);
-  background: var(--bg-secondary, #1A202C);
+  background: rgba(255, 255, 255, 0.05);
   padding: 4px;
   border-radius: 4px;
   flex-shrink: 0;
-  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+  border: 1px solid rgba(255, 255, 255, 0.05);
 }
 
 .statContent {
@@ -538,10 +536,10 @@
 .settingsModal {
   width: 200px;
   max-width: 90vw;
-  background: linear-gradient(145deg, var(--bg-primary, #1A202C), var(--bg-secondary, #1A202C));
+  background: #1A202C;
   border-radius: 24px;
-  backdrop-filter: blur(15px);
-  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   overflow: hidden;
 }
 
@@ -563,9 +561,9 @@
 .closeButton {
   width: 24px;
   height: 24px;
-  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 4px;
-  background: var(--bg-secondary, #1A202C);
+  background: transparent;
   color: var(--text-secondary, #e2e8f0);
   display: flex;
   align-items: center;
@@ -575,11 +573,9 @@
 }
 
 .closeButton:hover {
-  background: var(--accent-color, #ff7b00);
+  background: rgba(255, 255, 255, 0.1);
   color: var(--text-primary, #ffffff);
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(255, 123, 0, 0.2);
-  border-color: var(--accent-color, #ff7b00);
+  transform: translateY(-1px);
 }
 
 .settingsContent {
@@ -587,7 +583,7 @@
   max-height: 200px;
   overflow-y: auto;
   scrollbar-width: thin;
-  scrollbar-color: var(--accent-color, #ff7b00) var(--bg-secondary, #1A202C);
+  scrollbar-color: var(--accent-color, #ff7b00) transparent;
 }
 
 /* Custom Scrollbar for Settings */
@@ -596,7 +592,7 @@
 }
 
 .settingsContent::-webkit-scrollbar-track {
-  background: var(--bg-secondary, #1A202C);
+  background: transparent;
   border-radius: 3px;
 }
 
@@ -646,8 +642,8 @@
 .settingInput {
   width: 45px;
   padding: 4px 6px;
-  background: var(--bg-secondary, #1A202C);
-  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 4px;
   color: var(--text-primary, #ffffff);
   font-size: 11px;
@@ -656,7 +652,7 @@
 
 .settingInput:focus {
   border-color: var(--accent-color, #ff7b00);
-  box-shadow: 0 0 0 3px rgba(255, 123, 0, 0.1);
+  background: rgba(0, 0, 0, 0.2);
 }
 
 .volumeControl {
@@ -669,9 +665,9 @@
 .volumeButton {
   width: 24px;
   height: 24px;
-  border: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
+  border: 1px solid rgba(255, 255, 255, 0.1);
   border-radius: 4px;
-  background: var(--bg-secondary, #1A202C);
+  background: transparent;
   color: var(--text-secondary, #e2e8f0);
   display: flex;
   align-items: center;
@@ -682,17 +678,15 @@
 }
 
 .volumeButton:hover {
-  background: var(--accent-color, #ff7b00);
+  background: rgba(255, 255, 255, 0.1);
   color: var(--text-primary, #ffffff);
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(255, 123, 0, 0.2);
-  border-color: var(--accent-color, #ff7b00);
 }
 
 .volumeSlider {
   flex: 1;
   height: 4px;
-  background: var(--border-color, rgba(255, 255, 255, 0.1));
+  background: rgba(255, 255, 255, 0.1);
   border-radius: 2px;
   outline: none;
   appearance: none;
@@ -730,8 +724,8 @@
 
 .settingsFooter {
   padding: 8px 12px;
-  border-top: 1px solid var(--border-color, rgba(255, 255, 255, 0.1));
-  background: var(--bg-secondary, #1A202C);
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(0, 0, 0, 0.2);
 }
 
 .saveSettingsButton {

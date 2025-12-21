@@ -1,15 +1,17 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import { 
-  AlertTriangle, 
-  BarChart3, 
-  Expand, 
+import {
+  AlertTriangle,
+  BarChart3,
+  Expand,
   Share,
   Info,
-
+  X
 } from 'lucide-react';
 import { FaDiscord } from "react-icons/fa";
+import { sendMessage } from '../../lib/chat';
+import { useAppState } from '../../contexts/AppStateContext';
 import InfoModal from '../InfoModal';
 import DiscordModal from '../DiscordModal';
 import AuthModal from '../AuthModal';
@@ -18,18 +20,18 @@ import desktopStyles from '../../../styles/Desktop.module.css';
 
 // Motivational quotes array (moved outside component to avoid recreating)
 const motivationalQuotes = [
-  "You're doing great! Keep up the focused work! 🌟",
-  "Every minute of study brings you closer to your goals! 📚",
-  "Focus is your superpower - you've got this! 💪",
-  "Small steps lead to big achievements! Keep going! 🚀",
-  "Your dedication today shapes your success tomorrow! ✨",
-  "Learning never stops - you're investing in yourself! 🧠",
-  "Break through barriers with your determination! 🔥",
-  "Knowledge is power, and you're building it right now! ⚡",
-  "Stay consistent, stay focused, stay amazing! 🎯",
-  "Your future self will thank you for this effort! 🙏",
-  "Progress over perfection - you're doing wonderfully! 🌈",
-  "Each study session makes you stronger and smarter! 💎"
+  "You're doing great! Keep up the focused work!",
+  "Every minute of study brings you closer to your goals!",
+  "Focus is your superpower - you've got this!",
+  "Small steps lead to big achievements! Keep going!",
+  "Your dedication today shapes your success tomorrow!",
+  "Learning never stops - you're investing in yourself!",
+  "Break through barriers with your determination!",
+  "Knowledge is power, and you're building it right now!",
+  "Stay consistent, stay focused, stay amazing!",
+  "Your future self will thank you for this effort!",
+  "Progress over perfection - you're doing wonderfully!",
+  "Each study session makes you stronger and smarter!"
 ];
 
 interface TopBarProps {
@@ -40,6 +42,7 @@ interface TopBarProps {
 }
 
 export default function TopBar({ user, onToggleStats }: TopBarProps) {
+  const { updateChatState } = useAppState();
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [showDiscordModal, setShowDiscordModal] = useState(false);
   const [showClock, setShowClock] = useState(false);
@@ -60,7 +63,7 @@ export default function TopBar({ user, onToggleStats }: TopBarProps) {
 
     // Show first quote after 15 minutes
     const initialTimer = setTimeout(showMotivationalQuote, 15 * 60 * 1000);
-    
+
     // Then show every 15 minutes
     const interval = setInterval(showMotivationalQuote, 15 * 60 * 1000);
 
@@ -69,7 +72,7 @@ export default function TopBar({ user, onToggleStats }: TopBarProps) {
       clearInterval(interval);
     };
   }, []); // Empty dependency array since motivationalQuotes is now outside component
-  
+
   const handleFullscreen = () => {
     if (document.fullscreenElement) {
       document.exitFullscreen();
@@ -102,78 +105,109 @@ export default function TopBar({ user, onToggleStats }: TopBarProps) {
       }, 3000);
     }
   };
-  
+
+
   return (
     <>
       {/* Notification */}
-      {showNotification && (
-        <div className={desktopStyles.notification}>
-          {notificationMessage}
-        </div>
-      )}
-
-      <div className={desktopStyles.topRightIcons}>
-        {/* Clock Component */}
-        <Clock 
-          isExpanded={showClock}
-          onToggle={() => setShowClock(!showClock)}
-          onClose={() => setShowClock(false)}
-        />
-        
-        {!user && (
-          <>
+      <div className={desktopStyles.notificationsContainer}>
+        {showNotification && (
+          <div className={desktopStyles.notification}>
+            <div className={desktopStyles.notificationIcon}>
+              <Info size={18} />
+            </div>
+            <div className={desktopStyles.notificationContent}>
+              <p className={desktopStyles.notificationType}>Notification</p>
+              <p className={desktopStyles.notificationMessage}>{notificationMessage}</p>
+            </div>
             <button
-              className={desktopStyles.topIcon}
-              style={{ color: '#f59e0b' }}
-              onClick={() => setShowAuthModal(true)}
+              className={desktopStyles.notificationClose}
+              onClick={() => setShowNotification(false)}
             >
-              <AlertTriangle size={20} />
-              <div className={desktopStyles.topIconTooltip}>
-                Sign in to sync your data
-              </div>
+              <X size={14} />
             </button>
-            <AuthModal isVisible={showAuthModal} onClose={() => setShowAuthModal(false)} />
-          </>
+          </div>
         )}
-        
-        {user && (
-          <button
-            onClick={onToggleStats}
-            className={desktopStyles.topIcon}
-          >
-            <BarChart3 size={20} />
-          </button>
-        )}
-        
-        <button
-          onClick={() => setShowInfoModal(true)}
-          className={desktopStyles.topIcon}
-        >
-          <Info size={20} />
-        </button>
-          <button
-          onClick={() => setShowDiscordModal(true)}
-          className={desktopStyles.topIcon}
-        >
-          <FaDiscord size={20} />
-        </button> 
-         
-        <button
-          onClick={handleFullscreen}
-          className={desktopStyles.topIcon}
-        >
-          <Expand size={20} />
-        </button>
-        
-        <button
-          onClick={handleShare}
-          className={desktopStyles.topIcon}
-        >
-          <Share size={20} />
-        </button>
       </div>
 
-      <InfoModal 
+      <div className={desktopStyles.topRightIcons}>
+        <div className={desktopStyles.topBarGroup}>
+          <Clock
+            isExpanded={showClock}
+            onToggle={() => setShowClock(!showClock)}
+            onClose={() => setShowClock(false)}
+          />
+        </div>
+
+        <div className={desktopStyles.topBarDivider} />
+
+        <div className={desktopStyles.topBarGroup}>
+          {!user && (
+            <>
+              <button
+                className={desktopStyles.topIcon}
+                style={{ color: '#f59e0b' }}
+                onClick={() => setShowAuthModal(true)}
+              >
+                <AlertTriangle size={20} />
+                <div className={desktopStyles.topIconTooltip}>
+                  Sign in to sync your data
+                </div>
+              </button>
+              <AuthModal isVisible={showAuthModal} onClose={() => setShowAuthModal(false)} />
+            </>
+          )}
+
+          {user && (
+            <button
+              onClick={onToggleStats}
+              className={desktopStyles.topIcon}
+              title="View Statistics"
+            >
+              <BarChart3 size={20} />
+            </button>
+          )}
+
+          <button
+            onClick={() => setShowInfoModal(true)}
+            className={desktopStyles.topIcon}
+            title="Information"
+          >
+            <Info size={20} />
+          </button>
+
+          <button
+            onClick={() => setShowDiscordModal(true)}
+            className={desktopStyles.topIcon}
+            title="Join Discord"
+          >
+            <FaDiscord size={20} />
+          </button>
+        </div>
+
+        <div className={desktopStyles.topBarDivider} />
+
+        <div className={desktopStyles.topBarGroup}>
+          <button
+            onClick={handleShare}
+            className={desktopStyles.topIcon}
+            title="Share"
+          >
+            <Share size={20} />
+          </button>
+
+
+          <button
+            onClick={handleFullscreen}
+            className={desktopStyles.topIcon}
+            title="Fullscreen"
+          >
+            <Expand size={20} />
+          </button>
+        </div>
+      </div>
+
+      <InfoModal
         isOpen={showInfoModal}
         onClose={() => setShowInfoModal(false)}
       />

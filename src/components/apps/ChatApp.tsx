@@ -1,24 +1,24 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from 'react';
-import { Send, RefreshCw, User, Users, LogIn, MessageSquare } from 'lucide-react';
+import { Send, RefreshCw, User, Users, LogIn, MessageSquare, X } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
 import { useRealtimeChat } from '../../hooks/useRealtimeChat';
 import styles from '../../../styles/ChatbotApp.module.css';
 
 const ChatApp: React.FC = () => {
   const { user } = useAuth();
-  const { 
-    messages, 
-    loading, 
-    onlineUsers, 
+  const {
+    messages,
+    loading,
+    onlineUsers,
     username,
     hasUsername,
     sendMessage: sendChatMessage,
     updateUsername,
     refreshMessages
   } = useRealtimeChat();
-  
+
   const [newMessage, setNewMessage] = useState('');
   const [usernameInput, setUsernameInput] = useState('');
   const [usernameDialogOpen, setUsernameDialogOpen] = useState(false);
@@ -27,10 +27,10 @@ const ChatApp: React.FC = () => {
 
   // Show username dialog if user doesn't have a username
   useEffect(() => {
-    if (user && !hasUsername && !loading) {
+    if (user && !username && !loading) {
       setUsernameDialogOpen(true);
     }
-  }, [user, hasUsername, loading]);
+  }, [user, username, loading]);
 
   // Auto scroll to bottom when new messages arrive
   useEffect(() => {
@@ -44,9 +44,9 @@ const ChatApp: React.FC = () => {
 
   const handleSubmitUsername = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!usernameInput.trim()) return;
-    
+
     const success = await updateUsername(usernameInput);
     if (success) {
       setUsernameDialogOpen(false);
@@ -55,9 +55,9 @@ const ChatApp: React.FC = () => {
 
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    
+
     if (!newMessage.trim() || !user) return;
-    
+
     const success = await sendChatMessage(newMessage);
     if (success) {
       setNewMessage('');
@@ -75,28 +75,28 @@ const ChatApp: React.FC = () => {
     const today = new Date();
     const yesterday = new Date(today);
     yesterday.setDate(yesterday.getDate() - 1);
-    
+
     const isToday = date.toDateString() === today.toDateString();
     const isYesterday = date.toDateString() === yesterday.toDateString();
-    
+
     if (isToday) return 'Today';
     if (isYesterday) return 'Yesterday';
-    
-    return date.toLocaleDateString([], { 
-      weekday: 'long', 
-      year: 'numeric', 
-      month: 'long', 
-      day: 'numeric' 
+
+    return date.toLocaleDateString([], {
+      weekday: 'long',
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
     });
   };
 
   const groupMessagesByDate = (messages: Array<{ id: string; created_at: string; user_id: string; username: string; message: string }>) => {
     const grouped: { date: string; messages: Array<{ id: string; created_at: string; user_id: string; username: string; message: string }> }[] = [];
-    
+
     messages.forEach((message) => {
       const messageDate = new Date(message.created_at).toDateString();
       const lastGroup = grouped[grouped.length - 1];
-      
+
       if (lastGroup && lastGroup.date === messageDate) {
         lastGroup.messages.push(message);
       } else {
@@ -106,7 +106,7 @@ const ChatApp: React.FC = () => {
         });
       }
     });
-    
+
     return grouped;
   };
 
@@ -142,8 +142,15 @@ const ChatApp: React.FC = () => {
             <Users size={14} />
             <span>{onlineUsers} online</span>
           </div>
-          <button 
-            onClick={refreshMessages} 
+          <button
+            onClick={() => setUsernameDialogOpen(true)}
+            className={styles.refreshButton}
+            title="Change username"
+          >
+            <User size={16} />
+          </button>
+          <button
+            onClick={refreshMessages}
             className={styles.refreshButton}
             disabled={loading}
             title="Refresh messages"
@@ -175,8 +182,8 @@ const ChatApp: React.FC = () => {
                   <div className={styles.dateLine}></div>
                 </div>
                 {group.messages.map((msg) => (
-                  <div 
-                    key={msg.id} 
+                  <div
+                    key={msg.id}
                     className={`${styles.message} ${msg.user_id === user?.id ? styles.ownMessage : ''}`}
                   >
                     <div className={styles.messageHeader}>
@@ -205,8 +212,8 @@ const ChatApp: React.FC = () => {
           ref={inputRef}
           className={styles.messageInput}
         />
-        <button 
-          type="submit" 
+        <button
+          type="submit"
           disabled={!newMessage.trim() || !user || loading}
           className={styles.sendButton}
         >
@@ -218,14 +225,27 @@ const ChatApp: React.FC = () => {
         <div className={styles.modal}>
           <div className={styles.modalContent}>
             <div className={styles.modalHeader}>
-              <h3>Choose a username</h3>
-              <button 
-                onClick={generateRandomUsername}
-                className={styles.closeButton}
-                type="button"
-              >
-                <User size={16} />
-              </button>
+              <h3>{username ? 'Change Username' : 'Choose a Username'}</h3>
+              <div style={{ display: 'flex', gap: '8px' }}>
+                <button
+                  onClick={generateRandomUsername}
+                  className={styles.closeButton}
+                  title="Randomize"
+                  type="button"
+                >
+                  <RefreshCw size={14} />
+                </button>
+                {username && (
+                  <button
+                    onClick={() => setUsernameDialogOpen(false)}
+                    className={styles.closeButton}
+                    title="Close"
+                    type="button"
+                  >
+                    <X size={18} />
+                  </button>
+                )}
+              </div>
             </div>
             <form onSubmit={handleSubmitUsername}>
               <input
@@ -236,7 +256,7 @@ const ChatApp: React.FC = () => {
                 className={styles.usernameInput}
                 autoFocus
               />
-              <button 
+              <button
                 type="submit"
                 disabled={!usernameInput.trim()}
                 className={styles.submitButton}

@@ -142,7 +142,7 @@ export function useDataPersistence() {
   useEffect(() => {
     if (isAuthenticated) {
       // Optional: Trigger initial data sync when user becomes authenticated
-      console.log('User authenticated, data persistence enabled');
+      // User authenticated, data persistence enabled
     }
   }, [isAuthenticated]);
 

@@ -86,7 +86,7 @@ export const useVideoManager = (): VideoManager => {
         const onLoad = () => {
           cleanup();
           preloadedVideos.current.set(videoId, video);
-          console.log(`Successfully preloaded video from CDN: ${background.alt}`);
+          // Successfully preloaded video from CDN
           resolve(video);
         };
 
@@ -99,7 +99,7 @@ export const useVideoManager = (): VideoManager => {
             const fallbackUrl = getFallbackUrl(background.filename, currentFallbackIndex);
             if (fallbackUrl && fallbackUrl !== videoUrl) { // Prevent infinite loops
               currentFallbackIndex++;
-              console.log(`Trying fallback ${currentFallbackIndex}: ${fallbackUrl}`);
+              // Trying fallback
               video.src = '';
               await delay(Math.min(1000 * Math.pow(2, attempt), 8000));
               attempt++;
@@ -117,7 +117,7 @@ export const useVideoManager = (): VideoManager => {
         };
 
         const onLoadStart = () => {
-          console.log(`Started loading video: ${background.alt}`);
+          // Started loading video
         };
 
         video.addEventListener('canplaythrough', onLoad, { once: true });
@@ -156,29 +156,29 @@ export const useVideoManager = (): VideoManager => {
 
   const clearPreloadedVideos = useCallback(() => {
     const count = preloadedVideos.current.size;
-    console.log(`Clearing ${count} preloaded videos`);
+    // Clearing preloaded videos
     
     if (count === 0) {
-      console.log('No preloaded videos to clear');
+      // No preloaded videos to clear
       return;
     }
     
     preloadedVideos.current.forEach((video, id) => {
-      console.log(`Clearing preloaded video: ${id}`);
+      // Clearing preloaded video
       video.src = '';
       video.remove();
     });
     preloadedVideos.current.clear();
     loadingPromises.current.clear();
     
-    console.log('All preloaded videos cleared successfully');
+    // All preloaded videos cleared successfully
   }, []);
 
   const cleanupOldVideos = useCallback((maxCount: number) => {
     if (preloadedVideos.current.size <= maxCount) return;
 
     const videosToRemove = Array.from(preloadedVideos.current.keys()).slice(0, preloadedVideos.current.size - maxCount);
-    console.log(`Cleaning up ${videosToRemove.length} old preloaded videos`);
+    // Cleaning up old preloaded videos
     
     videosToRemove.forEach(key => {
       const video = preloadedVideos.current.get(key);
