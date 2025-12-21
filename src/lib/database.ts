@@ -480,37 +480,18 @@ export class DatabaseService {
       const user = await this.checkAuth();
       if (!user) return false;
 
-      // First check if user record exists
-      const existingUser = await this.getUserSettings();
+      // Use upsert to handle both creation and updates automatically
+      const { streak_count, total_focus_time, ...settingsToSave } = settings as any;
+      const { error } = await supabase
+        .from('users')
+        .upsert([{
+          id: user.id,
+          email: user.email || '',
+          ...settingsToSave,
+          updated_at: new Date().toISOString()
+        }], { onConflict: 'id' });
 
-      if (existingUser) {
-        // Update existing user - filter out non-existent columns
-        const { streak_count, total_focus_time, ...settingsToSave } = settings as any;
-        const { error } = await supabase
-          .from('users')
-          .update({
-            ...settingsToSave,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', user.id);
-
-        if (error) throw error;
-      } else {
-        // Create new user record - filter out non-existent columns
-        const { streak_count, total_focus_time, ...settingsToSave } = settings as any;
-        const { error } = await supabase
-          .from('users')
-          .insert([{
-            id: user.id,
-            email: user.email || '',
-            ...settingsToSave,
-            created_at: new Date().toISOString(),
-            updated_at: new Date().toISOString()
-          }]);
-
-        if (error) throw error;
-      }
-
+      if (error) throw error;
       return true;
     } catch (error) {
       console.error('Error saving user settings:', error);
@@ -653,11 +634,10 @@ export class DatabaseService {
       const { streak_count, total_focus_time, ...validProfile } = userProfile;
       const { error } = await supabase
         .from('users')
-        .insert([{
+        .upsert([{
           ...validProfile,
-          created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
-        }]);
+        }], { onConflict: 'id' });
 
       if (error) {
 

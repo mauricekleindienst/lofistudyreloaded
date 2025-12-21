@@ -15,36 +15,21 @@ export async function POST() {
       )
     }
 
-    // Check if profile already exists
-    const { data: existingProfile } = await supabase
+    // Create or update the profile using upsert
+    const { error: upsertError } = await supabase
       .from('users')
-      .select('id')
-      .eq('id', user.id)
-      .single()
-
-    if (existingProfile) {
-      return NextResponse.json(
-        { message: 'Profile already exists' },
-        { status: 200 }
-      )
-    }
-
-    // Create the profile
-    const { error: insertError } = await supabase
-      .from('users')
-      .insert([{
+      .upsert([{
         id: user.id,
         email: user.email || '',
         full_name: user.user_metadata?.full_name || user.user_metadata?.name || '',
         avatar_url: user.user_metadata?.avatar_url || user.user_metadata?.picture || '',
         premium: false,
         settings: {}
-      }])
+      }], { onConflict: 'id' })
 
-    if (insertError) {
-
+    if (upsertError) {
       return NextResponse.json(
-        { error: 'Failed to create profile', details: insertError.message },
+        { error: 'Failed to create or update profile', details: upsertError.message },
         { status: 500 }
       )
     }
