@@ -4,10 +4,10 @@ import { NextResponse } from 'next/server'
 export async function POST() {
   try {
     const supabase = await createClient()
-    
+
     // Get the current user
     const { data: { user }, error: userError } = await supabase.auth.getUser()
-    
+
     if (userError || !user) {
       return NextResponse.json(
         { error: 'Not authenticated' },
@@ -38,13 +38,11 @@ export async function POST() {
         full_name: user.user_metadata?.full_name || user.user_metadata?.name || '',
         avatar_url: user.user_metadata?.avatar_url || user.user_metadata?.picture || '',
         premium: false,
-        streak_count: 0,
-        total_focus_time: 0,
         settings: {}
       }])
 
     if (insertError) {
-    
+
       return NextResponse.json(
         { error: 'Failed to create profile', details: insertError.message },
         { status: 500 }

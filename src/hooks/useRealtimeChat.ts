@@ -56,22 +56,9 @@ export function useRealtimeChat() {
           setMessages((prev) => [...prev, newMessage]);
         });
 
-        // Track presence for online users
-        unsubscribePresence = trackPresence(user.id);
-
-        // Setup presence channel for online users count
-        const presenceChannel: RealtimeChannel = supabase.channel('online_users');
-
-        presenceChannel.on('presence', { event: 'sync' }, () => {
-          const presenceState = presenceChannel.presenceState();
-          const count = Object.keys(presenceState).length;
+        // Track presence for online users and get count in one subscription
+        unsubscribePresence = trackPresence(user.id, (count) => {
           setOnlineUsers(count);
-        });
-
-        await presenceChannel.subscribe(async (status) => {
-          if (status === 'SUBSCRIBED') {
-            await presenceChannel.track({ user_id: user.id });
-          }
         });
 
       } catch (error) {

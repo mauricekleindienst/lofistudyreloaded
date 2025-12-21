@@ -138,6 +138,13 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
   const [showStats, setShowStats] = useState(false);
   const [isTransitioning, setIsTransitioning] = useState(false);
 
+  // Ref to track current open windows without triggering effect re-runs
+  const openWindowsRef = useRef<ModernWindow[]>([]);
+
+  useEffect(() => {
+    openWindowsRef.current = openWindows;
+  }, [openWindows]);
+
   // Enhanced video buffering state
   const [videoLoadError, setVideoLoadError] = useState(false);
   const [retryCount, setRetryCount] = useState(0);
@@ -518,7 +525,7 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
   // Reset unread count when chat is opened or restored
   useEffect(() => {
     if (!isClient) return;
-    const isChatVisible = openWindows.some(w => w.app.id === 'chat' && !w.isMinimized);
+    const isChatVisible = openWindowsRef.current.some(w => w.app.id === 'chat' && !w.isMinimized);
     if (isChatVisible && appStates.chat.unreadCount > 0) {
       updateChatState({ unreadCount: 0 });
     }
@@ -535,14 +542,14 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
       // Don't count own messages for the unread badge, except for our test bot
       if (user && message.user_id === user.id && message.username !== 'Lofi Bot 🤖') return;
 
-      const isChatVisible = openWindows.some(w => w.app.id === 'chat' && !w.isMinimized);
+      const isChatVisible = openWindowsRef.current.some(w => w.app.id === 'chat' && !w.isMinimized);
       if (!isChatVisible) {
         updateChatState(prev => ({ unreadCount: prev.unreadCount + 1 }));
       }
     });
 
     return () => unsubscribe();
-  }, [isClient, openWindows, updateChatState, user]);
+  }, [isClient, updateChatState, user]);
 
   // Handle background change with database persistence and intelligent preloading
   const handleBackgroundChange = useCallback(async (background: Background) => {

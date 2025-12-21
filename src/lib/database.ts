@@ -142,7 +142,7 @@ export class DatabaseService {
         console.error('Database error while loading todos:', error);
         throw error;
       }
-      
+
       // Todos loaded successfully from database
       return data || [];
     } catch (error) {
@@ -178,7 +178,7 @@ export class DatabaseService {
         console.error('Database error while saving todo:', error);
         throw error;
       }
-      
+
       // Todo saved successfully to database
       return data;
     } catch (error) {
@@ -208,7 +208,7 @@ export class DatabaseService {
         console.error('Database error while updating todo:', error);
         throw error;
       }
-      
+
       // Todo updated successfully in database
       return data;
     } catch (error) {
@@ -236,7 +236,7 @@ export class DatabaseService {
         console.error('Database error while deleting todo:', error);
         throw error;
       }
-      
+
       // Todo deleted successfully from database
       return true;
     } catch (error) {
@@ -349,7 +349,7 @@ export class DatabaseService {
 
       const today = new Date().toISOString().split('T')[0];
       const category = stats.category || 'Other';
-      
+
       // First, check if the user has a username in any pomodoro_stats records
       const { data: userWithUsername } = await supabase
         .from('pomodoro_stats')
@@ -359,12 +359,12 @@ export class DatabaseService {
         .order('updated_at', { ascending: false })
         .limit(1)
         .single();
-      
+
       let username = stats.username;
       if (!username && userWithUsername?.username) {
         username = userWithUsername.username;
       }
-      
+
       // Next, try to get existing stats for today and category
       const { data: existingStats } = await supabase
         .from('pomodoro_stats')
@@ -484,24 +484,26 @@ export class DatabaseService {
       const existingUser = await this.getUserSettings();
 
       if (existingUser) {
-        // Update existing user
+        // Update existing user - filter out non-existent columns
+        const { streak_count, total_focus_time, ...settingsToSave } = settings as any;
         const { error } = await supabase
           .from('users')
           .update({
-            ...settings,
+            ...settingsToSave,
             updated_at: new Date().toISOString()
           })
           .eq('id', user.id);
 
         if (error) throw error;
       } else {
-        // Create new user record
+        // Create new user record - filter out non-existent columns
+        const { streak_count, total_focus_time, ...settingsToSave } = settings as any;
         const { error } = await supabase
           .from('users')
           .insert([{
             id: user.id,
             email: user.email || '',
-            ...settings,
+            ...settingsToSave,
             created_at: new Date().toISOString(),
             updated_at: new Date().toISOString()
           }]);
@@ -520,7 +522,7 @@ export class DatabaseService {
   async saveSelectedBackground(backgroundId: string): Promise<boolean> {
     const currentSettings = await this.getUserSettings();
     const settings = currentSettings?.settings || {};
-    
+
     return await this.saveUserSettings({
       settings: {
         ...settings,
@@ -551,15 +553,15 @@ export class DatabaseService {
       if (statsError) throw statsError;
 
       // Aggregate by user and calculate totals
-      const userStats = new Map<string, { 
-        id: string; 
-        sessions: number; 
+      const userStats = new Map<string, {
+        id: string;
+        sessions: number;
         focusTime: number;
       }>();
-      
+
       statsData?.forEach(stat => {
         const userId = stat.user_id;
-        
+
         if (!userStats.has(userId)) {
           userStats.set(userId, {
             id: userId,
@@ -625,10 +627,11 @@ export class DatabaseService {
 
   async updateUserProfile(userId: string, updates: Partial<ExtendedUserProfile>): Promise<boolean> {
     try {
+      const { streak_count, total_focus_time, ...validUpdates } = updates;
       const { error } = await supabase
         .from('users')
         .update({
-          ...updates,
+          ...validUpdates,
           updated_at: new Date().toISOString()
         })
         .eq('id', userId);
@@ -647,16 +650,17 @@ export class DatabaseService {
 
   async createUserProfile(userProfile: Omit<ExtendedUserProfile, 'created_at' | 'updated_at'>): Promise<boolean> {
     try {
+      const { streak_count, total_focus_time, ...validProfile } = userProfile;
       const { error } = await supabase
         .from('users')
         .insert([{
-          ...userProfile,
+          ...validProfile,
           created_at: new Date().toISOString(),
           updated_at: new Date().toISOString()
         }]);
 
       if (error) {
-      
+
         return false;
       }
 
@@ -686,7 +690,7 @@ export class DatabaseService {
         console.error('Database error while loading appointments:', error);
         throw error;
       }
-      
+
       return data || [];
     } catch (error) {
       console.error('Error fetching appointments:', error);
@@ -720,7 +724,7 @@ export class DatabaseService {
         console.error('Database error while saving appointment:', error);
         throw error;
       }
-      
+
       return data;
     } catch (error) {
       console.error('Error saving appointment:', error);
@@ -753,7 +757,7 @@ export class DatabaseService {
         console.error('Database error while updating appointment:', error);
         throw error;
       }
-      
+
       return data;
     } catch (error) {
       console.error('Error updating appointment:', error);
@@ -779,7 +783,7 @@ export class DatabaseService {
         console.error('Database error while deleting appointment:', error);
         throw error;
       }
-      
+
       return true;
     } catch (error) {
       console.error('Error deleting appointment:', error);
@@ -811,18 +815,18 @@ export class DatabaseService {
   async getChatMessages(limit = 50): Promise<ChatMessage[]> {
     try {
       await this.checkAuth();
-      
+
       const { data, error } = await supabase
         .from('chat_messages')
         .select('*')
         .order('created_at', { ascending: false })
         .limit(limit);
-      
+
       if (error) {
         console.error('Error fetching chat messages:', error);
         return [];
       }
-      
+
       return data?.reverse() || [];
     } catch (error) {
       console.error('Failed to fetch chat messages:', error);
@@ -833,18 +837,18 @@ export class DatabaseService {
   async sendChatMessage(message: Omit<ChatMessage, 'id' | 'created_at'>): Promise<ChatMessage | null> {
     try {
       await this.checkAuth();
-      
+
       const { data, error } = await supabase
         .from('chat_messages')
         .insert([message])
         .select()
         .single();
-      
+
       if (error) {
         console.error('Error sending chat message:', error);
         return null;
       }
-      
+
       return data;
     } catch (error) {
       console.error('Failed to send chat message:', error);
