@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from 'react';
-import { X, Mail, Lock, Github } from 'lucide-react';
+import { X, Github } from 'lucide-react';
 import { FaDiscord, FaGoogle } from 'react-icons/fa';
 import { useAuth } from '../contexts/AuthContext';
 import { createClient } from '../utils/supabase/client';
@@ -14,72 +14,14 @@ interface AuthModalProps {
 
 // Add this at the top of the component to debug
 const AuthModal: React.FC<AuthModalProps> = ({ isVisible, onClose }) => {
-  const [isSignUp, setIsSignUp] = useState(false);
-  const [email, setEmail] = useState('');
-  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [resetEmailSent, setResetEmailSent] = useState(false);
 
-  const { signIn, signUp, signInWithProvider, isConfigured } = useAuth();
+  const { signInWithProvider, isConfigured } = useAuth();
   const supabase = createClient();
   
 
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    setLoading(true);
-    setError('');
-
-    try {
-      const { error } = isSignUp 
-        ? await signUp(email, password)
-        : await signIn(email, password);
-      
-      if (error) {
-        setError(typeof error === 'object' && error && 'message' in error ? (error as { message: string }).message : 'Authentication failed');
-      } else {
-        if (isSignUp) {
-          setError('Check your email for the confirmation link!');
-        } else {
-          onClose();
-        }
-      }
-    } catch {
-      setError('An unexpected error occurred');
-    } finally {
-      setLoading(false);
-    }
-  };
-
-  const handleForgotPassword = async () => {
-    if (!email) {
-      setError('Please enter your email address first');
-      return;
-    }
-
-    setLoading(true);
-    setError('');
-    
-    try {
-      const siteUrl = process.env.NEXT_PUBLIC_SITE_URL || window.location.origin;
-      
-      const { error } = await supabase.auth.resetPasswordForEmail(email, {
-        redirectTo: `${siteUrl}/auth/recovery`,
-      });
-      
-      if (error) {
-        setError(error.message || 'Failed to send reset email');
-      } else {
-        setResetEmailSent(true);
-        setError('Password reset email sent! Check your inbox.');
-      }
-    } catch (err) {
-      setError('Failed to send password reset email. Please try again.');
-    } finally {
-      setLoading(false);
-    }
-  };
 
   const handleOAuthSignIn = async (provider: 'discord' | 'github' | 'google') => {
     setLoading(true);
@@ -119,7 +61,7 @@ const AuthModal: React.FC<AuthModalProps> = ({ isVisible, onClose }) => {
       <div className={styles.authModal} onClick={(e) => e.stopPropagation()}>
         <div className={styles.authHeader}>
           <h2 className={styles.authTitle}>
-            {isSignUp ? 'Create Account' : 'Welcome Back'}
+            Sign In / Sign Up
           </h2>
           <button onClick={onClose} className={styles.closeButton}>
             <X size={20} />
@@ -141,72 +83,15 @@ const AuthModal: React.FC<AuthModalProps> = ({ isVisible, onClose }) => {
           ) : (
             <>
               <p className={styles.authSubtitle}>
-                {isSignUp 
-                  ? 'Sign up to save your progress and sync across devices'
-                  : 'Sign in to access your saved data and analytics'
-                }
+                Select a provider to continue
               </p>
 
               {error && (
-                <div className={resetEmailSent ? styles.successMessage : styles.errorMessage}>
+                <div className={styles.errorMessage}>
                   {error}
                 </div>
               )}
 
-              <form onSubmit={handleSubmit} className={styles.authForm}>
-                <div className={styles.inputGroup}>
-                  <Mail size={18} className={styles.inputIcon} />
-                  <input
-                    type="email"
-                    placeholder="Email address"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className={styles.authInput}
-                    required
-                  />
-                </div>
-
-                <div className={styles.inputGroup}>
-                  <Lock size={18} className={styles.inputIcon} />
-                  <input
-                    type="password"
-                    placeholder="Password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    className={styles.authInput}
-                    required
-                    minLength={6}
-                  />
-                </div>
-
-                {!isSignUp && (
-                  <div className={styles.forgotPassword}>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        // Forgot password button clicked
-                        handleForgotPassword();
-                      }}
-                      className={styles.forgotPasswordButton}
-                      disabled={loading}
-                    >
-                      Forgot Password?
-                    </button>
-                  </div>
-                )}
-
-                <button
-                  type="submit"
-                  className={styles.authButton}
-                  disabled={loading}
-                >
-                  {loading ? 'Loading...' : (isSignUp ? 'Sign Up' : 'Sign In')}
-                </button>
-              </form>
-              
-              <div className={styles.divider}>
-                <span>or continue with</span>
-              </div>
               
               <div className={styles.oauthButtons}>
                 <button
@@ -236,17 +121,6 @@ const AuthModal: React.FC<AuthModalProps> = ({ isVisible, onClose }) => {
               </div>
 
               <div className={styles.authSwitch}>
-                {isSignUp ? 'Already have an account?' : "Don't have an account?"}{' '}
-                <button
-                  onClick={() => {
-                    setIsSignUp(!isSignUp);
-                    setError('');
-                    setResetEmailSent(false);
-                  }}
-                  className={styles.switchButton}
-                >
-                  {isSignUp ? 'Sign In' : 'Sign Up'}
-                </button>
                 <p>By signing up, you agree to our <a href="/legal" target="_blank" rel="noopener noreferrer">Terms of Service</a> and <a href="/privacy" target="_blank" rel="noopener noreferrer">Privacy Policy</a>.</p>
               </div>
             </>

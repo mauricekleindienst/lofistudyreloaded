@@ -53,7 +53,11 @@ export function useRealtimeChat() {
 
         // Subscribe to new messages
         unsubscribeMessages = subscribeToMessages((newMessage) => {
-          setMessages((prev) => [...prev, newMessage]);
+          setMessages((prev) => {
+            // Safety check: Don't add if already exists (prevents Duplicate Key errors)
+            if (prev.some(m => m.id === newMessage.id)) return prev;
+            return [...prev, newMessage];
+          });
         });
 
         // Track presence for online users and get count in one subscription

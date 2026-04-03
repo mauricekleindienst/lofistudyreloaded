@@ -9,11 +9,17 @@ const nextConfig: NextConfig = {
         port: '',
         pathname: '/vi/**',
       },
-     {
+      {
         protocol: 'https',
         hostname: 'lh3.googleusercontent.com',
         port: '',
-        pathname: '/a/**',
+        pathname: '/**',
+      },
+      {
+        protocol: 'https',
+        hostname: 'cdn.discordapp.com',
+        port: '',
+        pathname: '/avatars/**',
       },
     ],
   },

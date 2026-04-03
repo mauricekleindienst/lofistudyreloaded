@@ -51,13 +51,68 @@ export async function getMessages(limit = 50): Promise<ChatMessage[]> {
   }
 }
 
-// Shared channel and listener management to prevent "multiple subscription" errors
+// Shared state for message management
 let messageChannel: RealtimeChannel | null = null;
 let messageListeners: ((message: ChatMessage) => void)[] = [];
+let pollingInterval: NodeJS.Timeout | null = null;
+const processedMessageIds = new Set<string>();
+
+/**
+ * Ensures a message is only processed once by listeners.
+ * Prevents "Duplicate Key" errors in React when Realtime and Polling collide.
+ */
+function notifyListeners(message: ChatMessage) {
+  if (processedMessageIds.has(message.id)) return;
+  
+  processedMessageIds.add(message.id);
+  // Keep the set size manageable (last 200 IDs)
+  if (processedMessageIds.size > 200) {
+    const firstId = processedMessageIds.values().next().value;
+    if (firstId) processedMessageIds.delete(firstId);
+  }
+
+  messageListeners.forEach(listener => listener(message));
+}
+
+/**
+ * Fallback mechanism for when Realtime (WebSockets) is blocked or fails.
+ * Fetches latest messages every 5 seconds.
+ */
+async function startPolling() {
+  if (pollingInterval) return;
+  
+  console.log('Chat: Realtime unavailable or disconnected. Starting polling fallback...');
+  
+  pollingInterval = setInterval(async () => {
+    try {
+      const messages = await getMessages(20);
+      messages.forEach(msg => notifyListeners(msg));
+    } catch (e) {
+      console.warn('Chat polling error:', e);
+    }
+  }, 5000);
+}
+
+function stopPolling() {
+  if (pollingInterval) {
+    clearInterval(pollingInterval);
+    pollingInterval = null;
+    console.log('Chat: Stopping polling fallback.');
+  }
+}
 
 export function subscribeToMessages(callback: (message: ChatMessage) => void): () => void {
-  // Add listener to the list
+  // Add listener
   messageListeners.push(callback);
+
+  // Initial fetch to populate known IDs (prevents duplicates on startup)
+  getMessages(50).then(messages => {
+    messages.forEach(msg => {
+      if (!processedMessageIds.has(msg.id)) {
+        processedMessageIds.add(msg.id);
+      }
+    });
+  });
 
   // If channel doesn't exist yet, create and subscribe
   if (!messageChannel) {
@@ -72,23 +127,31 @@ export function subscribeToMessages(callback: (message: ChatMessage) => void): (
           table: 'chat_messages',
         },
         (payload) => {
-          const newMessage = payload.new as ChatMessage;
-          // Notify all listeners
-          messageListeners.forEach(listener => listener(newMessage));
+          notifyListeners(payload.new as ChatMessage);
         }
       )
       .subscribe((status) => {
-        if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
-          // Reset if it fails so it can try to resubscribe later
-          messageChannel = null;
+        console.log(`Chat connection status: ${status}`);
+        
+        if (status === 'SUBSCRIBED') {
+          stopPolling(); // Realtime is working!
+        } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+          startPolling(); // Fallback to polling
+          messageChannel = null; // Prepare for possible redo
         }
       });
   }
 
   // Return cleanup function
   return () => {
-    // Remove listener
     messageListeners = messageListeners.filter(l => l !== callback);
+    if (messageListeners.length === 0) {
+      if (messageChannel) {
+        messageChannel.unsubscribe();
+        messageChannel = null;
+      }
+      stopPolling();
+    }
   };
 }
 
