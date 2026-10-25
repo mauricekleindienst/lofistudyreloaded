@@ -18,6 +18,8 @@ export const DELETE = route(async (request) => {
     collections.todos().then((c) => c.deleteMany({ userId })),
     collections.notes().then((c) => c.deleteMany({ userId })),
     collections.appointments().then((c) => c.deleteMany({ userId })),
+    collections.decks().then((c) => c.deleteMany({ userId })),
+    collections.habits().then((c) => c.deleteMany({ userId })),
     collections.pomodoroStats().then((c) => c.deleteMany({ userId })),
     collections.chatMessages().then((c) => c.deleteMany({ userId })),
     collections.presence().then((c) => c.deleteOne({ _id: userId.toHexString() })),

@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { X, CheckSquare, Play, Images, Search, Film, ImageIcon } from 'lucide-react';
+import { X, CheckSquare, Play, Images, Search, Film, ImageIcon, Shuffle, SunDim } from 'lucide-react';
 import { backgrounds } from '@/data/backgrounds';
 import styles from '../../../styles/BackgroundSelector.module.css';
 import Image from 'next/image';
@@ -16,13 +16,18 @@ interface BackgroundSelectorProps {
   onCategoryChange: (category: string) => void;
   motion: boolean;
   onMotionChange: (motion: boolean) => void;
+  /** 0-80 % black overlay */
+  dim: number;
+  onDimChange: (dim: number) => void;
 }
 
 const categories = [
   { id: 'all', name: 'All', icon: '🌍' },
+  { id: 'rain', name: 'Rain', icon: '🌧️' },
   { id: 'nature', name: 'Nature', icon: '🌿' },
-  { id: 'urban', name: 'Urban', icon: '🏙️' },
+  { id: 'night', name: 'Night', icon: '🌙' },
   { id: 'cozy', name: 'Cozy', icon: '🏠' },
+  { id: 'urban', name: 'Urban', icon: '🏙️' },
   { id: 'gaming', name: 'Gaming', icon: '🎮' },
 ];
 
@@ -34,7 +39,9 @@ export default function BackgroundSelector({
   onBackgroundChange,
   onCategoryChange,
   motion,
-  onMotionChange
+  onMotionChange,
+  dim,
+  onDimChange,
 }: BackgroundSelectorProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [visibleCount, setVisibleCount] = useState(20);
@@ -108,10 +115,22 @@ export default function BackgroundSelector({
             </div>
             <div className={styles.titleText}>
               <h3 className={styles.title}>Background Gallery</h3>
-              <p className={styles.subtitle}>Curated high-quality ambiances</p>
+              <p className={styles.subtitle}>{backgrounds.length} looping scenes · illustrated and real</p>
             </div>
           </div>
           <div className={styles.headerActions}>
+            <button
+              type="button"
+              onClick={() => {
+                const pool = backgrounds.filter((b) => b.id !== currentBackground.id);
+                onBackgroundChange(pool[Math.floor(Math.random() * pool.length)]);
+              }}
+              className={styles.motionToggle}
+              title="Pick a random background"
+            >
+              <Shuffle size={16} />
+              <span>Surprise me</span>
+            </button>
             <button
               type="button"
               onClick={() => onMotionChange(!motion)}
@@ -148,12 +167,28 @@ export default function BackgroundSelector({
               <button 
                 className={styles.clearSearch}
                 onClick={() => setSearchQuery('')}
+                aria-label="Clear search"
               >
                 <X size={14} />
               </button>
             )}
           </div>
           
+          <label className={styles.dimControl} title="Darken the background so windows stand out">
+            <SunDim size={16} aria-hidden />
+            <span>Dim</span>
+            <input
+              type="range"
+              min={0}
+              max={80}
+              step={5}
+              value={dim}
+              onChange={(e) => onDimChange(Number(e.target.value))}
+              aria-label="Dim background"
+            />
+            <span className={styles.dimValue}>{dim}%</span>
+          </label>
+
           <div className={styles.categories}>
             {categoryCounts.map(category => (
               <button

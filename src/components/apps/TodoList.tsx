@@ -11,12 +11,16 @@ import {
   BookOpen,
   Zap,
   Loader2,
+  Search,
+  Timer,
 } from 'lucide-react';
 import todoStyles from '../../../styles/Todo.module.css';
 import { useAppState } from '../../contexts/AppStateContext';
 import { useDataPersistence } from '../../hooks/useDataPersistence';
 import type { Todo } from '../../lib/database';
 import { localDate } from '../../lib/api';
+import { usePomodoro } from '../../contexts/PomodoroContext';
+import { openApp } from '../../lib/ui';
 
 const PRIORITY_RANK: Record<Todo['priority'], number> = { high: 0, medium: 1, low: 2 };
 
@@ -42,7 +46,10 @@ const TodoList: React.FC = () => {
   const [newTodo, setNewTodo] = useState('');
   const [newPriority, setNewPriority] = useState<Priority>('medium');
   const [newCategory, setNewCategory] = useState<Category>('work');
-  const [filter, setFilter] = useState<'all' | 'active' | 'completed'>('all');
+  const [filter, setFilter] = useState<'all' | 'today' | 'active' | 'completed'>('active');
+  const [query, setQuery] = useState('');
+  const [newEstimate, setNewEstimate] = useState(0);
+  const pomo = usePomodoro();
   const [isSaving, setIsSaving] = useState(false);
   const [newDue, setNewDue] = useState('');
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -67,6 +74,25 @@ const TodoList: React.FC = () => {
     updateTodoState({ pendingCount: todos.filter(todo => !todo.completed).length });
   }, [todos, updateTodoState]);
 
+  // The focus timer credits finished sessions to a task.
+  useEffect(() => {
+    const onUpdated = (e: Event) => {
+      const updated = (e as CustomEvent<Todo>).detail;
+      setTodos(prev => prev.map(t => (t.id === updated.id ? updated : t)));
+    };
+    window.addEventListener('lofi:todo-updated', onUpdated);
+    return () => window.removeEventListener('lofi:todo-updated', onUpdated);
+  }, []);
+
+  const focusOn = (todo: Todo) => {
+    if (pomo.task?.id === todo.id) {
+      pomo.setTask(null);
+      return;
+    }
+    pomo.setTask({ id: todo.id, text: todo.text });
+    openApp('pomodoro');
+  };
+
   const addTodo = async (e?: React.FormEvent) => {
     e?.preventDefault();
     const text = newTodo.trim();
@@ -78,6 +104,8 @@ const TodoList: React.FC = () => {
       completed: false,
       priority: newPriority,
       category: newCategory,
+      pomodoros: 0,
+      estimate: newEstimate,
       ...(newDue ? { due_date: newDue } : {}),
     });
     setIsSaving(false);
@@ -85,16 +113,18 @@ const TodoList: React.FC = () => {
       setTodos(prev => [...prev, saved]);
       setNewTodo('');
       setNewDue('');
+      setNewEstimate(0);
     }
   };
 
   const toggleTodo = async (id: string) => {
     const todo = todos.find(t => t.id === id);
     if (!todo) return;
-    setTodos(prev => prev.map(t => (t.id === id ? { ...t, completed: !t.completed } : t)));
+    setTodos(prev => prev.map(t => (t.id === id ? { ...t, completed: !todo.completed } : t)));
     const result = await db.updateTodo(id, { completed: !todo.completed });
+    // Undo only this field, so a pomodoro credit that arrived meanwhile isn't lost.
     if (!result) {
-      setTodos(prev => prev.map(t => (t.id === id ? todo : t)));
+      setTodos(prev => prev.map(t => (t.id === id ? { ...t, completed: todo.completed } : t)));
     }
   };
 
@@ -136,7 +166,7 @@ const TodoList: React.FC = () => {
     if (!id || !original || !text || text === original.text) return;
     setTodos(prev => prev.map(t => (t.id === id ? { ...t, text } : t)));
     if (!(await db.updateTodo(id, { text }))) {
-      setTodos(prev => prev.map(t => (t.id === id ? original : t)));
+      setTodos(prev => prev.map(t => (t.id === id ? { ...t, text: original.text } : t)));
     }
   };
 
@@ -149,8 +179,12 @@ const TodoList: React.FC = () => {
   };
 
   // Open tasks first; then by due date, priority, and creation order.
+  const today = localDate();
+  const q = query.trim().toLowerCase();
   const filteredTodos = useMemo(() => todos
     .filter(todo => {
+      if (q && !todo.text.toLowerCase().includes(q) && !todo.category.includes(q)) return false;
+      if (filter === 'today') return !todo.completed && Boolean(todo.due_date) && todo.due_date! <= today;
       if (filter === 'active') return !todo.completed;
       if (filter === 'completed') return todo.completed;
       return true;
@@ -162,8 +196,8 @@ const TodoList: React.FC = () => {
       PRIORITY_RANK[a.todo.priority] - PRIORITY_RANK[b.todo.priority] ||
       a.index - b.index
     )
-    .map(({ todo }) => todo), [todos, filter]);
-  const today = localDate();
+    .map(({ todo }) => todo), [todos, filter, q, today]);
+  const dueTodayCount = todos.filter(t => !t.completed && t.due_date && t.due_date <= today).length;
   const completedCount = todos.filter(t => t.completed).length;
 
   return (
@@ -230,6 +264,19 @@ const TodoList: React.FC = () => {
             <option value="medium">🟡 Medium</option>
             <option value="high">🔴 High</option>
           </select>
+          <select
+            value={newEstimate}
+            onChange={(e) => setNewEstimate(Number(e.target.value))}
+            aria-label="Estimated focus sessions"
+            title="How many focus sessions will this take?"
+            className={todoStyles.prioritySelect}
+            disabled={isSaving}
+          >
+            <option value={0}>🍅 Est.</option>
+            {[1, 2, 3, 4, 5, 6, 8].map(n => (
+              <option key={n} value={n}>🍅 {n}</option>
+            ))}
+          </select>
           <label className={todoStyles.dueInput} title="Due date (optional)">
             <CalendarDays size={14} aria-hidden />
             <input
@@ -247,16 +294,23 @@ const TodoList: React.FC = () => {
       {/* Filter Tabs */}
       <div className={todoStyles.filterTabs}>
         <button
+          onClick={() => setFilter('active')}
+          className={`${todoStyles.filterTab} ${filter === 'active' ? todoStyles.activeTab : ''}`}
+        >
+          Open <span className={todoStyles.count}>{todos.filter(t => !t.completed).length}</span>
+        </button>
+        <button
+          onClick={() => setFilter('today')}
+          className={`${todoStyles.filterTab} ${filter === 'today' ? todoStyles.activeTab : ''}`}
+          title="Due today or overdue"
+        >
+          Today <span className={todoStyles.count}>{dueTodayCount}</span>
+        </button>
+        <button
           onClick={() => setFilter('all')}
           className={`${todoStyles.filterTab} ${filter === 'all' ? todoStyles.activeTab : ''}`}
         >
           All <span className={todoStyles.count}>{todos.length}</span>
-        </button>
-        <button
-          onClick={() => setFilter('active')}
-          className={`${todoStyles.filterTab} ${filter === 'active' ? todoStyles.activeTab : ''}`}
-        >
-          Active <span className={todoStyles.count}>{todos.filter(t => !t.completed).length}</span>
         </button>
         <button
           onClick={() => setFilter('completed')}
@@ -266,7 +320,20 @@ const TodoList: React.FC = () => {
         </button>
       </div>
 
-      {completedCount > 0 && (
+      {todos.length > 5 && (
+        <label className={todoStyles.searchBox}>
+          <Search size={14} aria-hidden />
+          <input
+            type="search"
+            placeholder="Search tasks"
+            value={query}
+            onChange={(e) => setQuery(e.target.value)}
+            aria-label="Search tasks"
+          />
+        </label>
+      )}
+
+      {completedCount > 0 && (filter === 'completed' || filter === 'all') && (
         <button type="button" className={todoStyles.clearDone} onClick={clearCompleted}>
           Clear {completedCount} completed
         </button>
@@ -327,9 +394,29 @@ const TodoList: React.FC = () => {
                 <span className={`${todoStyles.priorityBadge} ${todoStyles[`priority${todo.priority.charAt(0).toUpperCase() + todo.priority.slice(1)}`]}`}>
                   {todo.priority}
                 </span>
+                {((todo.pomodoros ?? 0) > 0 || (todo.estimate ?? 0) > 0) && (
+                  <span
+                    className={`${todoStyles.pomoBadge} ${todo.estimate && (todo.pomodoros ?? 0) >= todo.estimate ? todoStyles.pomoDone : ''}`}
+                    title={`${todo.pomodoros ?? 0} focus sessions${todo.estimate ? ` of ${todo.estimate} planned` : ''}`}
+                  >
+                    🍅 {todo.pomodoros ?? 0}
+                    {todo.estimate ? `/${todo.estimate}` : ''}
+                  </span>
+                )}
               </div>
             </div>
             
+            {!todo.completed && (
+              <button
+                onClick={() => focusOn(todo)}
+                className={`${todoStyles.deleteButton} ${todoStyles.editButton} ${pomo.task?.id === todo.id ? todoStyles.focusing : ''}`}
+                aria-label={pomo.task?.id === todo.id ? 'Stop focusing on this task' : 'Focus on this task'}
+                aria-pressed={pomo.task?.id === todo.id}
+                title={pomo.task?.id === todo.id ? 'Focusing — click to stop' : 'Focus on this task'}
+              >
+                <Timer size={14} />
+              </button>
+            )}
             <button
               onClick={() => startEdit(todo)}
               className={`${todoStyles.deleteButton} ${todoStyles.editButton}`}
@@ -356,20 +443,28 @@ const TodoList: React.FC = () => {
         {!loading && filteredTodos.length === 0 && (
           <div className={todoStyles.emptyState}>
             <div className={todoStyles.emptyIcon}>
-              {filter === 'completed' ? '🎉' : filter === 'active' ? '📝' : '✨'}
+              {q ? '🔍' : filter === 'completed' ? '🎉' : filter === 'today' ? '☀️' : filter === 'active' ? '📝' : '✨'}
             </div>
             <h3 className={todoStyles.emptyTitle}>
-              {filter === 'completed' 
-                ? 'No completed tasks yet' 
-                : filter === 'active' 
-                ? 'No active tasks' 
+              {q
+                ? 'No matching tasks'
+                : filter === 'completed'
+                ? 'No completed tasks yet'
+                : filter === 'today'
+                ? 'Nothing due today'
+                : filter === 'active'
+                ? todos.length ? 'All done!' : 'Ready to get things done?'
                 : 'Ready to get things done?'}
             </h3>
             <p className={todoStyles.emptyMessage}>
-              {filter === 'completed' 
-                ? 'Complete some tasks to see them here' 
-                : filter === 'active' 
-                ? 'All tasks completed! Great job!' 
+              {q
+                ? 'Try a different word'
+                : filter === 'completed'
+                ? 'Complete some tasks to see them here'
+                : filter === 'today'
+                ? 'Tasks with a due date of today or earlier show up here'
+                : filter === 'active'
+                ? todos.length ? 'Every task is checked off. Great job!' : 'Add your first task above to get started'
                 : 'Add your first task above to get started'}
             </p>
           </div>        )}

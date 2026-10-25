@@ -32,6 +32,22 @@ const AccountSettings: React.FC = () => {
     if (user && !isEditing) setDisplayName(user.full_name);
   }, [user, isEditing]);
 
+  // A different account (or signing out) starts from a clean form — nothing typed for the
+  // previous account, like a half-finished delete confirmation, may carry over.
+  const [shownUser, setShownUser] = useState(user?.id);
+  if (shownUser !== user?.id) {
+    setShownUser(user?.id);
+    setIsEditing(false);
+    setProfileMessage(null);
+    setCurrentPassword('');
+    setNewPassword('');
+    setPasswordMessage(null);
+    setShowDeleteConfirm(false);
+    setDeleteConfirm('');
+    setDeletePassword('');
+    setDeleteError('');
+  }
+
   if (!user) {
     return (
       <div className={styles.accountSettings}>

@@ -60,9 +60,19 @@ export async function requireUser(): Promise<UserDoc> {
   return user;
 }
 
-export async function readJson(request: Request): Promise<Record<string, unknown>> {
+/** Bodies are capped (default 1 MB) so a huge upload can't exhaust memory. */
+export async function readJson(request: Request, maxBytes = 1_000_000): Promise<Record<string, unknown>> {
+  const declared = Number(request.headers.get('content-length') ?? 0);
+  if (declared > maxBytes) throw new HttpError(413, 'Request is too large');
+  let text: string;
   try {
-    const body = await request.json();
+    text = await request.text();
+  } catch {
+    throw new HttpError(400, 'Expected a JSON object body');
+  }
+  if (Buffer.byteLength(text) > maxBytes) throw new HttpError(413, 'Request is too large');
+  try {
+    const body = JSON.parse(text);
     if (body && typeof body === 'object' && !Array.isArray(body)) return body as Record<string, unknown>;
   } catch {
     // fall through
@@ -128,6 +138,14 @@ export function bool(value: unknown, field: string, fallback?: boolean): boolean
   if (value === undefined && fallback !== undefined) return fallback;
   if (typeof value === 'boolean') return value;
   throw new HttpError(400, `${field} must be a boolean`);
+}
+
+export function int(value: unknown, field: string, min: number, max: number, fallback?: number): number {
+  if (value === undefined && fallback !== undefined) return fallback;
+  if (typeof value !== 'number' || !Number.isInteger(value) || value < min || value > max) {
+    throw new HttpError(400, `${field} must be a whole number between ${min} and ${max}`);
+  }
+  return value;
 }
 
 export const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;

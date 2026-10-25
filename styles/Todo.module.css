@@ -1010,3 +1010,55 @@
   color: var(--text-primary);
   background: rgba(255, 255, 255, 0.08);
 }
+
+/* --- search, focus link, pomodoro counts --- */
+.searchBox {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  height: 36px;
+  padding: 0 12px;
+  margin-bottom: 8px;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-tertiary);
+}
+
+.searchBox:focus-within {
+  border-color: var(--accent-color);
+}
+
+.searchBox input {
+  flex: 1;
+  min-width: 0;
+  border: none;
+  outline: none;
+  background: transparent;
+  color: var(--text-primary);
+  font-size: 14px;
+}
+
+.pomoBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+  padding: 2px 6px;
+  border-radius: 6px;
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  background: rgba(255, 123, 0, 0.12);
+  color: #ffb066;
+}
+
+.pomoDone {
+  background: rgba(16, 185, 129, 0.14);
+  color: #6ee7b7;
+}
+
+.focusing {
+  opacity: 1 !important;
+  color: var(--accent-color) !important;
+  background: rgba(255, 123, 0, 0.14) !important;
+}

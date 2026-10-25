@@ -11,6 +11,8 @@ import type {
   PresenceDoc,
   OAuthStateDoc,
   RateLimitDoc,
+  DeckDoc,
+  HabitDoc,
 } from './models';
 
 // One client per server process. In dev, Next's hot reload would otherwise
@@ -65,9 +67,11 @@ async function ensureIndexes(db: Db) {
     db.collection('todos').createIndex({ userId: 1, position: 1 }),
     db.collection('notes').createIndex({ userId: 1, updatedAt: -1 }),
     db.collection('appointments').createIndex({ userId: 1, date: 1 }),
+    db.collection('decks').createIndex({ userId: 1, updatedAt: -1 }),
+    db.collection('habits').createIndex({ userId: 1, position: 1 }),
     db.collection('pomodoro_stats').createIndex({ userId: 1, date: 1, category: 1 }, { unique: true }),
     db.collection('pomodoro_stats').createIndex({ date: 1 }),
-    db.collection('chat_messages').createIndex({ createdAt: -1 }),
+    db.collection('chat_messages').createIndex({ userId: 1, _id: 1 }),
     db.collection('presence').createIndex({ lastSeen: 1 }, { expireAfterSeconds: 60 }),
     db.collection('oauth_states').createIndex({ createdAt: 1 }, { expireAfterSeconds: 600 }),
     db.collection('rate_limits').createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),
@@ -89,4 +93,6 @@ export const collections = {
   presence: () => col<PresenceDoc>('presence'),
   oauthStates: () => col<OAuthStateDoc>('oauth_states'),
   rateLimits: () => col<RateLimitDoc>('rate_limits'),
+  decks: () => col<DeckDoc>('decks'),
+  habits: () => col<HabitDoc>('habits'),
 };

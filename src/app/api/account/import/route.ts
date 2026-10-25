@@ -1,7 +1,7 @@
 import { ObjectId } from 'mongodb';
 import { collections } from '@/lib/server/mongo';
-import { route, json, readJson, requireUser, rateLimit, HttpError } from '@/lib/server/http';
-import { parseAppointment, parseNote, parseTodo } from '@/lib/server/resources';
+import { route, json, readJson, requireUser, rateLimit, HttpError, dateStr, str } from '@/lib/server/http';
+import { parseAppointment, parseDeck, parseHabit, parseNote, parseTodo } from '@/lib/server/resources';
 
 export const runtime = 'nodejs';
 
@@ -20,7 +20,7 @@ function list(value: unknown, field: string): Record<string, unknown>[] {
 export const POST = route(async (request) => {
   const user = await requireUser();
   await rateLimit(`import:${user._id.toHexString()}`, 5, 3600);
-  const body = await readJson(request);
+  const body = await readJson(request, 12_000_000);
   const now = new Date();
   const userId = user._id;
 
@@ -49,9 +49,65 @@ export const POST = route(async (request) => {
     .filter(Boolean)
     .map((a) => ({ ...a!, _id: new ObjectId(), userId, createdAt: now, updatedAt: now }));
 
-  if (todos.length) await todosCol.insertMany(todos as never[]);
-  if (notes.length) await (await collections.notes()).insertMany(notes as never[]);
-  if (appointments.length) await (await collections.appointments()).insertMany(appointments as never[]);
+  const decks = list(body.decks, 'decks')
+    .slice(0, 200)
+    .map((d) => safe(() => parseDeck(d, false)))
+    .filter(Boolean)
+    .map((d) => ({ ...d!, _id: new ObjectId(), userId, createdAt: now, updatedAt: now }));
+  const habitsCol = await collections.habits();
+  const lastHabit = await habitsCol.find({ userId }).sort({ position: -1 }).limit(1).next();
+  let habitPosition = lastHabit?.position ?? 0;
+  const habits = list(body.habits, 'habits')
+    .slice(0, 50)
+    .map((h) => safe(() => parseHabit(h, false)))
+    .filter(Boolean)
+    .map((h) => ({ ...h!, _id: new ObjectId(), userId, position: ++habitPosition, createdAt: now, updatedAt: now }));
 
-  return json({ imported: { todos: todos.length, notes: notes.length, appointments: appointments.length } });
+  // Respect the same per-user caps as the normal create routes.
+  const room = async (col: { countDocuments: (f: object) => Promise<number> }, max: number) =>
+    Math.max(0, max - (await col.countDocuments({ userId })));
+  const [notesCol, apptCol, decksCol] = await Promise.all([collections.notes(), collections.appointments(), collections.decks()]);
+  todos.splice(await room(todosCol, 2000));
+  notes.splice(await room(notesCol, 1000));
+  appointments.splice(await room(apptCol, 5000));
+  decks.splice(await room(decksCol, 200));
+  habits.splice(await room(habitsCol, 50));
+
+  // Guest focus sessions: kept separately so they show up in your own stats but can't be
+  // used to climb the leaderboard (nothing on the device can prove they happened).
+  const stats = list(body.pomodoro, 'pomodoro')
+    .map((s) =>
+      safe(() => ({
+        date: dateStr(s.date, 'date')!,
+        category: str(s.category ?? 'Other', 'category', { max: 30, min: 1 })!,
+        count: Math.min(100, Math.max(0, Math.floor(Number(s.pomodoro_count) || 0))),
+        minutes: Math.min(1440, Math.max(0, Math.floor(Number(s.total_focus_time_minutes) || 0))),
+      }))
+    )
+    .filter((s): s is NonNullable<typeof s> => Boolean(s && (s.count || s.minutes)));
+  if (stats.length) {
+    await (await collections.pomodoroStats()).bulkWrite(
+      stats.map((s) => ({
+        updateOne: {
+          filter: { userId, date: s.date, category: s.category },
+          update: {
+            $inc: { importedCount: s.count, importedMinutes: s.minutes },
+            $set: { updatedAt: now },
+            $setOnInsert: { _id: new ObjectId(), pomodoroCount: 0, focusMinutes: 0 },
+          },
+          upsert: true,
+        },
+      }))
+    );
+  }
+
+  if (todos.length) await todosCol.insertMany(todos as never[]);
+  if (decks.length) await decksCol.insertMany(decks as never[]);
+  if (habits.length) await habitsCol.insertMany(habits as never[]);
+  if (notes.length) await notesCol.insertMany(notes as never[]);
+  if (appointments.length) await apptCol.insertMany(appointments as never[]);
+
+  return json({
+    imported: { todos: todos.length, notes: notes.length, appointments: appointments.length, decks: decks.length, habits: habits.length, sessions: stats.length },
+  });
 });

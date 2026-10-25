@@ -10,7 +10,7 @@ export interface Background {
   alt: string;
   note: string;
   createdby: string;
-  category: 'nature' | 'cozy' | 'urban' | 'gaming';
+  category: 'nature' | 'rain' | 'night' | 'cozy' | 'urban' | 'gaming';
 }
 
 export interface ModernApp {
@@ -21,6 +21,8 @@ export interface ModernApp {
   category: 'productivity' | 'entertainment' | 'tools' | 'study';
   color: string;
   description: string;
+  /** pinned to the dock; the others live in the app launcher */
+  dock?: boolean;
 }
 
 export interface ModernWindow {

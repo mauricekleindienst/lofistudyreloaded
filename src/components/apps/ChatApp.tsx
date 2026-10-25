@@ -19,6 +19,7 @@ const ChatApp: React.FC = () => {
     refreshMessages
   } = useRealtimeChat();
 
+  const [sending, setSending] = useState(false);
   const [newMessage, setNewMessage] = useState('');
   const [usernameInput, setUsernameInput] = useState('');
   const [usernameDialogOpen, setUsernameDialogOpen] = useState(false);
@@ -57,13 +58,19 @@ const ChatApp: React.FC = () => {
   const handleSendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!newMessage.trim() || !user) return;
+    // One send at a time: a double Enter must not post the message twice.
+    if (!newMessage.trim() || !user || sending) return;
 
     stickToBottom.current = true;
-    const success = await sendChatMessage(newMessage);
-    if (success) {
-      setNewMessage('');
-      inputRef.current?.focus();
+    setSending(true);
+    try {
+      const success = await sendChatMessage(newMessage);
+      if (success) {
+        setNewMessage('');
+        inputRef.current?.focus();
+      }
+    } finally {
+      setSending(false);
     }
   };
 
@@ -206,7 +213,7 @@ const ChatApp: React.FC = () => {
           />
           <button
             type="submit"
-            disabled={!newMessage.trim()}
+            disabled={!newMessage.trim() || sending}
             className={styles.sendButton}
             aria-label="Send message"
           >

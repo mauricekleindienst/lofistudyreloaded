@@ -13,6 +13,10 @@ export interface Todo {
   category: 'work' | 'personal' | 'study' | 'health';
   due_date?: string | null;
   position?: number;
+  /** focus sessions spent on this task */
+  pomodoros?: number;
+  /** planned focus sessions (0 = no estimate) */
+  estimate?: number;
   created_at?: string;
   updated_at?: string;
 }
@@ -21,6 +25,41 @@ export interface Note {
   id: string;
   title: string;
   content: string;
+  pinned?: boolean;
+  color?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface FlashCard {
+  id: string;
+  front: string;
+  back: string;
+  /** Leitner box 0-5 */
+  box: number;
+  /** next review day, YYYY-MM-DD */
+  due: string;
+}
+
+export interface Deck {
+  id: string;
+  title: string;
+  color?: string;
+  cards: FlashCard[];
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface Habit {
+  id: string;
+  name: string;
+  emoji: string;
+  color?: string;
+  /** YYYY-MM-DD days the habit was done */
+  days: string[];
+  /** times per week */
+  target: number;
+  position?: number;
   created_at?: string;
   updated_at?: string;
 }
@@ -60,6 +99,12 @@ export interface UserSettings {
   pomodoroDurations?: { pomodoro: number; shortBreak: number; longBreak: number };
   pomodoroVolume?: number;
   pomodoroMuted?: boolean;
+  pomodoroAutoBreaks?: boolean;
+  pomodoroAutoFocus?: boolean;
+  pomodoroLongEvery?: number;
+  pomodoroGoal?: number;
+  backgroundMotion?: boolean;
+  backgroundDim?: number;
   [key: string]: unknown;
 }
 
@@ -71,6 +116,8 @@ const KEY = {
   todos: 'lofi:guest:todos',
   notes: 'lofi:guest:notes',
   appointments: 'lofi:guest:appointments',
+  decks: 'lofi:guest:decks',
+  habits: 'lofi:guest:habits',
   pomodoro: 'lofi:guest:pomodoro',
   settings: 'lofi:settings',
 } as const;
@@ -117,7 +164,11 @@ function migrateLegacyKeys() {
 
 function localCollection<T extends { id: string; created_at?: string; updated_at?: string }>(key: string) {
   return {
-    all: () => readLocal<T[]>(key, []),
+    // Guard against hand-edited or corrupt storage: anything but an array of objects is ignored.
+    all: (): T[] => {
+      const items = readLocal<unknown>(key, []);
+      return Array.isArray(items) ? (items.filter((i) => i && typeof i === 'object' && typeof (i as T).id === 'string') as T[]) : [];
+    },
     create(item: New<T>): T {
       const now = new Date().toISOString();
       const doc = { ...item, id: localId(), created_at: now, updated_at: now } as unknown as T;
@@ -138,6 +189,9 @@ function localCollection<T extends { id: string; created_at?: string; updated_at
       writeLocal(key, this.all().filter((d) => d.id !== id));
       return true;
     },
+    removeMany(ids: Set<string>) {
+      writeLocal(key, this.all().filter((d) => !ids.has(d.id)));
+    },
     clear() {
       try {
         localStorage.removeItem(key);
@@ -148,10 +202,17 @@ function localCollection<T extends { id: string; created_at?: string; updated_at
   };
 }
 
+function localStats(): PomodoroStats[] {
+  const items = readLocal<unknown>(KEY.pomodoro, []);
+  return Array.isArray(items) ? (items.filter((s) => s && typeof s === 'object' && typeof s.date === 'string') as PomodoroStats[]) : [];
+}
+
 const local = {
   todos: localCollection<Todo>(KEY.todos),
   notes: localCollection<Note>(KEY.notes),
   appointments: localCollection<Appointment>(KEY.appointments),
+  decks: localCollection<Deck>(KEY.decks),
+  habits: localCollection<Habit>(KEY.habits),
 };
 
 function reportError(action: string, err: unknown) {
@@ -236,12 +297,22 @@ class DatabaseService {
     this.update<Appointment>('/api/appointments', local.appointments, id, c, 'appointment');
   deleteAppointment = (id: string) => this.remove<Appointment>('/api/appointments', local.appointments, id, 'appointment');
 
+  getDecks = () => this.list<Deck>('/api/decks', local.decks, 'flashcards');
+  saveDeck = (d: New<Deck>) => this.create<Deck>('/api/decks', local.decks, d, 'deck');
+  updateDeck = (id: string, c: Partial<Deck>) => this.update<Deck>('/api/decks', local.decks, id, c, 'deck');
+  deleteDeck = (id: string) => this.remove<Deck>('/api/decks', local.decks, id, 'deck');
+
+  getHabits = () => this.list<Habit>('/api/habits', local.habits, 'habits');
+  saveHabit = (h: New<Habit>) => this.create<Habit>('/api/habits', local.habits, h, 'habit');
+  updateHabit = (id: string, c: Partial<Habit>) => this.update<Habit>('/api/habits', local.habits, id, c, 'habit');
+  deleteHabit = (id: string) => this.remove<Habit>('/api/habits', local.habits, id, 'habit');
+
   // --- pomodoro ---
 
-  async recordPomodoro(category: string, minutes: number): Promise<boolean> {
-    const date = localDate();
+  /** date: the local day the session ended (defaults to today) */
+  async recordPomodoro(category: string, minutes: number, date = localDate()): Promise<boolean> {
     if (!this.authenticated) {
-      const all = readLocal<PomodoroStats[]>(KEY.pomodoro, []);
+      const all = localStats();
       const existing = all.find((s) => s.date === date && s.category === category);
       if (existing) {
         existing.pomodoro_count += 1;
@@ -264,7 +335,7 @@ class DatabaseService {
   /** from = YYYY-MM-DD (inclusive), undefined = all time */
   async getPomodoroStats(from?: string): Promise<PomodoroStats[]> {
     if (!this.authenticated) {
-      return readLocal<PomodoroStats[]>(KEY.pomodoro, []).filter((s) => !from || s.date >= from);
+      return localStats().filter((s) => !from || s.date >= from);
     }
     try {
       return (await api<{ stats: PomodoroStats[] }>(`/api/pomodoro${from ? `?from=${from}` : ''}`)).stats;
@@ -288,7 +359,8 @@ class DatabaseService {
   // --- settings (always cached locally so the UI can start instantly) ---
 
   getLocalSettings(): UserSettings {
-    return readLocal<UserSettings>(KEY.settings, {});
+    const s = readLocal<unknown>(KEY.settings, {});
+    return s && typeof s === 'object' && !Array.isArray(s) ? (s as UserSettings) : {};
   }
 
   async saveSettings(changes: Partial<UserSettings>): Promise<void> {
@@ -304,11 +376,22 @@ class DatabaseService {
   // --- guest -> account ---
 
   hasGuestData(): boolean {
-    return local.todos.all().length + local.notes.all().length + local.appointments.all().length > 0;
+    return Object.values(local).some((store) => store.all().length > 0) || localStats().length > 0;
   }
 
-  /** After sign-in: move anything created as a guest into the account. */
-  async importGuestData(): Promise<number> {
+  private importing: Promise<number> | null = null;
+
+  /** After sign-in: move anything created as a guest into the account (one run at a time). */
+  importGuestData(): Promise<number> {
+    if (!this.importing) {
+      this.importing = this.runImport().finally(() => {
+        this.importing = null;
+      });
+    }
+    return this.importing;
+  }
+
+  private async runImport(): Promise<number> {
     if (!this.authenticated || !this.hasGuestData()) return 0;
     const strip = <T extends { id: string }>(items: T[]) =>
       items.map((item) => {
@@ -316,19 +399,27 @@ class DatabaseService {
         delete rest.id;
         return rest;
       });
+    // Snapshot what is sent; only those items are removed afterwards, so anything created
+    // while the request is in flight stays on the device.
+    const sent = Object.fromEntries(Object.entries(local).map(([k, store]) => [k, store.all()])) as {
+      [K in keyof typeof local]: ReturnType<(typeof local)[K]['all']>;
+    };
+    const stats = localStats();
     try {
-      const res = await api<{ imported: { todos: number; notes: number; appointments: number } }>('/api/account/import', {
+      const res = await api<{ imported: Record<string, number> }>('/api/account/import', {
         method: 'POST',
         json: {
-          todos: strip(local.todos.all()),
-          notes: strip(local.notes.all()),
-          appointments: strip(local.appointments.all()),
+          todos: strip(sent.todos),
+          notes: strip(sent.notes),
+          appointments: strip(sent.appointments),
+          decks: strip(sent.decks),
+          habits: strip(sent.habits),
+          pomodoro: stats,
         },
       });
-      local.todos.clear();
-      local.notes.clear();
-      local.appointments.clear();
-      return res.imported.todos + res.imported.notes + res.imported.appointments;
+      (Object.keys(local) as (keyof typeof local)[]).forEach((k) => local[k].removeMany(new Set(sent[k].map((i) => i.id))));
+      if (stats.length) writeLocal(KEY.pomodoro, []);
+      return Object.values(res.imported).reduce((a, b) => a + b, 0);
     } catch (err) {
       reportError('Importing your guest data', err);
       return 0;

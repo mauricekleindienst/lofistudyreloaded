@@ -2,7 +2,8 @@ import { NextResponse } from 'next/server';
 import { ObjectId } from 'mongodb';
 import { collections } from '@/lib/server/mongo';
 import { createSession, getCurrentUser } from '@/lib/server/auth';
-import { getProvider, isProvider, redirectUri, appUrl } from '@/lib/server/oauth';
+import { getProvider, isProvider, redirectUri, appUrl, OAUTH_STATE_COOKIE, type OAuthProfile } from '@/lib/server/oauth';
+import { cookies } from 'next/headers';
 import { route } from '@/lib/server/http';
 
 export const runtime = 'nodejs';
@@ -10,6 +11,9 @@ export const runtime = 'nodejs';
 export const GET = route<{ params: Promise<{ provider: string }> }>(async (request, { params }) => {
   const { provider } = await params;
   const base = appUrl(request);
+  const jar = await cookies();
+  const expectedState = jar.get(OAUTH_STATE_COOKIE)?.value;
+  jar.delete({ name: OAUTH_STATE_COOKIE, path: '/api/auth/oauth' });
   const fail = (message: string) => NextResponse.redirect(`${base}/?auth_error=${encodeURIComponent(message)}`);
 
   if (!isProvider(provider)) return fail('Unknown sign-in provider');
@@ -21,6 +25,7 @@ export const GET = route<{ params: Promise<{ provider: string }> }>(async (reque
   const code = url.searchParams.get('code');
   const state = url.searchParams.get('state');
   if (!code || !state) return fail('Sign-in response was incomplete');
+  if (!expectedState || expectedState !== state) return fail('Sign-in link expired, please try again');
 
   const states = await collections.oauthStates();
   const saved = await states.findOneAndDelete({ _id: state });
@@ -45,15 +50,26 @@ export const GET = route<{ params: Promise<{ provider: string }> }>(async (reque
     return fail('Could not complete sign-in');
   }
 
-  const profile = await config.fetchProfile(tokenJson.access_token);
+  let profile: OAuthProfile;
+  try {
+    profile = await config.fetchProfile(tokenJson.access_token);
+  } catch (err) {
+    console.error(`[oauth:${provider}] profile request failed`, err);
+    return fail('Could not complete sign-in');
+  }
   const users = await collections.users();
   const now = new Date();
 
-  // 1. Already linked?  2. Signed in already -> link.  3. Same verified email -> link.  4. New account.
+  // 1. Already linked?  2. Signed in already -> link.  3. Same verified email on an account without a
+  // password -> link.  4. New account. Email+password accounts are never linked by email alone: their
+  // email isn't verified, so someone could have registered a victim's address in advance.
   let user = await users.findOne({ providers: { $elemMatch: { provider, providerId: profile.providerId } } });
   if (!user) {
     const current = await getCurrentUser();
     const byEmail = profile.email ? await users.findOne({ email: profile.email.toLowerCase() }) : null;
+    if (!current && byEmail?.passwordHash) {
+      return fail('An account with this email already exists. Sign in with your password first, then try again to connect it.');
+    }
     const target = current ?? byEmail;
     if (target) {
       await users.updateOne(
@@ -76,7 +92,12 @@ export const GET = route<{ params: Promise<{ provider: string }> }>(async (reque
         createdAt: now,
         updatedAt: now,
       };
-      await users.insertOne(doc);
+      try {
+        await users.insertOne(doc);
+      } catch {
+        // A parallel first sign-in with the same email won the race.
+        return fail('Could not complete sign-in, please try again');
+      }
       user = doc;
     }
   }

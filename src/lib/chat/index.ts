@@ -33,6 +33,9 @@ class ChatStore {
   private listeners = new Set<Listener>();
   private timer: number | null = null;
   private inFlight = false;
+  /** Last id the server returned. Kept apart from messages we add after sending, so a
+   *  message someone else posted just before ours isn't skipped by the next poll. */
+  private cursor: string | null = null;
 
   subscribe(listener: Listener): () => void {
     this.listeners.add(listener);
@@ -74,12 +77,14 @@ class ChatStore {
     if (this.inFlight) return;
     this.inFlight = true;
     try {
-      const last = this.state.messages[this.state.messages.length - 1];
-      const res = await api<{ messages: ChatMessage[]; online: number }>(`/api/chat${last ? `?after=${last.id}` : ''}`);
+      const res = await api<{ messages: ChatMessage[]; online: number }>(`/api/chat${this.cursor ? `?after=${this.cursor}` : ''}`);
       const known = new Set(this.state.messages.map((m) => m.id));
       const fresh = res.messages.filter((m) => !known.has(m.id));
+      const newest = res.messages[res.messages.length - 1];
+      if (newest && (!this.cursor || newest.id > this.cursor)) this.cursor = newest.id;
       this.state = {
-        messages: [...this.state.messages, ...fresh].slice(-MAX_MESSAGES),
+        // ObjectId hex strings sort by creation time.
+        messages: [...this.state.messages, ...fresh].sort((a, b) => (a.id < b.id ? -1 : a.id > b.id ? 1 : 0)).slice(-MAX_MESSAGES),
         online: res.online,
         loaded: true,
         lastBatch: this.state.loaded ? fresh : [],
@@ -102,6 +107,7 @@ class ChatStore {
 
   reset() {
     this.state = { messages: [], online: 0, loaded: false, lastBatch: [] };
+    this.cursor = null;
     if (this.listeners.size) this.poll();
   }
 }

@@ -6,6 +6,7 @@ import AuthModal from '@/components/AuthModal';
 import { AppStateProvider } from '@/contexts/AppStateContext';
 import { PomodoroProvider } from '@/contexts/PomodoroContext';
 import { AmbientProvider } from '@/contexts/AmbientContext';
+import { MusicProvider } from '@/contexts/MusicContext';
 
 export default function HomeClient() {
   const [showAuthModal, setShowAuthModal] = useState(false);
@@ -15,10 +16,12 @@ export default function HomeClient() {
   return (
     <AppStateProvider>
       <PomodoroProvider>
-        <AmbientProvider>
-          <Desktop onShowAuth={openAuth} />
-          <AuthModal isVisible={showAuthModal} onClose={closeAuth} />
-        </AmbientProvider>
+        <MusicProvider>
+          <AmbientProvider>
+            <Desktop onShowAuth={openAuth} />
+            <AuthModal isVisible={showAuthModal} onClose={closeAuth} />
+          </AmbientProvider>
+        </MusicProvider>
       </PomodoroProvider>
     </AppStateProvider>
   );

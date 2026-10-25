@@ -17,9 +17,10 @@ const calculate = (a: number, b: number, op: Op): number => {
 // Trim float noise (0.1 + 0.2) and keep long results readable.
 const format = (n: number): string => {
   if (!Number.isFinite(n)) return 'Error';
-  const rounded = parseFloat(n.toPrecision(12));
+  // 15 significant digits: exact for every integer the 15-digit input allows, still hides float noise.
+  const rounded = parseFloat(n.toPrecision(15));
   const text = String(rounded);
-  return text.length > 14 ? rounded.toExponential(6) : text;
+  return text.length > 17 ? rounded.toExponential(8) : text;
 };
 
 const CalcButton: React.FC<{ onClick: () => void; className?: string; label?: string; children: React.ReactNode }> = ({
@@ -48,6 +49,7 @@ const Calculator: React.FC = () => {
     }
     if (digit === '.' && display.includes('.')) return;
     if (display.replace(/[-.]/g, '').length >= 15) return;
+    if (display === '-0' && digit !== '.') return setDisplay(`-${digit}`);
     setDisplay(display === '0' && digit !== '.' ? digit : display + digit);
   }, [display, waitingForNewValue]);
 
@@ -91,13 +93,20 @@ const Calculator: React.FC = () => {
     setDisplay(next === '' || next === '-' ? '0' : next);
   }, [display, waitingForNewValue]);
 
-  // Keyboard support while the calculator window has focus or the pointer is over it.
+  // Keyboard support while focus is in the calculator (or nothing has focus and the pointer
+  // is over it). Shortcuts like Ctrl+C are left alone.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
       const root = rootRef.current;
-      if (!root || !(root.contains(document.activeElement) || root.matches(':hover'))) return;
-      if ((e.target as HTMLElement)?.tagName === 'INPUT' || (e.target as HTMLElement)?.tagName === 'TEXTAREA') return;
+      if (!root || e.ctrlKey || e.metaKey || e.altKey) return;
+      const active = document.activeElement;
+      const idle = !active || active === document.body;
+      if (!(root.contains(active) || (idle && root.matches(':hover')))) return;
+      const target = e.target as HTMLElement;
+      if (target?.closest('input, textarea, select, [contenteditable]')) return;
       const k = e.key;
+      // Enter/Space on a focused key presses that key, not "=".
+      if ((k === 'Enter' || k === ' ') && target?.tagName === 'BUTTON') return;
       if (/^[0-9.]$/.test(k)) inputNumber(k);
       else if (k === ',') inputNumber('.');
       else if (k === '+' || k === '-') inputOperation(k);
@@ -105,18 +114,24 @@ const Calculator: React.FC = () => {
       else if (k === '/') inputOperation('÷');
       else if (k === 'Enter' || k === '=') performCalculation();
       else if (k === 'Backspace') deleteDigit();
-      else if (k === 'Escape' || k === 'Delete' || k.toLowerCase() === 'c') clear();
+      else if (k === 'Delete' || k.toLowerCase() === 'c') clear();
       else return;
       e.preventDefault();
-      e.stopPropagation();
     };
-    window.addEventListener('keydown', onKey, true);
-    return () => window.removeEventListener('keydown', onKey, true);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
   }, [inputNumber, inputOperation, performCalculation, deleteDigit, clear]);
 
 
   const toggleSign = () => {
-    if (display === '0' || display === 'Error') return;
+    if (display === 'Error') return;
+    // Right after an operator, ± starts the next number as a negative one.
+    if (waitingForNewValue) {
+      setDisplay('-0');
+      setWaitingForNewValue(false);
+      return;
+    }
+    if (display === '0') return;
     setDisplay(display.startsWith('-') ? display.slice(1) : `-${display}`);
   };
 
@@ -141,7 +156,10 @@ const Calculator: React.FC = () => {
         <div className={calculatorStyles.expression} aria-hidden>
           {previousValue !== null && operation ? `${format(previousValue)} ${operation === '-' ? '−' : operation}` : '\u00a0'}
         </div>
-        <output className={calculatorStyles.result} aria-live="polite">
+        <output
+          className={`${calculatorStyles.result} ${display.length > 14 ? calculatorStyles.xlong : display.length > 10 ? calculatorStyles.long : ''}`}
+          aria-live="polite"
+        >
           {display}
         </output>
       </div>

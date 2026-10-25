@@ -27,7 +27,14 @@ export const GET = route(async (request) => {
 
   let messages: ChatMessageDoc[];
   if (after && ObjectId.isValid(after) && after.length === 24) {
-    messages = await col.find({ _id: { $gt: new ObjectId(after) } }).sort({ _id: 1 }).limit(100).toArray();
+    // Ids are made before the insert, so a slow write can land "behind" the cursor.
+    // Re-sending the last few seconds lets the client pick those up (it de-duplicates).
+    const overlap = ObjectId.createFromTime(Math.floor((Date.now() - 10_000) / 1000));
+    messages = await col
+      .find({ $or: [{ _id: { $gt: new ObjectId(after) } }, { _id: { $gte: overlap } }] })
+      .sort({ _id: 1 })
+      .limit(100)
+      .toArray();
   } else {
     messages = (await col.find().sort({ _id: -1 }).limit(50).toArray()).reverse();
   }

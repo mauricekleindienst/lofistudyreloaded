@@ -1252,3 +1252,44 @@
   content: normal;
   margin: 0;
 }
+
+/* --- pins, checklists, autosave --- */
+.pinMark {
+  flex-shrink: 0;
+  margin-right: 4px;
+  vertical-align: -1px;
+  color: var(--accent-color);
+}
+
+.autosave {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.contentFormatted :global(li.task) {
+  list-style: none;
+  margin-left: -1.2em;
+  display: flex;
+  align-items: flex-start;
+  gap: 8px;
+}
+
+.contentFormatted :global(li.task) input {
+  flex-shrink: 0;
+  width: 16px;
+  height: 16px;
+  margin-top: 3px;
+  accent-color: var(--accent-color);
+  cursor: pointer;
+}
+
+.contentFormatted :global(li.task.done) span {
+  text-decoration: line-through;
+  opacity: 0.6;
+}
+
+.contentFormatted a {
+  color: var(--accent-color);
+  word-break: break-all;
+}

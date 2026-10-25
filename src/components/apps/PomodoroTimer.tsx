@@ -1,7 +1,8 @@
 "use client";
 
 import React, { useState } from "react";
-import { Play, Pause, RotateCcw, Settings, Volume2, VolumeX, SkipForward, X, Brain, Coffee, Armchair } from "lucide-react";
+import { Play, Pause, RotateCcw, Settings, Volume2, VolumeX, SkipForward, X, Brain, Coffee, Armchair, Target, Music } from "lucide-react";
+import { useMusic } from "../../contexts/MusicContext";
 import styles from "../../../styles/PomodoroTimer.module.css";
 import { usePomodoro, POMODORO_CATEGORIES, type PomodoroMode } from "../../contexts/PomodoroContext";
 
@@ -22,20 +23,27 @@ const clampMinutes = (value: string, fallback: number, max: number) => {
 export default function PomodoroTimer() {
   const pomo = usePomodoro();
   const [showSettings, setShowSettings] = useState(false);
-  const [draft, setDraft] = useState({ pomodoro: '25', shortBreak: '5', longBreak: '15' });
+  const music = useMusic();
+  const [draft, setDraft] = useState({ pomodoro: '25', shortBreak: '5', longBreak: '15', longEvery: '4', goal: '8', autoBreaks: true, autoFocus: false });
 
   const mode = MODES.find((m) => m.id === pomo.mode)!;
   const total = pomo.durations[pomo.mode];
   const progress = total > 0 ? (total - pomo.timeLeft) / total : 0;
   const mm = String(Math.floor(pomo.timeLeft / 60)).padStart(2, '0');
   const ss = String(pomo.timeLeft % 60).padStart(2, '0');
-  const untilLong = 4 - (pomo.cycles % 4);
+  const every = pomo.options.longEvery;
+  const untilLong = every - (pomo.cycles % every);
+  const goalPct = Math.min(1, pomo.todaySessions / pomo.options.goal);
 
   const openSettings = () => {
     setDraft({
       pomodoro: String(pomo.durations.pomodoro / 60),
       shortBreak: String(pomo.durations.shortBreak / 60),
       longBreak: String(pomo.durations.longBreak / 60),
+      longEvery: String(pomo.options.longEvery),
+      goal: String(pomo.options.goal),
+      autoBreaks: pomo.options.autoBreaks,
+      autoFocus: pomo.options.autoFocus,
     });
     setShowSettings(true);
   };
@@ -46,6 +54,12 @@ export default function PomodoroTimer() {
       pomodoro: clampMinutes(draft.pomodoro, 25, 180) * 60,
       shortBreak: clampMinutes(draft.shortBreak, 5, 60) * 60,
       longBreak: clampMinutes(draft.longBreak, 15, 120) * 60,
+    });
+    pomo.setOptions({
+      longEvery: Math.max(2, clampMinutes(draft.longEvery, 4, 8)),
+      goal: clampMinutes(draft.goal, 8, 24),
+      autoBreaks: draft.autoBreaks,
+      autoFocus: draft.autoFocus,
     });
     setShowSettings(false);
   };
@@ -86,12 +100,24 @@ export default function PomodoroTimer() {
           </div>
           <div className={styles.modeLabel}>{pomo.isRunning ? mode.label : 'Paused'}</div>
           <div className={styles.dots} aria-label={`${untilLong} until long break`}>
-            {[0, 1, 2, 3].map((i) => (
-              <span key={i} className={i < pomo.cycles % 4 ? styles.dotDone : styles.dot} />
+            {Array.from({ length: every }, (_, i) => (
+              <span key={i} className={i < pomo.cycles % every ? styles.dotDone : styles.dot} />
             ))}
           </div>
         </div>
       </div>
+
+      {pomo.task && (
+        <div className={styles.task}>
+          <Target size={14} aria-hidden />
+          <span className={styles.taskText} title={pomo.task.text}>
+            {pomo.task.text}
+          </span>
+          <button type="button" onClick={() => pomo.setTask(null)} aria-label="Stop focusing on this task">
+            <X size={14} />
+          </button>
+        </div>
+      )}
 
       <div className={styles.controls}>
         <button
@@ -127,8 +153,12 @@ export default function PomodoroTimer() {
             ))}
           </select>
         </label>
-        <div className={styles.today} title="Completed focus sessions today">
-          <strong>{pomo.todaySessions}</strong> today · {Math.round(pomo.todayMinutes / 6) / 10}h
+        <div
+          className={styles.today}
+          title={`${pomo.todaySessions} of ${pomo.options.goal} focus sessions today · ${Math.round(pomo.todayMinutes / 6) / 10}h`}
+        >
+          <span className={styles.goal} style={{ '--goal': `${goalPct * 360}deg` } as React.CSSProperties} aria-hidden />
+          <strong>{pomo.todaySessions}</strong>/{pomo.options.goal} today
         </div>
         <button className={styles.secondary} onClick={openSettings} aria-label="Timer settings" title="Settings">
           <Settings size={16} />
@@ -165,6 +195,52 @@ export default function PomodoroTimer() {
                   </span>
                 </label>
               ))}
+            </div>
+            <div className={styles.fields}>
+              <label className={styles.field}>
+                <span>Long break every</span>
+                <span className={styles.inputWrap}>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    min={2}
+                    max={8}
+                    value={draft.longEvery}
+                    onChange={(e) => setDraft((d) => ({ ...d, longEvery: e.target.value }))}
+                  />
+                  <em>×</em>
+                </span>
+              </label>
+              <label className={styles.field}>
+                <span>Daily goal</span>
+                <span className={styles.inputWrap}>
+                  <input
+                    type="number"
+                    inputMode="numeric"
+                    min={1}
+                    max={24}
+                    value={draft.goal}
+                    onChange={(e) => setDraft((d) => ({ ...d, goal: e.target.value }))}
+                  />
+                  <em>🍅</em>
+                </span>
+              </label>
+            </div>
+            <div className={styles.switches}>
+              <label className={styles.switchRow}>
+                <span>Start breaks automatically</span>
+                <input type="checkbox" role="switch" checked={draft.autoBreaks} onChange={(e) => setDraft((d) => ({ ...d, autoBreaks: e.target.checked }))} />
+              </label>
+              <label className={styles.switchRow}>
+                <span>Start focus automatically after a break</span>
+                <input type="checkbox" role="switch" checked={draft.autoFocus} onChange={(e) => setDraft((d) => ({ ...d, autoFocus: e.target.checked }))} />
+              </label>
+              <label className={styles.switchRow}>
+                <span>
+                  <Music size={13} aria-hidden /> Play music during focus, pause on breaks
+                </span>
+                <input type="checkbox" role="switch" checked={music.focusSync} onChange={(e) => music.setFocusSync(e.target.checked)} />
+              </label>
             </div>
             <div className={styles.volume}>
               <button type="button" className={styles.secondary} onClick={pomo.toggleMute} aria-label={pomo.muted ? 'Unmute alerts' : 'Mute alerts'}>

@@ -20,6 +20,7 @@ const PROVIDERS: Record<OAuthProvider, { label: string; icon: React.ReactNode }>
 const AuthModal: React.FC<AuthModalProps> = ({ isVisible, onClose }) => {
   const { signIn, signUp, signInWithProvider, providers } = useAuth();
   const [mode, setMode] = useState<'signin' | 'signup'>('signin');
+  const pressedBackdrop = useRef(false);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [name, setName] = useState('');
@@ -32,7 +33,11 @@ const AuthModal: React.FC<AuthModalProps> = ({ isVisible, onClose }) => {
     if (!isVisible) return;
     setError('');
     const t = window.setTimeout(() => emailRef.current?.focus(), 50);
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || e.defaultPrevented) return;
+      e.preventDefault();
+      onClose();
+    };
     window.addEventListener('keydown', onKey);
     return () => {
       window.clearTimeout(t);
@@ -67,7 +72,18 @@ const AuthModal: React.FC<AuthModalProps> = ({ isVisible, onClose }) => {
   };
 
   return (
-    <div className={styles.authOverlay} onClick={onClose}>
+    <div
+      className={styles.authOverlay}
+      // Close only on a real click on the backdrop: selecting text in a field and releasing
+      // the mouse outside the dialog must not throw away what was typed.
+      onMouseDown={(e) => {
+        pressedBackdrop.current = e.target === e.currentTarget;
+      }}
+      onClick={(e) => {
+        if (pressedBackdrop.current && e.target === e.currentTarget) onClose();
+        pressedBackdrop.current = false;
+      }}
+    >
       <div
         className={styles.authModal}
         onClick={(e) => e.stopPropagation()}

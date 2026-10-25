@@ -18,6 +18,8 @@ interface CrudOptions<T extends UserOwned> {
   /** Hard cap per user so one account can't fill the disk. */
   maxPerUser: number;
   label: string;
+  /** Largest accepted request body in bytes (default 1 MB). */
+  maxBodyBytes?: number;
   /** Extra fields on insert, e.g. a position for ordering. */
   onCreate?: (col: Collection<T>, userId: ObjectId) => Promise<Partial<T>>;
 }
@@ -35,7 +37,7 @@ export function crud<T extends UserOwned>(opts: CrudOptions<T>) {
 
   const create = route(async (request) => {
     const user = await requireUser();
-    const body = await readJson(request);
+    const body = await readJson(request, opts.maxBodyBytes);
     const col = await opts.collection();
     const count = await col.countDocuments({ userId: user._id } as never);
     if (count >= opts.maxPerUser) {
@@ -57,7 +59,7 @@ export function crud<T extends UserOwned>(opts: CrudOptions<T>) {
   const update = route<IdContext>(async (request, { params }) => {
     const user = await requireUser();
     const id = parseObjectId((await params).id);
-    const changes = opts.parse(await readJson(request), true);
+    const changes = opts.parse(await readJson(request, opts.maxBodyBytes), true);
     const col = await opts.collection();
     const updated = await col.findOneAndUpdate(
       { _id: id, userId: user._id } as never,

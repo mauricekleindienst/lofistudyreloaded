@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { 
   Plus, 
   Search, 
@@ -26,14 +26,22 @@ import {
   ListOrdered,
   List as ListIcon,
   ChevronLeft,
+  Pin,
+  PinOff,
+  Download,
+  Copy,
+  ListChecks,
+  Check,
 } from 'lucide-react';
 import { useDataPersistence } from '../../hooks/useDataPersistence';
 import { useAppState } from '../../contexts/AppStateContext';
 import { toast } from '../../lib/api';
-import { renderMarkdown, stripMarkdown } from '../../lib/markdown';
+import { renderMarkdown, stripMarkdown, toggleTask, countWords } from '../../lib/markdown';
 import type { Note } from '../../lib/database';
 import styles from '../../../styles/NotesApp.module.css';
 
+
+const DRAFT_KEY = 'lofi:notes:draft';
 
 export default function NotesApp() {
   const { updateNotesState } = useAppState();
@@ -50,6 +58,7 @@ export default function NotesApp() {
   const [sortBy, setSortBy] = useState<'updated' | 'created' | 'title'>('updated');
   const [isLoading, setIsLoading] = useState(true);
   const [isSaving, setIsSaving] = useState(false);
+  const [autoSaved, setAutoSaved] = useState<'idle' | 'saving' | 'saved'>('idle');
 
   // Form state
   const [editTitle, setEditTitle] = useState('');
@@ -91,6 +100,7 @@ export default function NotesApp() {
 
     // Sort notes
     const sorted = [...filtered].sort((a, b) => {
+      if (Boolean(a.pinned) !== Boolean(b.pinned)) return a.pinned ? -1 : 1;
       switch (sortBy) {
         case 'title':
           return a.title.localeCompare(b.title);
@@ -105,13 +115,142 @@ export default function NotesApp() {
     setFilteredNotes(sorted);
   }, [notes, searchQuery, sortBy]);
 
-  // Handle creating a new note
+  // Handle creating a new note (an unsaved draft from last time is restored)
   const handleCreateNote = () => {
     setIsCreating(true);
     setIsEditing(true);
     setSelectedNote(null);
-    setEditTitle('');
-    setEditContent('');
+    let draft: { title?: string; content?: string } | null = null;
+    try {
+      draft = JSON.parse(localStorage.getItem(DRAFT_KEY) || 'null');
+    } catch {
+      // ignore
+    }
+    setEditTitle(draft?.title ?? '');
+    setEditContent(draft?.content ?? '');
+    if (draft?.title || draft?.content) toast('Restored your unsaved draft.', 'info');
+  };
+
+  // New notes: keep a local draft so a closed window doesn't lose text.
+  useEffect(() => {
+    if (!isCreating) return;
+    try {
+      if (editTitle || editContent) localStorage.setItem(DRAFT_KEY, JSON.stringify({ title: editTitle, content: editContent }));
+      else localStorage.removeItem(DRAFT_KEY);
+    } catch {
+      // ignore
+    }
+  }, [isCreating, editTitle, editContent]);
+
+  // Existing notes: save automatically a moment after typing stops.
+  const autosaveTimer = useRef<number | null>(null);
+  /** edit waiting for the autosave timer; flushed if the window or page closes first */
+  const pending = useRef<{ id: string; title: string; content: string } | null>(null);
+  useEffect(() => {
+    if (!isEditing || isCreating || !selectedNote) return;
+    const title = editTitle.trim();
+    if (!title || (title === selectedNote.title && editContent === selectedNote.content)) return;
+    const change = { id: selectedNote.id, title, content: editContent };
+    pending.current = change;
+    if (autosaveTimer.current) window.clearTimeout(autosaveTimer.current);
+    autosaveTimer.current = window.setTimeout(async () => {
+      pending.current = null;
+      setAutoSaved('saving');
+      const updated = await db.updateNote(change.id, { title: change.title, content: change.content });
+      if (updated) {
+        setNotes((prev) => prev.map((n) => (n.id === updated.id ? updated : n)));
+        // The user may have moved on to another note while this was saving.
+        setSelectedNote((current) => (current?.id === updated.id ? updated : current));
+        setAutoSaved('saved');
+      } else setAutoSaved('idle');
+    }, 1200);
+    return () => {
+      if (autosaveTimer.current) window.clearTimeout(autosaveTimer.current);
+    };
+  }, [isEditing, isCreating, selectedNote, editTitle, editContent, db]);
+
+  useEffect(() => {
+    const flush = () => {
+      const change = pending.current;
+      if (!change) return;
+      pending.current = null;
+      db.updateNote(change.id, { title: change.title, content: change.content });
+    };
+    window.addEventListener('pagehide', flush);
+    return () => {
+      window.removeEventListener('pagehide', flush);
+      flush();
+    };
+  }, [db]);
+
+  /**
+   * Leaving the editor never throws work away: an existing note is saved right now,
+   * a new one stays as the local draft that "New note" restores.
+   */
+  const keepEdits = () => {
+    if (!hasUnsavedEdits()) return;
+    if (isCreating) {
+      toast('Your new note is kept as a draft — press “New Note” to continue.', 'info');
+      return;
+    }
+    const title = editTitle.trim();
+    if (!selectedNote || !title) return;
+    pending.current = null;
+    if (autosaveTimer.current) window.clearTimeout(autosaveTimer.current);
+    const id = selectedNote.id;
+    db.updateNote(id, { title, content: editContent }).then((updated) => {
+      if (updated) setNotes((prev) => prev.map((n) => (n.id === id ? updated : n)));
+    });
+  };
+
+  /** Edits that would be lost by leaving the editor now. */
+  const hasUnsavedEdits = () =>
+    isEditing &&
+    (isCreating
+      ? Boolean(editTitle.trim() || editContent.trim())
+      : editTitle.trim() !== (selectedNote?.title ?? '') || editContent !== (selectedNote?.content ?? ''));
+
+  const togglePin = async (note: Note) => {
+    const pinned = !note.pinned;
+    setNotes((prev) => prev.map((n) => (n.id === note.id ? { ...n, pinned } : n)));
+    if (selectedNote?.id === note.id) setSelectedNote({ ...selectedNote, pinned });
+    const updated = await db.updateNote(note.id, { pinned });
+    if (!updated) setNotes((prev) => prev.map((n) => (n.id === note.id ? note : n)));
+  };
+
+  const copyNote = async (note: Note) => {
+    try {
+      await navigator.clipboard.writeText(`# ${note.title}\n\n${note.content}`);
+      toast('Note copied to the clipboard.', 'success');
+    } catch {
+      toast('Copying is blocked in this browser.', 'warning');
+    }
+  };
+
+  const downloadNote = (note: Note) => {
+    const blob = new Blob([`# ${note.title}\n\n${note.content}\n`], { type: 'text/markdown;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${note.title.replace(/[\\/:*?"<>|]+/g, '').trim().slice(0, 80) || 'note'}.md`;
+    a.click();
+    window.setTimeout(() => URL.revokeObjectURL(url), 1000);
+  };
+
+  // Ticking a checklist item while reading saves the note right away.
+  const onContentClick = async (e: React.MouseEvent<HTMLDivElement>) => {
+    const box = (e.target as HTMLElement).closest<HTMLInputElement>('input[data-line]');
+    if (!box || !selectedNote) return;
+    e.preventDefault();
+    const content = toggleTask(selectedNote.content, Number(box.dataset.line));
+    const optimistic = { ...selectedNote, content };
+    setSelectedNote(optimistic);
+    setNotes((prev) => prev.map((n) => (n.id === optimistic.id ? optimistic : n)));
+    const updated = await db.updateNote(selectedNote.id, { content });
+    if (!updated) {
+      setSelectedNote(selectedNote);
+      setNotes((prev) => prev.map((n) => (n.id === selectedNote.id ? selectedNote : n)));
+    }
   };
 
   // Handle saving a note
@@ -128,6 +267,11 @@ export default function NotesApp() {
       if (isCreating) {
         const created = await db.saveNote(noteData);
         if (!created) return;
+        try {
+          localStorage.removeItem(DRAFT_KEY);
+        } catch {
+          // ignore
+        }
         setNotes(prev => [created, ...prev]);
         setSelectedNote(created);
       } else if (selectedNote) {
@@ -170,11 +314,7 @@ export default function NotesApp() {
 
   // Handle selecting a note
   const handleSelectNote = (note: Note) => {
-    if (isEditing && (editTitle !== selectedNote?.title || editContent !== selectedNote?.content)) {
-      if (!confirm('You have unsaved changes. Do you want to discard them?')) {
-        return;
-      }
-    }
+    keepEdits();
 
     setSelectedNote(note);
     setEditTitle(note.title);
@@ -188,6 +328,7 @@ export default function NotesApp() {
     if (selectedNote) {
       setEditTitle(selectedNote.title);
       setEditContent(selectedNote.content);
+      setAutoSaved('idle');
       setIsEditing(true);
     }
   };
@@ -195,6 +336,11 @@ export default function NotesApp() {
   // Cancel editing
   const handleCancelEdit = () => {
     if (isCreating) {
+      try {
+        localStorage.removeItem(DRAFT_KEY);
+      } catch {
+        // ignore
+      }
       setSelectedNote(null);
       setIsCreating(false);
     } else if (selectedNote) {
@@ -259,6 +405,7 @@ export default function NotesApp() {
   const formatH3 = () => insertTextAtCursor('### ');
   const formatOrderedList = () => insertTextAtCursor('1. ');
   const formatUnorderedList = () => insertTextAtCursor('- ');
+  const formatChecklist = () => insertTextAtCursor('- [ ] ');
 
   const insertLine = () => {
     if (!textareaRef) return;
@@ -374,10 +521,33 @@ export default function NotesApp() {
                 key={note.id}
                 className={`${styles.noteCard} ${selectedNote?.id === note.id ? styles.selected : ''}`}
                 onClick={() => handleSelectNote(note)}
+                role="button"
+                tabIndex={0}
+                aria-label={`Open note ${note.title}`}
+                aria-current={selectedNote?.id === note.id}
+                onKeyDown={(e) => {
+                  if (e.target !== e.currentTarget || (e.key !== 'Enter' && e.key !== ' ')) return;
+                  e.preventDefault();
+                  handleSelectNote(note);
+                }}
               >
                 <div className={styles.noteHeader}>
-                  <h3 className={styles.noteTitle}>{note.title}</h3>
+                  <h3 className={styles.noteTitle}>
+                    {note.pinned && <Pin size={12} className={styles.pinMark} aria-label="Pinned" />}
+                    {note.title}
+                  </h3>
                   <div className={styles.noteActions}>
+                    <button
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        togglePin(note);
+                      }}
+                      className={styles.deleteButton}
+                      title={note.pinned ? 'Unpin' : 'Pin to top'}
+                      aria-label={note.pinned ? 'Unpin note' : 'Pin note'}
+                    >
+                      {note.pinned ? <PinOff size={14} /> : <Pin size={14} />}
+                    </button>
                     <button
                       onClick={(e) => {
                         e.stopPropagation();
@@ -419,9 +589,7 @@ export default function NotesApp() {
                 type="button"
                 className={styles.backButton}
                 onClick={() => {
-                  if (isEditing && (editTitle !== (selectedNote?.title ?? '') || editContent !== (selectedNote?.content ?? ''))) {
-                    if (!confirm('Discard unsaved changes?')) return;
-                  }
+                  keepEdits();
                   setIsEditing(false);
                   setIsCreating(false);
                   setSelectedNote(null);
@@ -462,6 +630,31 @@ export default function NotesApp() {
                 <>
                   <h2 className={styles.editorTitle}>{selectedNote?.title}</h2>
                   <div className={styles.editorActions}>
+                    <button
+                      onClick={() => selectedNote && togglePin(selectedNote)}
+                      className={styles.cancelButton}
+                      title={selectedNote?.pinned ? 'Unpin' : 'Pin to top'}
+                      aria-label={selectedNote?.pinned ? 'Unpin note' : 'Pin note'}
+                      aria-pressed={Boolean(selectedNote?.pinned)}
+                    >
+                      {selectedNote?.pinned ? <PinOff size={16} /> : <Pin size={16} />}
+                    </button>
+                    <button
+                      onClick={() => selectedNote && copyNote(selectedNote)}
+                      className={styles.cancelButton}
+                      title="Copy as Markdown"
+                      aria-label="Copy note"
+                    >
+                      <Copy size={16} />
+                    </button>
+                    <button
+                      onClick={() => selectedNote && downloadNote(selectedNote)}
+                      className={styles.cancelButton}
+                      title="Download as .md"
+                      aria-label="Download note"
+                    >
+                      <Download size={16} />
+                    </button>
                     <button
                       onClick={handleEditNote}
                       className={styles.editButton}
@@ -599,6 +792,14 @@ export default function NotesApp() {
                       >
                         <ListOrdered size={16} />
                       </button>
+                      <button
+                        type="button"
+                        onClick={formatChecklist}
+                        className={styles.toolbarButton}
+                        title="Checklist"
+                      >
+                        <ListChecks size={16} />
+                      </button>
                     </div>
                   </div>
 
@@ -637,8 +838,9 @@ export default function NotesApp() {
               ) : (
                 <div className={styles.contentDisplay}>
                   {selectedNote?.content ? (
-                    <div 
+                    <div
                       className={styles.contentFormatted}
+                      onClick={onContentClick}
                       dangerouslySetInnerHTML={{ 
                         __html: renderFormattedContent(selectedNote.content) 
                       }}
@@ -661,6 +863,26 @@ export default function NotesApp() {
                       Modified: {formatDate(selectedNote.updated_at)}
                     </span>
                   )}
+                  <span>
+                    {countWords(selectedNote.content)} words · {Math.max(1, Math.round(countWords(selectedNote.content) / 220))} min read
+                  </span>
+                </div>
+              </div>
+            )}
+            {isEditing && (
+              <div className={styles.editorFooter}>
+                <div className={styles.noteMetadata}>
+                  <span>{countWords(editContent)} words</span>
+                  {!isCreating && (
+                    <span className={styles.autosave} aria-live="polite">
+                      {autoSaved === 'saving' ? 'Saving…' : autoSaved === 'saved' ? (
+                        <>
+                          <Check size={12} /> Saved
+                        </>
+                      ) : 'Autosave on'}
+                    </span>
+                  )}
+                  {isCreating && <span>Draft kept on this device until you save</span>}
                 </div>
               </div>
             )}

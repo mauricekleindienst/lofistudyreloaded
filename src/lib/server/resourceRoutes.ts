@@ -3,9 +3,13 @@ import { collections } from './mongo';
 import { crud } from './crud';
 import {
   parseAppointment,
+  parseDeck,
+  parseHabit,
   parseNote,
   parseTodo,
   serializeAppointment,
+  serializeDeck,
+  serializeHabit,
   serializeNote,
   serializeTodo,
 } from './resources';
@@ -30,6 +34,7 @@ export const noteRoutes = crud({
   sort: { updatedAt: -1 },
   maxPerUser: 1000,
   label: 'notes',
+  maxBodyBytes: 500_000,
 });
 
 export const appointmentRoutes = crud({
@@ -39,4 +44,28 @@ export const appointmentRoutes = crud({
   sort: { date: 1, time: 1 },
   maxPerUser: 5000,
   label: 'appointments',
+});
+
+export const deckRoutes = crud({
+  collection: collections.decks,
+  parse: parseDeck,
+  serialize: serializeDeck,
+  sort: { updatedAt: -1 },
+  maxPerUser: 200,
+  label: 'decks',
+  // A big deck is a few MB of JSON; MongoDB documents top out at 16 MB.
+  maxBodyBytes: 8_000_000,
+});
+
+export const habitRoutes = crud({
+  collection: collections.habits,
+  parse: parseHabit,
+  serialize: serializeHabit,
+  sort: { position: 1, createdAt: 1 },
+  maxPerUser: 50,
+  label: 'habits',
+  async onCreate(col, userId) {
+    const last = await col.find({ userId }).sort({ position: -1 }).limit(1).next();
+    return { position: (last?.position ?? 0) + 1 };
+  },
 });

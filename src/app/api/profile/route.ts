@@ -29,6 +29,9 @@ export const PATCH = route(async (request) => {
     if (!body.settings || typeof body.settings !== 'object' || Array.isArray(body.settings)) {
       throw new HttpError(400, 'settings must be an object');
     }
+    const depth = (v: unknown, d = 0): number =>
+      v && typeof v === 'object' ? Math.max(d + 1, ...Object.values(v as object).map((x) => depth(x, d + 1))) : d;
+    if (depth(body.settings) > 4) throw new HttpError(400, 'settings are nested too deeply');
     const merged = { ...(user.settings ?? {}), ...(body.settings as Record<string, unknown>) };
     if (JSON.stringify(merged).length > 10_000) throw new HttpError(400, 'settings too large');
     set.settings = merged;
