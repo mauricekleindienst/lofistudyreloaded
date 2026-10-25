@@ -1,45 +1,70 @@
 "use client";
-import React, { useState, useEffect, useRef } from 'react';
-import YouTube, { YouTubeEvent } from 'react-youtube';
-import { Music, X, SkipBack, SkipForward, Play, Pause, Volume2, VolumeX, Shuffle, Repeat, List, Plus, Trash2 } from 'lucide-react';
+import React, { useCallback, useEffect, useRef, useState } from 'react';
+import YouTube, { type YouTubeEvent, type YouTubePlayer } from 'react-youtube';
+import { Music, X, SkipBack, SkipForward, Play, Pause, Volume2, VolumeX, Shuffle, Repeat, List, Plus, Trash2, RotateCcw } from 'lucide-react';
 import { useAppState } from '../contexts/AppStateContext';
+import { toast } from '../lib/api';
 import styles from '../../styles/MusicPlayerSidebar.module.css';
 
-// Type declaration for YouTube iframe API
-declare global {
-  interface Window {
-    onYouTubeIframeAPIReady?: () => void;
-  }
-}
-
 interface Track {
-  id: number;
-  title: string;
   videoId: string;
+  title: string;
   channelName: string;
   channelUrl: string;
   isCustom?: boolean;
 }
 
-// Initial music tracks list
-const initialTracks: Track[] = [
-  { id: 1, title: 'Lofi hip hop radio 📚', videoId: 'jfKfPfyJRdk', channelName: 'LofiGirl', channelUrl: 'https://www.youtube.com/@LofiGirl' },
-  { id: 2, title: 'Medieval lofi radio 🏰', videoId: '_uMuuHk_KkQ', channelName: 'LofiGirl', channelUrl: 'https://www.youtube.com/@LofiGirl' },
-  { id: 3, title: 'Jazz lofi radio 🎷', videoId: 'HuFYqnbVbzY', channelName: 'LofiGirl', channelUrl: 'https://www.youtube.com/@LofiGirl' },
-  { id: 4, title: 'Sad lofi radio ☔', videoId: 'P6Segk8cr-c', channelName: 'LofiGirl', channelUrl: 'https://www.youtube.com/@LofiGirl' },
-  { id: 5, title: 'Asian lofi radio ⛩️', videoId: 'Na0w3Mz46GA', channelName: 'LofiGirl', channelUrl: 'https://www.youtube.com/@LofiGirl' },
-  { id: 6, title: 'Peaceful piano radio 🎹', videoId: '4oStw0r33so', channelName: 'LofiGirl', channelUrl: 'https://www.youtube.com/@LofiGirl' },
-  { id: 7, title: 'Synthwave radio 🌌', videoId: '4xDzrJKXOOY', channelName: 'LofiGirl', channelUrl: 'https://www.youtube.com/@LofiGirl' },
-  { id: 8, title: 'Dark ambient radio 🌃', videoId: 'S_MOd40zlYU', channelName: 'LofiGirl', channelUrl: 'https://www.youtube.com/@LofiGirl' },
-  { id: 9, title: 'Dark academia 🌓', videoId: 'SllpB3W5f6s', channelName: 'Toxic Drunker', channelUrl: 'https://www.youtube.com/@ToxicDrunker_' },
-  { id: 10, title: 'Jazz music ☕', videoId: 'MYPVQccHhAQ', channelName: 'Relaxing Jazz Piano', channelUrl: 'https://www.youtube.com/@relaxingjazzpiano6491' },
-  { id: 11, title: 'Lofi Pokemon mix 🏝️', videoId: '6CjpgFOOtuI', channelName: 'STUDIO MATCHA US', channelUrl: 'https://www.youtube.com/@LoFi_Pokemon_Matcha' },
-  { id: 12, title: 'Skyrim soundtrack ❄️', videoId: '_Z1VzsE1GVg', channelName: 'Aaronmn7', channelUrl: 'https://www.youtube.com/@AeronN7' },
-  { id: 13, title: 'Animal crossing 🌳', videoId: 'V6GUhCxMDLg', channelName: 'RemDaBom', channelUrl: 'https://www.youtube.com/@RemDaBom' },
-  { id: 14, title: 'Minecraft Soundtrack 🏰', videoId: 'ZUIT_rQIR5M', channelName: 'Minecraft', channelUrl: 'https://www.youtube.com/@Minecraft' },
-  { id: 15, title: 'Harry Potter study musik 📚', videoId: 'pQdTu0IeVho', channelName: 'AmbientWorlds', channelUrl: 'https://www.youtube.com/@AmbientWorlds' },
-  { id: 16, title: 'Morning Work Chill Mix ☀️', videoId: 'XXkXvTR7IL8', channelName: 'BLUME', channelUrl: 'https://www.youtube.com/@BLUME_Music' }
+const BUILT_IN: Track[] = [
+  { title: 'Lofi hip hop radio 📚', videoId: 'jfKfPfyJRdk', channelName: 'Lofi Girl', channelUrl: 'https://www.youtube.com/@LofiGirl' },
+  { title: 'Medieval lofi radio 🏰', videoId: '_uMuuHk_KkQ', channelName: 'Lofi Girl', channelUrl: 'https://www.youtube.com/@LofiGirl' },
+  { title: 'Jazz lofi radio 🎷', videoId: 'HuFYqnbVbzY', channelName: 'Lofi Girl', channelUrl: 'https://www.youtube.com/@LofiGirl' },
+  { title: 'Sad lofi radio ☔', videoId: 'P6Segk8cr-c', channelName: 'Lofi Girl', channelUrl: 'https://www.youtube.com/@LofiGirl' },
+  { title: 'Asian lofi radio ⛩️', videoId: 'Na0w3Mz46GA', channelName: 'Lofi Girl', channelUrl: 'https://www.youtube.com/@LofiGirl' },
+  { title: 'Peaceful piano radio 🎹', videoId: '4oStw0r33so', channelName: 'Lofi Girl', channelUrl: 'https://www.youtube.com/@LofiGirl' },
+  { title: 'Synthwave radio 🌌', videoId: '4xDzrJKXOOY', channelName: 'Lofi Girl', channelUrl: 'https://www.youtube.com/@LofiGirl' },
+  { title: 'Dark ambient radio 🌃', videoId: 'S_MOd40zlYU', channelName: 'Lofi Girl', channelUrl: 'https://www.youtube.com/@LofiGirl' },
+  { title: 'Dark academia 🌓', videoId: 'SllpB3W5f6s', channelName: 'Toxic Drunker', channelUrl: 'https://www.youtube.com/@ToxicDrunker_' },
+  { title: 'Jazz music ☕', videoId: 'MYPVQccHhAQ', channelName: 'Relaxing Jazz Piano', channelUrl: 'https://www.youtube.com/@relaxingjazzpiano6491' },
+  { title: 'Lofi Pokémon mix 🏝️', videoId: '6CjpgFOOtuI', channelName: 'STUDIO MATCHA', channelUrl: 'https://www.youtube.com/@LoFi_Pokemon_Matcha' },
+  { title: 'Skyrim soundtrack ❄️', videoId: '_Z1VzsE1GVg', channelName: 'Aaronmn7', channelUrl: 'https://www.youtube.com/@AeronN7' },
+  { title: 'Animal Crossing 🌳', videoId: 'V6GUhCxMDLg', channelName: 'RemDaBom', channelUrl: 'https://www.youtube.com/@RemDaBom' },
+  { title: 'Minecraft soundtrack 🏰', videoId: 'ZUIT_rQIR5M', channelName: 'Minecraft', channelUrl: 'https://www.youtube.com/@Minecraft' },
+  { title: 'Harry Potter study music 📚', videoId: 'pQdTu0IeVho', channelName: 'AmbientWorlds', channelUrl: 'https://www.youtube.com/@AmbientWorlds' },
+  { title: 'Morning work chill mix ☀️', videoId: 'XXkXvTR7IL8', channelName: 'BLUME', channelUrl: 'https://www.youtube.com/@BLUME_Music' },
 ];
+
+const STORAGE_KEY = 'lofi:music';
+
+interface Persisted {
+  custom: Track[];
+  hidden: string[];
+  current: string | null;
+  volume: number;
+  shuffle: boolean;
+  repeat: boolean;
+}
+
+/** Accepts watch?v=, youtu.be/, /shorts/, /live/, /embed/ links or a bare 11-char id. */
+export function parseYouTubeId(input: string): string | null {
+  const value = input.trim();
+  if (/^[\w-]{11}$/.test(value)) return value;
+  try {
+    const url = new URL(value.startsWith('http') ? value : `https://${value}`);
+    const host = url.hostname.replace(/^(www\.|m\.|music\.)/, '');
+    if (host === 'youtu.be') return url.pathname.slice(1, 12) || null;
+    if (host === 'youtube.com' || host === 'youtube-nocookie.com') {
+      const v = url.searchParams.get('v');
+      if (v && /^[\w-]{11}$/.test(v)) return v;
+      const m = url.pathname.match(/^\/(?:shorts|live|embed)\/([\w-]{11})/);
+      if (m) return m[1];
+    }
+  } catch {
+    // not a URL
+  }
+  return null;
+}
+
+const thumb = (id: string) => `https://i.ytimg.com/vi/${id}/mqdefault.jpg`;
 
 interface MusicPlayerSidebarProps {
   isOpen: boolean;
@@ -48,262 +73,213 @@ interface MusicPlayerSidebarProps {
 
 const MusicPlayerSidebar: React.FC<MusicPlayerSidebarProps> = ({ isOpen, onToggle }) => {
   const { updateMusicState } = useAppState();
-  
-  // Music player state
-  const [tracks, setTracks] = useState<Track[]>(initialTracks);
-  const [currentTrackIndex, setCurrentTrackIndex] = useState(0);
-  const [isPlaying, setIsPlaying] = useState(false);
+
+  const [custom, setCustom] = useState<Track[]>([]);
+  const [hidden, setHidden] = useState<string[]>([]);
+  const [currentId, setCurrentId] = useState<string>(BUILT_IN[0].videoId);
   const [volume, setVolume] = useState(50);
-  const [isFormVisible, setIsFormVisible] = useState(false);
-  const [newTrackTitle, setNewTrackTitle] = useState('');  const [newTrackUrl, setNewTrackUrl] = useState('');
-  const [apiReady, setApiReady] = useState(false);  const [isLoading, setIsLoading] = useState(false);
   const [isMuted, setIsMuted] = useState(false);
   const [isShuffled, setIsShuffled] = useState(false);
   const [isRepeating, setIsRepeating] = useState(false);
-  const playerRef = useRef<YouTubeEvent['target'] | null>(null);
+  const [isPlaying, setIsPlaying] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  // The YouTube iframe (~1 MB of scripts) is only created once the user presses play.
+  const [activated, setActivated] = useState(false);
+  const [isFormVisible, setIsFormVisible] = useState(false);
+  const [newTrackTitle, setNewTrackTitle] = useState('');
+  const [newTrackUrl, setNewTrackUrl] = useState('');
+  const [formError, setFormError] = useState('');
+  const [thumbFailed, setThumbFailed] = useState<Record<string, true>>({});
+  const [playerReady, setPlayerReady] = useState(false);
+  const playerRef = useRef<YouTubePlayer | null>(null);
+  const hydrated = useRef(false);
 
-  const currentTrack = tracks[currentTrackIndex];
+  const tracks = [...BUILT_IN.filter((t) => !hidden.includes(t.videoId)), ...custom];
+  const currentIndex = Math.max(0, tracks.findIndex((t) => t.videoId === currentId));
+  const currentTrack: Track | undefined = tracks[currentIndex];
 
-  // Load YouTube iframe API script on mount
+  // Handlers registered with the YouTube player outlive renders; read live values via a ref.
+  const live = useRef({ tracks, currentIndex, isShuffled, isRepeating });
   useEffect(() => {
-    const script = document.createElement('script');
-    script.src = 'https://www.youtube.com/iframe_api';
-    script.async = true;
-    document.body.appendChild(script);
+    live.current = { tracks, currentIndex, isShuffled, isRepeating };
+  });
 
-    window.onYouTubeIframeAPIReady = () => setApiReady(true);
-
-    return () => {
-      if (script.parentNode) {
-        document.body.removeChild(script);
-      }
-      delete window.onYouTubeIframeAPIReady;
-    };
-  }, []);
-
-  // Persist music player state in localStorage
+  // --- persistence ---
   useEffect(() => {
-    const storedTracksJSON = localStorage.getItem('musicSidebar_tracks');
-    const storedTrackIndex = localStorage.getItem('musicSidebar_currentTrackIndex');
-    const storedVolume = localStorage.getItem('musicSidebar_volume');
-    
-    let loadedTracks: Track[] = initialTracks;
-
-    if (storedTracksJSON) {
-      try {
-        const storedTracks = JSON.parse(storedTracksJSON) as Track[];
-        const customTracks = storedTracks.filter(t => t.isCustom);
-        
-        const initialVideoIds = new Set(initialTracks.map(t => t.videoId));
-        const uniqueCustomTracks = customTracks.filter(t => !initialVideoIds.has(t.videoId));
-
-        loadedTracks = [...initialTracks, ...uniqueCustomTracks];
-      } catch (e) {
-        console.error('Error parsing stored tracks:', e);
-        loadedTracks = initialTracks;
+    try {
+      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null') as Persisted | null;
+      if (saved) {
+        setCustom(Array.isArray(saved.custom) ? saved.custom.filter((t) => t && /^[\w-]{11}$/.test(t.videoId)) : []);
+        setHidden(Array.isArray(saved.hidden) ? saved.hidden : []);
+        if (saved.current) setCurrentId(saved.current);
+        if (typeof saved.volume === 'number') setVolume(saved.volume);
+        setIsShuffled(Boolean(saved.shuffle));
+        setIsRepeating(Boolean(saved.repeat));
       }
+      ['musicSidebar_tracks', 'musicSidebar_currentTrackIndex', 'musicSidebar_volume'].forEach((k) => localStorage.removeItem(k));
+    } catch {
+      // ignore corrupt state
     }
-    
-    // Re-assign IDs to ensure they are unique and sequential
-    const finalTracks = loadedTracks.map((track, index) => ({
-      ...track,
-      id: index + 1,
-    }));
-
-    setTracks(finalTracks);
-
-    if (storedTrackIndex) {
-      const index = parseInt(storedTrackIndex, 10);
-      if (index >= 0 && index < finalTracks.length) {
-        setCurrentTrackIndex(index);
-      }
-    }
-    if (storedVolume) {
-      const volume = parseInt(storedVolume, 10);
-      if (volume >= 0 && volume <= 100) {
-        setVolume(volume);
-      }
-    }
+    hydrated.current = true;
   }, []);
 
   useEffect(() => {
-    localStorage.setItem('musicSidebar_tracks', JSON.stringify(tracks));
-    localStorage.setItem('musicSidebar_currentTrackIndex', currentTrackIndex.toString());
-    localStorage.setItem('musicSidebar_volume', volume.toString());
-  }, [tracks, currentTrackIndex, volume]);
+    if (!hydrated.current) return;
+    const data: Persisted = { custom, hidden, current: currentId, volume, shuffle: isShuffled, repeat: isRepeating };
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
+    } catch {
+      // ignore
+    }
+  }, [custom, hidden, currentId, volume, isShuffled, isRepeating]);
 
-  // No user toggle; theme auto-activates in season
-
-  // Update context with current music state
   useEffect(() => {
-    updateMusicState({
-      isPlaying,
-      currentTrack: tracks[currentTrackIndex]?.title || null
-    });
-  }, [isPlaying, currentTrackIndex, tracks, updateMusicState]);
+    updateMusicState({ isPlaying, currentTrack: currentTrack?.title ?? null });
+  }, [isPlaying, currentTrack?.title, updateMusicState]);
 
-  // Music Player Functions
+  useEffect(() => {
+    playerRef.current?.setVolume(volume);
+  }, [volume]);
+
+  // --- navigation ---
+  const goTo = useCallback((videoId: string) => {
+    setCurrentId(videoId);
+    setActivated(true);
+    setIsLoading(true);
+  }, []);
+
+  const step = useCallback(
+    (dir: 1 | -1) => {
+      const { tracks: list, currentIndex: idx, isShuffled: shuffle } = live.current;
+      if (list.length === 0) return;
+      let next = (idx + dir + list.length) % list.length;
+      if (shuffle && list.length > 1) {
+        do next = Math.floor(Math.random() * list.length);
+        while (next === idx);
+      }
+      goTo(list[next].videoId);
+    },
+    [goTo]
+  );
+
   const playPause = () => {
-    if (playerRef.current) {
-      if (isPlaying) {
-        playerRef.current.pauseVideo();
-      } else {
-        playerRef.current.playVideo();
-      }
-    }
-  };
-
-  const nextTrack = () => {
-    let nextIndex;
-    if (isShuffled) {
-      nextIndex = Math.floor(Math.random() * tracks.length);
-    } else {
-      nextIndex = (currentTrackIndex + 1) % tracks.length;
-    }
-    setCurrentTrackIndex(nextIndex);
-    setIsLoading(true);
-  };
-
-  const previousTrack = () => {
-    let prevIndex;
-    if (isShuffled) {
-      prevIndex = Math.floor(Math.random() * tracks.length);
-    } else {
-      prevIndex = currentTrackIndex === 0 ? tracks.length - 1 : currentTrackIndex - 1;
-    }
-    setCurrentTrackIndex(prevIndex);
-    setIsLoading(true);
-  };
-  const selectTrack = (index: number) => {
-    setCurrentTrackIndex(index);
-    setIsLoading(true);
-  };
-
-  const removeTrack = (id: number) => {
-    const trackToRemoveIndex = tracks.findIndex(t => t.id === id);
-    if (trackToRemoveIndex === -1) {
+    if (!activated) {
+      setActivated(true);
+      setIsLoading(true);
       return;
     }
-
-    const isDeletingCurrentTrack = trackToRemoveIndex === currentTrackIndex;
-
-    // Stop player if the current track is being deleted
-    if (isDeletingCurrentTrack) {
-      playerRef.current?.stopVideo();
-      setIsPlaying(false);
-    }
-
-    const newTracks = tracks.filter(track => track.id !== id);
-
-    let newCurrentTrackIndex = currentTrackIndex;
-
-    if (newTracks.length === 0) {
-      newCurrentTrackIndex = 0;
-    } else if (isDeletingCurrentTrack) {
-      // The new current track will be at the same index, unless it was the last track
-      newCurrentTrackIndex = trackToRemoveIndex % newTracks.length;
-    } else if (trackToRemoveIndex < currentTrackIndex) {
-      // A track before the current one was removed
-      newCurrentTrackIndex -= 1;
-    }
-
-    setTracks(newTracks);
-    setCurrentTrackIndex(newCurrentTrackIndex);
+    if (!playerRef.current) return;
+    if (isPlaying) playerRef.current.pauseVideo();
+    else playerRef.current.playVideo();
   };
 
   const toggleMute = () => {
-    if (playerRef.current) {
-      if (isMuted) {
-        playerRef.current.unMute();
-        setIsMuted(false);
-      } else {
-        playerRef.current.mute();
-        setIsMuted(true);
-      }
-    }
+    const p = playerRef.current;
+    if (isMuted) p?.unMute();
+    else p?.mute();
+    setIsMuted(!isMuted);
   };
 
+  // --- player events ---
   const onReady = (event: YouTubeEvent) => {
     playerRef.current = event.target;
-    setIsLoading(false);
-    
-    // Set initial volume
-    playerRef.current.setVolume(volume);
+    setPlayerReady(true);
+    event.target.setVolume(volume);
+    if (isMuted) event.target.mute();
+    event.target.playVideo();
   };
 
-  const onStateChange = (event: YouTubeEvent) => {
+  const onStateChange = (event: YouTubeEvent<number>) => {
     switch (event.data) {
-      case 1: // playing
+      case 1:
         setIsPlaying(true);
         setIsLoading(false);
         break;
-      case 2: // paused
+      case 2:
+      case 5:
         setIsPlaying(false);
         setIsLoading(false);
         break;
-      case 0: // ended
-        setIsPlaying(false);
-        setIsLoading(false);
-        if (isRepeating) {
-          playerRef.current?.playVideo();
-        } else {
-          nextTrack();
-        }
-        break;
-      case 3: // buffering
+      case 3:
         setIsLoading(true);
         break;
-      default:
+      case 0:
+        setIsPlaying(false);
+        if (live.current.isRepeating) event.target.playVideo();
+        else step(1);
         break;
     }
   };
 
-  const addNewTrack = (title: string, url: string) => {
-    try {
-      const videoId = new URL(url).searchParams.get('v');
-      if (!videoId) {
-        alert('Invalid YouTube URL');
-        return;
-      }
-      const newTrack: Track = {
-        id: tracks.length > 0 ? Math.max(...tracks.map(t => t.id)) + 1 : 1,
-        title,
-        videoId,
-        channelName: "Custom",
-        channelUrl: "",
-        isCustom: true,
-      };
-      setTracks([...tracks, newTrack]);
-      setNewTrackTitle('');
-      setNewTrackUrl('');
-      setIsFormVisible(false);
-    } catch (error) {
-      alert('Invalid YouTube URL');
-      console.error("Error parsing YouTube URL:", error);
-    }
+  const onError = () => {
+    setIsLoading(false);
+    setIsPlaying(false);
+    toast(`"${currentTrack?.title ?? 'This video'}" can't be played here — skipping.`, 'warning');
+    if (live.current.tracks.length > 1) step(1);
   };
 
+  // Lock-screen / hardware media keys
   useEffect(() => {
-    if (playerRef.current) {
-      playerRef.current.setVolume(volume);
+    if (!('mediaSession' in navigator) || !currentTrack || !activated) return;
+    navigator.mediaSession.metadata = new MediaMetadata({
+      title: currentTrack.title,
+      artist: currentTrack.channelName,
+      artwork: [{ src: thumb(currentTrack.videoId), sizes: '320x180', type: 'image/jpeg' }],
+    });
+    navigator.mediaSession.setActionHandler('play', () => playerRef.current?.playVideo());
+    navigator.mediaSession.setActionHandler('pause', () => playerRef.current?.pauseVideo());
+    navigator.mediaSession.setActionHandler('nexttrack', () => step(1));
+    navigator.mediaSession.setActionHandler('previoustrack', () => step(-1));
+  }, [currentTrack, activated, step]);
+
+  // --- playlist editing ---
+  const addNewTrack = (e: React.FormEvent) => {
+    e.preventDefault();
+    const videoId = parseYouTubeId(newTrackUrl);
+    if (!videoId) {
+      setFormError('That doesn’t look like a YouTube link.');
+      return;
     }
-  }, [volume]);
+    if (tracks.some((t) => t.videoId === videoId)) {
+      setFormError('That video is already in your playlist.');
+      return;
+    }
+    setCustom((prev) => [
+      ...prev,
+      { videoId, title: newTrackTitle.trim() || 'My track', channelName: 'Added by you', channelUrl: `https://www.youtube.com/watch?v=${videoId}`, isCustom: true },
+    ]);
+    setHidden((prev) => prev.filter((id) => id !== videoId));
+    setNewTrackTitle('');
+    setNewTrackUrl('');
+    setFormError('');
+    setIsFormVisible(false);
+  };
 
+  const removeTrack = (track: Track) => {
+    if (track.videoId === currentId) {
+      playerRef.current?.stopVideo();
+      setIsPlaying(false);
+      const rest = tracks.filter((t) => t.videoId !== track.videoId);
+      if (rest.length) setCurrentId(rest[Math.min(currentIndex, rest.length - 1)].videoId);
+    }
+    if (track.isCustom) setCustom((prev) => prev.filter((t) => t.videoId !== track.videoId));
+    else setHidden((prev) => [...prev, track.videoId]);
+  };
+
+  const restoreDefaults = () => setHidden([]);
+
+  // Escape closes the sidebar
   useEffect(() => {
-    return () => {
-      if (playerRef.current) {
-        playerRef.current.destroy();
-      }
-    };
-  }, []);
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onToggle();
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isOpen, onToggle]);
 
-  const getThumbnailUrl = (videoId: string) => `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`;
   return (
     <>
-      {/* Backdrop Overlay */}
-      <div className={`${styles.backdrop} ${isOpen ? styles.backdropOpen : ''}`} onClick={onToggle} />
-      
-      {/* Floating Toggle Button (when sidebar is closed) */}
+      <div className={`${styles.backdrop} ${isOpen ? styles.backdropOpen : ''}`} onClick={onToggle} aria-hidden />
+
       <button
         className={`${styles.floatingToggle} ${isOpen ? styles.hidden : ''}`}
         onClick={onToggle}
@@ -319,134 +295,109 @@ const MusicPlayerSidebar: React.FC<MusicPlayerSidebarProps> = ({ isOpen, onToggl
           </div>
         )}
       </button>
-      
-      {/* Sidebar */}
-      <div className={`${styles.sidebar} ${isOpen ? styles.sidebarOpen : ''} `}>
-      
+
+      {/* The player stays mounted while the sidebar is closed, so music keeps playing. */}
+      {activated && currentTrack && (
+        <div className={styles.hiddenPlayer} aria-hidden>
+          <YouTube
+            videoId={currentTrack.videoId}
+            onReady={onReady}
+            onStateChange={onStateChange}
+            onError={onError}
+            opts={{
+              host: 'https://www.youtube-nocookie.com',
+              height: '1',
+              width: '1',
+              playerVars: { autoplay: 1, playsinline: 1, controls: 0, rel: 0 },
+            }}
+          />
+        </div>
+      )}
+
+      <aside className={`${styles.sidebar} ${isOpen ? styles.sidebarOpen : ''}`} aria-label="Music player" aria-hidden={!isOpen} inert={!isOpen}>
         <div className={styles.sidebarContent}>
-          {/* Header */}
           <div className={styles.header}>
-           
             <div className={styles.headerTitle}>
               <Music size={20} />
               <span>Music Player</span>
-          </div>
-            <button 
-              className={styles.closeButton} 
-              onClick={onToggle}
-              title="Close"
-            >
+            </div>
+            <button className={styles.closeButton} onClick={onToggle} aria-label="Close music player">
               <X size={18} />
             </button>
           </div>
 
-          {/* YouTube Player - Hidden */}
-          {apiReady && currentTrack && (
-            <div style={{ display: 'none' }}>
-              <YouTube
-                videoId={currentTrack.videoId}
-                onReady={onReady}
-                onStateChange={onStateChange}
-                opts={{
-                  height: '0',
-                  width: '0',
-                  playerVars: {
-                    autoplay: 1,
-                  },
-                }}
-              />
-            </div>
-          )}
-
-          {/* Now Playing */}
           <div className={styles.nowPlaying}>
             {currentTrack ? (
               <>
                 <div className={styles.trackThumbnail}>
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    key={currentTrack.videoId}
-                    src={getThumbnailUrl(currentTrack.videoId)}
-                    alt=""
-                    loading="lazy"
-                    referrerPolicy="no-referrer"
-                    width={60}
-                    height={60}
-                    className={styles.thumbnail}
-                    onError={(e) => {
-                      const image = e.currentTarget as HTMLImageElement;
-                      image.style.display = 'none';
-                      const fallback = image.nextElementSibling as HTMLElement;
-                      if (fallback) {
-                        fallback.style.display = 'flex';
-                      }
-                    }}
-                  />
-                  <div className={styles.thumbnailFallback}>
-                    <Music size={24} />
-                  </div>
+                  {!thumbFailed[currentTrack.videoId] ? (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      key={currentTrack.videoId}
+                      src={thumb(currentTrack.videoId)}
+                      alt=""
+                      loading="lazy"
+                      referrerPolicy="no-referrer"
+                      width={60}
+                      height={60}
+                      className={styles.thumbnail}
+                      onError={() => setThumbFailed((f) => ({ ...f, [currentTrack.videoId]: true }))}
+                    />
+                  ) : (
+                    <div className={styles.thumbnailFallback} style={{ display: 'flex' }}>
+                      <Music size={24} />
+                    </div>
+                  )}
                 </div>
                 <div className={styles.trackInfo}>
                   <h3 className={styles.trackTitle}>{currentTrack.title}</h3>
-                  <a
-                    href={currentTrack.channelUrl}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    className={styles.channelLink}
-                    onClick={(e) => e.stopPropagation()}
-                  >
+                  <a href={currentTrack.channelUrl} target="_blank" rel="noopener noreferrer" className={styles.channelLink}>
                     {currentTrack.channelName}
                   </a>
                 </div>
               </>
             ) : (
               <div className={styles.trackInfo}>
-                <h3 className={styles.trackTitle}>No track selected</h3>
-                <p className={styles.channelName}>...</p>
-              </div>
-            )}
-            {isLoading && currentTrack && (
-              <div className={styles.loadingSpinner}>
-                <div className={styles.spinner}></div>
+                <h3 className={styles.trackTitle}>Your playlist is empty</h3>
               </div>
             )}
           </div>
 
-          {/* Controls */}
           <div className={styles.controls}>
             <button
               className={`${styles.controlButton} ${isShuffled ? styles.active : ''}`}
               onClick={() => setIsShuffled(!isShuffled)}
-              title={isShuffled ? "Disable Shuffle" : "Enable Shuffle"}
+              aria-pressed={isShuffled}
+              aria-label="Shuffle"
             >
               <Shuffle size={18} />
             </button>
-            <button className={styles.controlButton} onClick={previousTrack} title="Previous Track">
+            <button className={styles.controlButton} onClick={() => step(-1)} aria-label="Previous track" disabled={!tracks.length}>
               <SkipBack size={18} />
             </button>
             <button
               className={styles.playButton}
               onClick={playPause}
-              disabled={isLoading}
-              title={isPlaying ? "Pause" : "Play"}
+              disabled={!currentTrack || (activated && isLoading && !playerReady)}
+              aria-label={isPlaying ? 'Pause' : 'Play'}
             >
               {isLoading ? <div className={styles.buttonSpinner}></div> : isPlaying ? <Pause size={20} /> : <Play size={20} />}
             </button>
-            <button className={styles.controlButton} onClick={nextTrack} title="Next Track">
+            <button className={styles.controlButton} onClick={() => step(1)} aria-label="Next track" disabled={!tracks.length}>
               <SkipForward size={18} />
             </button>
             <button
               className={`${styles.controlButton} ${isRepeating ? styles.active : ''}`}
               onClick={() => setIsRepeating(!isRepeating)}
-              title={isRepeating ? "Disable Repeat" : "Enable Repeat"}
+              aria-pressed={isRepeating}
+              aria-label="Repeat track"
             >
               <Repeat size={18} />
             </button>
           </div>
 
-          {/* Volume Section */}
           <div className={styles.volumeSection}>
-            <button className={styles.volumeButton} onClick={toggleMute} title={isMuted ? "Unmute" : "Mute"}>
+            <button className={styles.volumeButton} onClick={toggleMute} aria-label={isMuted ? 'Unmute' : 'Mute'}>
               {isMuted || volume === 0 ? <VolumeX size={20} /> : <Volume2 size={20} />}
             </button>
             <input
@@ -454,98 +405,96 @@ const MusicPlayerSidebar: React.FC<MusicPlayerSidebarProps> = ({ isOpen, onToggl
               min="0"
               max="100"
               value={volume}
-              onChange={(e) => setVolume(parseInt(e.target.value))}
+              onChange={(e) => setVolume(parseInt(e.target.value, 10))}
               className={styles.volumeSlider}
+              aria-label="Music volume"
             />
             <span className={styles.volumeValue}>{volume}%</span>
           </div>
 
-          {/* Playlist Toggle */}
           <div className={styles.playlistToggle}>
-            <button className={styles.playlistButton}>
+            <span className={styles.playlistButton}>
               <List size={16} />
               <span>Playlist</span>
-            </button>
-            <button className={styles.addTrackButton} onClick={() => setIsFormVisible(!isFormVisible)}>
-              <Plus size={16} />
-              <span>Add Track</span>
-            </button>
+            </span>
+            <div style={{ display: 'flex', gap: 8 }}>
+              {hidden.length > 0 && (
+                <button className={styles.addTrackButton} onClick={restoreDefaults} title="Restore removed stations">
+                  <RotateCcw size={14} />
+                </button>
+              )}
+              <button className={styles.addTrackButton} onClick={() => setIsFormVisible(!isFormVisible)} aria-expanded={isFormVisible}>
+                <Plus size={16} />
+                <span>Add track</span>
+              </button>
+            </div>
           </div>
 
-          {/* Add Track Form */}
           {isFormVisible && (
-            <div className={styles.addTrackForm}>
+            <form className={styles.addTrackForm} onSubmit={addNewTrack}>
               <div className={styles.formHeader}>
-                <h4>Add New Track</h4>
-                <button className={styles.formCloseButton} onClick={() => setIsFormVisible(false)}>
+                <h4>Add a YouTube video</h4>
+                <button type="button" className={styles.formCloseButton} onClick={() => setIsFormVisible(false)} aria-label="Cancel">
                   <X size={16} />
                 </button>
               </div>
               <div className={styles.formInputs}>
                 <input
-                  type="text"
-                  placeholder="Track Title"
-                  value={newTrackTitle}
-                  onChange={(e) => setNewTrackTitle(e.target.value)}
+                  type="url"
+                  inputMode="url"
+                  placeholder="https://youtube.com/watch?v=…"
+                  value={newTrackUrl}
+                  onChange={(e) => {
+                    setNewTrackUrl(e.target.value);
+                    setFormError('');
+                  }}
                   className={styles.formInput}
+                  aria-label="YouTube link"
+                  required
                 />
                 <input
                   type="text"
-                  placeholder="YouTube URL"
-                  value={newTrackUrl}
-                  onChange={(e) => setNewTrackUrl(e.target.value)}
+                  placeholder="Title (optional)"
+                  value={newTrackTitle}
+                  onChange={(e) => setNewTrackTitle(e.target.value)}
                   className={styles.formInput}
+                  aria-label="Title"
+                  maxLength={80}
                 />
-                <button
-                  className={styles.addButton}
-                  onClick={() => addNewTrack(newTrackTitle, newTrackUrl)}
-                  disabled={!newTrackTitle || !newTrackUrl}
-                >
+                {formError && <p className={styles.formError}>{formError}</p>}
+                <button type="submit" className={styles.addButton} disabled={!newTrackUrl.trim()}>
                   <Plus size={14} />
                   Add
                 </button>
               </div>
-            </div>
+            </form>
           )}
 
-          {/* Playlist - Always Visible */}
-          <div className={styles.playlist}>
+          <ul className={styles.playlist}>
             {tracks.map((track, index) => (
-              <div
-                key={track.id}
-                className={`${styles.track} ${index === currentTrackIndex ? styles.trackActive : ''}`}
-              >
-                <div style={{ flexGrow: 1, cursor: 'pointer', display: 'flex', alignItems: 'center' }} onClick={() => selectTrack(index)}>
+              <li key={track.videoId} className={`${styles.track} ${index === currentIndex ? styles.trackActive : ''}`}>
+                <button type="button" className={styles.trackSelect} onClick={() => goTo(track.videoId)} aria-current={index === currentIndex}>
                   <span className={styles.trackNumber}>{index + 1}</span>
-                  <div className={styles.trackMeta}>
+                  <span className={styles.trackMeta}>
                     <span className={styles.trackName}>{track.title}</span>
                     <span className={styles.trackArtist}>{track.channelName}</span>
-                  </div>
-                  {index === currentTrackIndex && isPlaying && (
-                    <div className={styles.playingAnimation}>
+                  </span>
+                  {index === currentIndex && isPlaying && (
+                    <span className={styles.playingAnimation}>
                       <span></span>
                       <span></span>
                       <span></span>
-                    </div>
+                    </span>
                   )}
-                </div>
-                {track.isCustom && (
-                  <button
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      removeTrack(track.id);
-                    }}
-                    title="Remove track"
-                    style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer', padding: '0 8px' }}
-                  >
-                    <Trash2 size={14} />
-                  </button>
-                )}
-              </div>
+                </button>
+                <button type="button" className={styles.trackRemove} onClick={() => removeTrack(track)} aria-label={`Remove ${track.title}`}>
+                  <Trash2 size={14} />
+                </button>
+              </li>
             ))}
-          </div>
+          </ul>
         </div>
-      </div>
+      </aside>
     </>
   );
 };

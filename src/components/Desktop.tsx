@@ -53,7 +53,7 @@ const WINDOW_SIZES: Record<string, { width: number; height: number }> = {
   todo: { width: 380, height: 600 },
   notes: { width: 820, height: 600 },
   calculator: { width: 300, height: 440 },
-  'sound-player': { width: 320, height: 480 },
+  'sound-player': { width: 360, height: 640 },
   'account-settings': { width: 440, height: 560 },
   chat: { width: 400, height: 580 },
 };
@@ -73,7 +73,10 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
   const [readySrc, setReadySrc] = useState<string | null>(null);
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
   const [useMobileVideo, setUseMobileVideo] = useState(false);
-  const [reduceMotion, setReduceMotion] = useState(false);
+  const [prefersReducedMotion, setReduceMotion] = useState(false);
+  // User choice in the gallery; defaults on unless the OS asks for reduced motion.
+  const [motionPref, setMotionPref] = useState<boolean | null>(null);
+  const stillOnly = motionPref === null ? prefersReducedMotion : !motionPref;
   const [showBackgrounds, setShowBackgrounds] = useState(false);
   const [now, setNow] = useState<Date | null>(null);
   const [notifications, setNotifications] = useState<ModernNotification[]>([]);
@@ -130,8 +133,10 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
 
   // --- background: restore the saved choice (device first, then account) ---
   useEffect(() => {
-    const local = findBackground(db.getLocalSettings().selectedBackground);
+    const settings = db.getLocalSettings();
+    const local = findBackground(settings.selectedBackground);
     if (local) setCurrentBackground(local);
+    if (typeof settings.backgroundMotion === 'boolean') setMotionPref(settings.backgroundMotion);
   }, []);
 
   useEffect(() => {
@@ -146,7 +151,7 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
   // attached onCanPlay — check readyState instead of relying on the event alone.
   useEffect(() => {
     const video = videoRef.current;
-    if (!video || reduceMotion) return;
+    if (!video || stillOnly) return;
     if (video.readyState >= 3) setReadySrc(videoSrc);
     video.play().catch(() => undefined);
     const onVisibility = () => {
@@ -155,7 +160,12 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
     };
     document.addEventListener('visibilitychange', onVisibility);
     return () => document.removeEventListener('visibilitychange', onVisibility);
-  }, [videoSrc, reduceMotion]);
+  }, [videoSrc, stillOnly]);
+
+  const handleMotionChange = useCallback((value: boolean) => {
+    setMotionPref(value);
+    db.saveSettings({ backgroundMotion: value });
+  }, []);
 
   const handleBackgroundChange = useCallback((background: Background) => {
     setCurrentBackground(background);
@@ -274,7 +284,7 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
         style={{ backgroundImage: `url(${currentBackground.poster})` }}
         aria-hidden
       />
-      {!reduceMotion && failedSrc !== videoSrc && (
+      {!stillOnly && failedSrc !== videoSrc && (
         <video
           key={videoSrc}
           ref={videoRef}
@@ -303,6 +313,7 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
           onToggleStats={() => setShowStats((v) => !v)}
           onAccountAction={openAccount}
           onToggleMusic={() => setIsMusicSidebarOpen((v) => !v)}
+          onOpenTimer={() => openApp(modernApps[0])}
         />
 
         <WindowManager
@@ -338,6 +349,8 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
           onClose={() => setShowBackgrounds(false)}
           onBackgroundChange={handleBackgroundChange}
           onCategoryChange={setSelectedCategory}
+          motion={!stillOnly}
+          onMotionChange={handleMotionChange}
         />
       )}
 

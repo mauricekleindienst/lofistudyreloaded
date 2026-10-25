@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { X, CheckSquare, Play, Images, Search } from 'lucide-react';
+import { X, CheckSquare, Play, Images, Search, Film, ImageIcon } from 'lucide-react';
 import { backgrounds } from '@/data/backgrounds';
 import styles from '../../../styles/BackgroundSelector.module.css';
 import Image from 'next/image';
@@ -14,6 +14,8 @@ interface BackgroundSelectorProps {
   onClose: () => void;
   onBackgroundChange: (background: Background) => void;
   onCategoryChange: (category: string) => void;
+  motion: boolean;
+  onMotionChange: (motion: boolean) => void;
 }
 
 const categories = [
@@ -30,7 +32,9 @@ export default function BackgroundSelector({
   selectedCategory,
   onClose,
   onBackgroundChange,
-  onCategoryChange
+  onCategoryChange,
+  motion,
+  onMotionChange
 }: BackgroundSelectorProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [visibleCount, setVisibleCount] = useState(20);
@@ -109,8 +113,19 @@ export default function BackgroundSelector({
           </div>
           <div className={styles.headerActions}>
             <button
+              type="button"
+              onClick={() => onMotionChange(!motion)}
+              className={styles.motionToggle}
+              aria-pressed={motion}
+              title={motion ? 'Show still images (saves battery)' : 'Play animated backgrounds'}
+            >
+              {motion ? <Film size={16} /> : <ImageIcon size={16} />}
+              <span>{motion ? 'Animated' : 'Still'}</span>
+            </button>
+            <button
               onClick={onClose}
               className={styles.closeButton}
+              aria-label="Close gallery"
             >
               <X size={20} />
             </button>
@@ -127,7 +142,7 @@ export default function BackgroundSelector({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className={styles.searchInput}
-              autoFocus
+              aria-label="Search backgrounds"
             />
             {searchQuery && (
               <button 
@@ -174,8 +189,10 @@ export default function BackgroundSelector({
                     onBackgroundChange(bg);
                     onClose();
                   }}
-                  onMouseEnter={() => setPreviewId(bg.id)}
-                  onMouseLeave={() => setPreviewId(null)}
+                  onPointerEnter={(e) => e.pointerType === 'mouse' && setPreviewId(bg.id)}
+                  onPointerLeave={() => setPreviewId(null)}
+                  onFocus={() => setPreviewId(bg.id)}
+                  onBlur={() => setPreviewId(null)}
                 >
                   <div className={styles.imageWrapper}>
                     <Image
@@ -190,6 +207,19 @@ export default function BackgroundSelector({
                       }}
                     />
                     
+                    {motion && previewId === bg.id && (
+                      <video
+                        className={styles.previewVideo}
+                        src={bg.srcMobile}
+                        muted
+                        autoPlay
+                        loop
+                        playsInline
+                        preload="none"
+                        aria-hidden
+                      />
+                    )}
+
                     {hasError && (
                       <div className={styles.errorPlaceholder}>
                         <span>Failed to load</span>

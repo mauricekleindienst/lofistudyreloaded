@@ -13,6 +13,7 @@ import desktopStyles from '../../../styles/Desktop.module.css';
 import { type AppStates } from '../../contexts/AppStateContext';
 import type { AppUser } from '../../contexts/AuthContext';
 import type { ModernApp, ModernWindow } from './types';
+import { useAmbient } from '../../contexts/AmbientContext';
 
 interface BottomBarProps {
   currentTime: string;
@@ -79,6 +80,7 @@ export default function BottomBar({
   onOpenBackgrounds,
   onAccountAction
 }: BottomBarProps) {
+  const ambient = useAmbient();
   const displayTime = currentTime || '--:--';
   const displayDate = currentDate || '\u00a0';
 
@@ -144,7 +146,12 @@ export default function BottomBar({
               CurrentIcon = MessageSquareDot;
             }
 
-            const runtimeInfo = getAppRuntimeInfo(app, openWindow, appStates);
+            const runtimeInfo =
+              app.id === 'sound-player'
+                ? ambient.activeCount > 0 && !ambient.paused
+                  ? `♪${ambient.activeCount}`
+                  : null
+                : getAppRuntimeInfo(app, openWindow, appStates);
 
             return (
               <div key={app.id} className={desktopStyles.appContainer}>

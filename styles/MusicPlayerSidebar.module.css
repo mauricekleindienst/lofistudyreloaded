@@ -1414,3 +1414,87 @@
     display: none;
   }
 }
+
+/* --- rework additions --- */
+.hiddenPlayer {
+  position: fixed;
+  width: 1px;
+  height: 1px;
+  left: -10px;
+  bottom: 0;
+  overflow: hidden;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.playlist {
+  list-style: none;
+}
+
+.trackSelect {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.trackSelect .trackMeta {
+  min-width: 0;
+}
+
+.trackRemove {
+  flex-shrink: 0;
+  display: grid;
+  place-items: center;
+  width: 32px;
+  height: 32px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-tertiary);
+  cursor: pointer;
+  opacity: 0;
+  transition: opacity 0.15s ease, background 0.15s ease;
+}
+
+.track:hover .trackRemove,
+.track:focus-within .trackRemove {
+  opacity: 1;
+}
+
+.trackRemove:hover {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+}
+
+@media (hover: none) {
+  .trackRemove {
+    opacity: 0.6;
+  }
+}
+
+.formError {
+  font-size: 12px;
+  color: #f87171;
+}
+
+.controlButton:disabled,
+.playButton:disabled {
+  opacity: 0.45;
+  cursor: default;
+}
+
+@media (max-width: 640px) {
+  .sidebar {
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+}

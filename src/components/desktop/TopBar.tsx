@@ -29,12 +29,12 @@ interface TopBarProps {
   onToggleStats: () => void;
   onAccountAction: () => void;
   onToggleMusic: () => void;
+  onOpenTimer: () => void;
 }
 
-export default function TopBar({ user, onToggleStats, onAccountAction, onToggleMusic }: TopBarProps) {
+export default function TopBar({ user, onToggleStats, onAccountAction, onToggleMusic, onOpenTimer }: TopBarProps) {
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [showDiscordModal, setShowDiscordModal] = useState(false);
-  const [showClock, setShowClock] = useState(false);
   const [isFullscreen, setIsFullscreen] = useState(false);
   const [canFullscreen, setCanFullscreen] = useState(false);
 
@@ -89,11 +89,7 @@ export default function TopBar({ user, onToggleStats, onAccountAction, onToggleM
           <button onClick={onToggleMusic} className={`${desktopStyles.topIcon} ${desktopStyles.showOnPhone}`} aria-label="Music player">
             <Music size={20} />
           </button>
-          <Clock
-            isExpanded={showClock}
-            onToggle={() => setShowClock(!showClock)}
-            onClose={() => setShowClock(false)}
-          />
+          <Clock onClick={onOpenTimer} />
         </div>
 
         <div className={desktopStyles.topBarDivider} />
