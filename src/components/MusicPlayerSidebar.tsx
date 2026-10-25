@@ -92,6 +92,7 @@ const MusicPlayerSidebar: React.FC<MusicPlayerSidebarProps> = ({ isOpen, onToggl
   const [thumbFailed, setThumbFailed] = useState<Record<string, true>>({});
   const [playerReady, setPlayerReady] = useState(false);
   const playerRef = useRef<YouTubePlayer | null>(null);
+  const failStreak = useRef(0);
   const hydrated = useRef(false);
 
   const tracks = [...BUILT_IN.filter((t) => !hidden.includes(t.videoId)), ...custom];
@@ -192,6 +193,7 @@ const MusicPlayerSidebar: React.FC<MusicPlayerSidebarProps> = ({ isOpen, onToggl
   const onStateChange = (event: YouTubeEvent<number>) => {
     switch (event.data) {
       case 1:
+        failStreak.current = 0;
         setIsPlaying(true);
         setIsLoading(false);
         break;
@@ -211,10 +213,19 @@ const MusicPlayerSidebar: React.FC<MusicPlayerSidebarProps> = ({ isOpen, onToggl
     }
   };
 
-  const onError = () => {
+  // YouTube error codes: 2 bad id, 5 HTML5 error, 100 removed, 101/150 embedding disabled, 153 missing referrer.
+  const onError = (event: YouTubeEvent<number>) => {
     setIsLoading(false);
     setIsPlaying(false);
-    toast(`"${currentTrack?.title ?? 'This video'}" can't be played here — skipping.`, 'warning');
+    console.warn('[music] YouTube error', event.data, currentTrack?.videoId);
+    failStreak.current += 1;
+    // If several in a row fail it's the network/blocker, not the videos — stop instead of looping forever.
+    if (failStreak.current >= 3) {
+      failStreak.current = 0;
+      toast('YouTube isn’t playing right now (blocked or offline). Try again in a moment.', 'error');
+      return;
+    }
+    toast(`"${currentTrack?.title ?? 'This video'}" can't be played — skipping.`, 'warning');
     if (live.current.tracks.length > 1) step(1);
   };
 
