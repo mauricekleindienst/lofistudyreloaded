@@ -1504,11 +1504,13 @@
   position: relative;
   margin: 0 16px 4px;
   aspect-ratio: 16 / 9;
-  min-height: 200px;
+  min-height: 202px;
   border-radius: 14px;
   overflow: hidden;
   background: #000;
-  border: 1px solid rgba(255, 255, 255, 0.08);
+  /* outline, not border: the iframe must stay >=200px tall for YouTube */
+  outline: 1px solid rgba(255, 255, 255, 0.08);
+  min-height: 210px;
   flex-shrink: 0;
 }
 

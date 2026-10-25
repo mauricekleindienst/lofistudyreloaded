@@ -73,10 +73,11 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
   const [readySrc, setReadySrc] = useState<string | null>(null);
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
   const [useMobileVideo, setUseMobileVideo] = useState(false);
-  const [prefersReducedMotion, setReduceMotion] = useState(false);
-  // User choice in the gallery; defaults on unless the OS asks for reduced motion.
+  // Animated unless the user switches to "Still" in the gallery. The OS reduce-motion
+  // setting is not used here: many people have it on unknowingly, and a slow ambient
+  // loop is the point of the app (the gallery toggle is the explicit opt-out).
   const [motionPref, setMotionPref] = useState<boolean | null>(null);
-  const stillOnly = motionPref === null ? prefersReducedMotion : !motionPref;
+  const stillOnly = motionPref === false;
   const [showBackgrounds, setShowBackgrounds] = useState(false);
   const [now, setNow] = useState<Date | null>(null);
   const [notifications, setNotifications] = useState<ModernNotification[]>([]);
@@ -100,13 +101,8 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
     const slow = Boolean(conn?.saveData) || ['slow-2g', '2g', '3g'].includes(conn?.effectiveType ?? '');
     setUseMobileVideo(slow || window.innerWidth < 1100 || window.matchMedia('(pointer: coarse)').matches);
 
-    const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
-    setReduceMotion(motion.matches);
-    const onMotion = (e: MediaQueryListEvent) => setReduceMotion(e.matches);
-    motion.addEventListener('change', onMotion);
     return () => {
       clearInterval(timer);
-      motion.removeEventListener('change', onMotion);
     };
   }, []);
 
@@ -153,13 +149,29 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
     const video = videoRef.current;
     if (!video || stillOnly) return;
     if (video.readyState >= 3) setReadySrc(videoSrc);
-    video.play().catch(() => undefined);
+    // Autoplay can be refused (iOS Low Power Mode, battery saver). Retry on the first
+    // tap/click/key instead of leaving a still image forever.
+    const retry = () => {
+      video.play().catch(() => undefined);
+      removeRetry();
+    };
+    const removeRetry = () => {
+      window.removeEventListener('pointerdown', retry);
+      window.removeEventListener('keydown', retry);
+    };
+    video.play().catch(() => {
+      window.addEventListener('pointerdown', retry, { once: true });
+      window.addEventListener('keydown', retry, { once: true });
+    });
     const onVisibility = () => {
       if (document.visibilityState === 'visible') video.play().catch(() => undefined);
       else video.pause();
     };
     document.addEventListener('visibilitychange', onVisibility);
-    return () => document.removeEventListener('visibilitychange', onVisibility);
+    return () => {
+      removeRetry();
+      document.removeEventListener('visibilitychange', onVisibility);
+    };
   }, [videoSrc, stillOnly]);
 
   const handleMotionChange = useCallback((value: boolean) => {
