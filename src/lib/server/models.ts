@@ -32,6 +32,10 @@ export interface TodoDoc {
   category: 'work' | 'personal' | 'study' | 'health';
   dueDate?: string;
   position: number;
+  /** focus sessions spent on this task */
+  pomodoros?: number;
+  /** planned focus sessions */
+  estimate?: number;
   createdAt: Date;
   updatedAt: Date;
 }
@@ -41,6 +45,43 @@ export interface NoteDoc {
   userId: ObjectId;
   title: string;
   content: string;
+  pinned?: boolean;
+  color?: string;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface FlashCard {
+  id: string;
+  front: string;
+  back: string;
+  /** Leitner box 0-5; higher = known better */
+  box: number;
+  /** next review day, YYYY-MM-DD */
+  due: string;
+}
+
+export interface DeckDoc {
+  _id: ObjectId;
+  userId: ObjectId;
+  title: string;
+  color?: string;
+  cards: FlashCard[];
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+export interface HabitDoc {
+  _id: ObjectId;
+  userId: ObjectId;
+  name: string;
+  emoji: string;
+  color?: string;
+  /** days the habit was done, YYYY-MM-DD, newest last (capped) */
+  days: string[];
+  /** times per week the user aims for */
+  target: number;
+  position: number;
   createdAt: Date;
   updatedAt: Date;
 }

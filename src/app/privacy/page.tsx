@@ -210,7 +210,6 @@ export default function PrivacyPolicyPage() {
                     <p>We use the following third-party services and only share data necessary for providing our services:</p>
                     <ul>
                       <li><strong>Hetzner Online (Germany):</strong> Server hosting for the website and database</li>
-                      <li><strong>YouTube:</strong> Only if you use the music player, which embeds YouTube videos</li>
                       <li><strong>OAuth providers (optional):</strong> Google, GitHub or Discord, only if you choose to sign in with them</li>
                     </ul>
                     <p>

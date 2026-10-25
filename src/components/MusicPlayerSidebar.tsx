@@ -1,288 +1,114 @@
 "use client";
-import React, { useCallback, useEffect, useRef, useState } from 'react';
-import YouTube, { type YouTubeEvent, type YouTubePlayer } from 'react-youtube';
-import { Music, X, SkipBack, SkipForward, Play, Pause, Volume2, VolumeX, Shuffle, Repeat, List, Plus, Trash2, RotateCcw } from 'lucide-react';
-import { useAppState } from '../contexts/AppStateContext';
-import styles from '../../styles/MusicPlayerSidebar.module.css';
-
-interface Track {
-  videoId: string;
-  title: string;
-  channelName: string;
-  channelUrl: string;
-  isCustom?: boolean;
-  /** Live streams have no static thumbnail; YouTube serves a grey placeholder instead. */
-  noThumb?: boolean;
-}
-
-const BUILT_IN: Track[] = [
-  { title: 'Lofi hip hop radio 📚', videoId: 'jfKfPfyJRdk', channelName: 'Lofi Girl', channelUrl: 'https://www.youtube.com/@LofiGirl', noThumb: true },
-  { title: 'Medieval lofi radio 🏰', videoId: '_uMuuHk_KkQ', channelName: 'Lofi Girl', channelUrl: 'https://www.youtube.com/@LofiGirl' },
-  { title: 'Jazz lofi radio 🎷', videoId: 'HuFYqnbVbzY', channelName: 'Lofi Girl', channelUrl: 'https://www.youtube.com/@LofiGirl', noThumb: true },
-  { title: 'Sad lofi radio ☔', videoId: 'P6Segk8cr-c', channelName: 'Lofi Girl', channelUrl: 'https://www.youtube.com/@LofiGirl', noThumb: true },
-  { title: 'Asian lofi radio ⛩️', videoId: 'Na0w3Mz46GA', channelName: 'Lofi Girl', channelUrl: 'https://www.youtube.com/@LofiGirl', noThumb: true },
-  { title: 'Peaceful piano radio 🎹', videoId: '4oStw0r33so', channelName: 'Lofi Girl', channelUrl: 'https://www.youtube.com/@LofiGirl' },
-  { title: 'Synthwave radio 🌌', videoId: '4xDzrJKXOOY', channelName: 'Lofi Girl', channelUrl: 'https://www.youtube.com/@LofiGirl' },
-  { title: 'Dark ambient radio 🌃', videoId: 'S_MOd40zlYU', channelName: 'Lofi Girl', channelUrl: 'https://www.youtube.com/@LofiGirl' },
-  { title: 'Dark academia 🌓', videoId: 'SllpB3W5f6s', channelName: 'Toxic Drunker', channelUrl: 'https://www.youtube.com/@ToxicDrunker_' },
-  { title: 'Jazz music ☕', videoId: 'MYPVQccHhAQ', channelName: 'Relaxing Jazz Piano', channelUrl: 'https://www.youtube.com/@relaxingjazzpiano6491' },
-  { title: 'Lofi Pokémon mix 🏝️', videoId: '6CjpgFOOtuI', channelName: 'STUDIO MATCHA', channelUrl: 'https://www.youtube.com/@LoFi_Pokemon_Matcha' },
-  { title: 'Skyrim soundtrack ❄️', videoId: '_Z1VzsE1GVg', channelName: 'Aaronmn7', channelUrl: 'https://www.youtube.com/@AeronN7' },
-  { title: 'Animal Crossing 🌳', videoId: 'V6GUhCxMDLg', channelName: 'RemDaBom', channelUrl: 'https://www.youtube.com/@RemDaBom' },
-  { title: 'Minecraft soundtrack 🏰', videoId: 'ZUIT_rQIR5M', channelName: 'Minecraft', channelUrl: 'https://www.youtube.com/@Minecraft' },
-  { title: 'Harry Potter study music 📚', videoId: 'pQdTu0IeVho', channelName: 'AmbientWorlds', channelUrl: 'https://www.youtube.com/@AmbientWorlds' },
-  { title: 'Morning work chill mix ☀️', videoId: 'XXkXvTR7IL8', channelName: 'BLUME', channelUrl: 'https://www.youtube.com/@BLUME_Music' },
-];
-
-const STORAGE_KEY = 'lofi:music';
-
-interface Persisted {
-  custom: Track[];
-  hidden: string[];
-  current: string | null;
-  volume: number;
-  shuffle: boolean;
-  repeat: boolean;
-}
-
-/** Accepts watch?v=, youtu.be/, /shorts/, /live/, /embed/ links or a bare 11-char id. */
-export function parseYouTubeId(input: string): string | null {
-  const value = input.trim();
-  if (/^[\w-]{11}$/.test(value)) return value;
-  try {
-    const url = new URL(value.startsWith('http') ? value : `https://${value}`);
-    const host = url.hostname.replace(/^(www\.|m\.|music\.)/, '');
-    if (host === 'youtu.be') return url.pathname.slice(1, 12) || null;
-    if (host === 'youtube.com' || host === 'youtube-nocookie.com') {
-      const v = url.searchParams.get('v');
-      if (v && /^[\w-]{11}$/.test(v)) return v;
-      const m = url.pathname.match(/^\/(?:shorts|live|embed)\/([\w-]{11})/);
-      if (m) return m[1];
-    }
-  } catch {
-    // not a URL
-  }
-  return null;
-}
-
-const thumb = (id: string) => `https://i.ytimg.com/vi/${id}/mqdefault.jpg`;
+import React, { useEffect, useState } from 'react';
+import {
+  Music,
+  X,
+  SkipBack,
+  SkipForward,
+  Play,
+  Pause,
+  Volume2,
+  VolumeX,
+  Shuffle,
+  Repeat,
+  Repeat1,
+  Heart,
+  Moon,
+  Timer,
+  Loader2,
+  ListMusic,
+} from 'lucide-react';
+import { useMusic, useMusicProgress, formatTime, FAVORITES_ID } from '../contexts/MusicContext';
+import { MUSIC_ARTIST, MUSIC_LICENSE, coverSrc, findTrack, stationOf, type MusicTrack } from '@/data/music';
+import styles from '../../styles/MusicPlayer.module.css';
 
 interface MusicPlayerSidebarProps {
   isOpen: boolean;
   onToggle: () => void;
 }
 
-const MusicPlayerSidebar: React.FC<MusicPlayerSidebarProps> = ({ isOpen, onToggle }) => {
-  const { updateMusicState } = useAppState();
+const SLEEP_OPTIONS: { label: string; value: number | 'track' }[] = [
+  { label: '15 min', value: 15 },
+  { label: '30 min', value: 30 },
+  { label: '1 hour', value: 60 },
+  { label: 'End of track', value: 'track' },
+];
 
-  const [custom, setCustom] = useState<Track[]>([]);
-  const [hidden, setHidden] = useState<string[]>([]);
-  const [currentId, setCurrentId] = useState<string>(BUILT_IN[0].videoId);
-  const [volume, setVolume] = useState(50);
-  const [isMuted, setIsMuted] = useState(false);
-  const [isShuffled, setIsShuffled] = useState(false);
-  const [isRepeating, setIsRepeating] = useState(false);
-  const [isPlaying, setIsPlaying] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  // The YouTube iframe (~1 MB of scripts) is only created once the user presses play.
-  const [activated, setActivated] = useState(false);
-  const [isFormVisible, setIsFormVisible] = useState(false);
-  const [newTrackTitle, setNewTrackTitle] = useState('');
-  const [newTrackUrl, setNewTrackUrl] = useState('');
-  const [formError, setFormError] = useState('');
-  const [thumbFailed, setThumbFailed] = useState<Record<string, true>>({});
-  const [playerReady, setPlayerReady] = useState(false);
-  const playerRef = useRef<YouTubePlayer | null>(null);
-  const [playError, setPlayError] = useState<number | null>(null);
-  const hydrated = useRef(false);
-
-  const tracks = [...BUILT_IN.filter((t) => !hidden.includes(t.videoId)), ...custom];
-  const currentIndex = Math.max(0, tracks.findIndex((t) => t.videoId === currentId));
-  const currentTrack: Track | undefined = tracks[currentIndex];
-
-  // Handlers registered with the YouTube player outlive renders; read live values via a ref.
-  const live = useRef({ tracks, currentIndex, isShuffled, isRepeating });
-  useEffect(() => {
-    live.current = { tracks, currentIndex, isShuffled, isRepeating };
-  });
-
-  // --- persistence ---
-  useEffect(() => {
-    try {
-      const saved = JSON.parse(localStorage.getItem(STORAGE_KEY) || 'null') as Persisted | null;
-      if (saved) {
-        setCustom(Array.isArray(saved.custom) ? saved.custom.filter((t) => t && /^[\w-]{11}$/.test(t.videoId)) : []);
-        setHidden(Array.isArray(saved.hidden) ? saved.hidden : []);
-        if (saved.current) setCurrentId(saved.current);
-        if (typeof saved.volume === 'number') setVolume(saved.volume);
-        setIsShuffled(Boolean(saved.shuffle));
-        setIsRepeating(Boolean(saved.repeat));
-      }
-      ['musicSidebar_tracks', 'musicSidebar_currentTrackIndex', 'musicSidebar_volume'].forEach((k) => localStorage.removeItem(k));
-    } catch {
-      // ignore corrupt state
-    }
-    hydrated.current = true;
-  }, []);
-
-  useEffect(() => {
-    if (!hydrated.current) return;
-    const data: Persisted = { custom, hidden, current: currentId, volume, shuffle: isShuffled, repeat: isRepeating };
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(data));
-    } catch {
-      // ignore
-    }
-  }, [custom, hidden, currentId, volume, isShuffled, isRepeating]);
-
-  useEffect(() => {
-    updateMusicState({ isPlaying, currentTrack: currentTrack?.title ?? null });
-  }, [isPlaying, currentTrack?.title, updateMusicState]);
-
-  useEffect(() => {
-    playerRef.current?.setVolume(volume);
-  }, [volume]);
-
-  // --- navigation ---
-  const goTo = useCallback((videoId: string) => {
-    setPlayError(null);
-    setCurrentId(videoId);
-    setActivated(true);
-    setIsLoading(true);
-  }, []);
-
-  const step = useCallback(
-    (dir: 1 | -1) => {
-      const { tracks: list, currentIndex: idx, isShuffled: shuffle } = live.current;
-      if (list.length === 0) return;
-      let next = (idx + dir + list.length) % list.length;
-      if (shuffle && list.length > 1) {
-        do next = Math.floor(Math.random() * list.length);
-        while (next === idx);
-      }
-      goTo(list[next].videoId);
-    },
-    [goTo]
+function Progress() {
+  const music = useMusic();
+  const { position, duration } = useMusicProgress();
+  const total = duration || music.track?.duration || 0;
+  const [drag, setDrag] = useState<number | null>(null);
+  const value = drag ?? position;
+  const pct = total ? (value / total) * 100 : 0;
+  return (
+    <div className={styles.progress}>
+      <input
+        type="range"
+        min={0}
+        max={Math.max(1, Math.floor(total))}
+        step={1}
+        value={Math.floor(value)}
+        className={styles.slider}
+        style={{ '--fill': `${pct}%` } as React.CSSProperties}
+        onChange={(e) => setDrag(Number(e.target.value))}
+        onPointerUp={() => {
+          if (drag !== null) music.seek(drag);
+          setDrag(null);
+        }}
+        onKeyUp={() => {
+          if (drag !== null) music.seek(drag);
+          setDrag(null);
+        }}
+        aria-label="Seek"
+        aria-valuetext={`${formatTime(value)} of ${formatTime(total)}`}
+      />
+      <div className={styles.times}>
+        <span>{formatTime(value)}</span>
+        <span>-{formatTime(Math.max(0, total - value))}</span>
+      </div>
+    </div>
   );
+}
 
-  const playPause = () => {
-    if (!activated || !playerReady) {
-      setPlayError(null);
-      setActivated(true);
-      setIsLoading(true);
-      return;
-    }
-    if (!playerRef.current) return;
-    if (isPlaying) playerRef.current.pauseVideo();
-    else playerRef.current.playVideo();
-  };
-
-  const toggleMute = () => {
-    const p = playerRef.current;
-    if (isMuted) p?.unMute();
-    else p?.mute();
-    setIsMuted(!isMuted);
-  };
-
-  // --- player events ---
-  const onReady = (event: YouTubeEvent) => {
-    playerRef.current = event.target;
-    setPlayerReady(true);
-    event.target.setVolume(volume);
-    if (isMuted) event.target.mute();
-    event.target.playVideo();
-  };
-
-  const onStateChange = (event: YouTubeEvent<number>) => {
-    switch (event.data) {
-      case 1:
-        setPlayError(null);
-        setIsPlaying(true);
-        setIsLoading(false);
-        break;
-      case 2:
-      case 5:
-        setIsPlaying(false);
-        setIsLoading(false);
-        break;
-      case 3:
-        setIsLoading(true);
-        break;
-      case 0:
-        setIsPlaying(false);
-        if (live.current.isRepeating) event.target.playVideo();
-        else step(1);
-        break;
-    }
-  };
-
-  // YouTube error codes: 2 bad id, 5 HTML5 error, 100 removed, 101/150 embedding not allowed,
-  // 153 missing referrer. Show the reason in the player instead of skipping through the playlist.
-  const onError = (event: YouTubeEvent<number>) => {
-    setIsLoading(false);
-    setIsPlaying(false);
-    setPlayError(event.data);
-    console.warn('[music] YouTube error', event.data, currentTrack?.videoId);
-  };
-
-
-  // Lock-screen / hardware media keys
+function SleepCountdown({ endsAt }: { endsAt: number }) {
+  const [now, setNow] = useState(() => Date.now());
   useEffect(() => {
-    if (!('mediaSession' in navigator) || !currentTrack || !activated) return;
-    navigator.mediaSession.metadata = new MediaMetadata({
-      title: currentTrack.title,
-      artist: currentTrack.channelName,
-      artwork: [{ src: thumb(currentTrack.videoId), sizes: '320x180', type: 'image/jpeg' }],
-    });
-    navigator.mediaSession.setActionHandler('play', () => playerRef.current?.playVideo());
-    navigator.mediaSession.setActionHandler('pause', () => playerRef.current?.pauseVideo());
-    navigator.mediaSession.setActionHandler('nexttrack', () => step(1));
-    navigator.mediaSession.setActionHandler('previoustrack', () => step(-1));
-  }, [currentTrack, activated, step]);
+    const id = window.setInterval(() => setNow(Date.now()), 1000);
+    return () => window.clearInterval(id);
+  }, []);
+  return <>{formatTime(Math.max(0, (endsAt - now) / 1000))}</>;
+}
 
-  // --- playlist editing ---
-  const addNewTrack = (e: React.FormEvent) => {
-    e.preventDefault();
-    const videoId = parseYouTubeId(newTrackUrl);
-    if (!videoId) {
-      setFormError('That doesn’t look like a YouTube link.');
-      return;
-    }
-    if (tracks.some((t) => t.videoId === videoId)) {
-      setFormError('That video is already in your playlist.');
-      return;
-    }
-    setCustom((prev) => [
-      ...prev,
-      { videoId, title: newTrackTitle.trim() || 'My track', channelName: 'Added by you', channelUrl: `https://www.youtube.com/watch?v=${videoId}`, isCustom: true },
-    ]);
-    setHidden((prev) => prev.filter((id) => id !== videoId));
-    setNewTrackTitle('');
-    setNewTrackUrl('');
-    setFormError('');
-    setIsFormVisible(false);
-  };
+const MusicPlayerSidebar: React.FC<MusicPlayerSidebarProps> = ({ isOpen, onToggle }) => {
+  const music = useMusic();
+  const { track, stations, stationId, favorites } = music;
+  const [viewId, setViewId] = useState(stationId);
+  const [showSleep, setShowSleep] = useState(false);
 
-  const removeTrack = (track: Track) => {
-    if (track.videoId === currentId) {
-      playerRef.current?.stopVideo();
-      setIsPlaying(false);
-      const rest = tracks.filter((t) => t.videoId !== track.videoId);
-      if (rest.length) setCurrentId(rest[Math.min(currentIndex, rest.length - 1)].videoId);
-    }
-    if (track.isCustom) setCustom((prev) => prev.filter((t) => t.videoId !== track.videoId));
-    else setHidden((prev) => [...prev, track.videoId]);
-  };
+  // Jump to the playing station whenever it changes (the user may browse others meanwhile).
+  const [shownStation, setShownStation] = useState(stationId);
+  if (shownStation !== stationId) {
+    setShownStation(stationId);
+    setViewId(stationId);
+  }
 
-  const restoreDefaults = () => setHidden([]);
-
-  // Escape closes the sidebar
   useEffect(() => {
     if (!isOpen) return;
     const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onToggle();
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
   }, [isOpen, onToggle]);
+
+  const playingStation = track ? stationOf(track) : stations[0];
+  const viewTracks: MusicTrack[] =
+    viewId === FAVORITES_ID
+      ? favorites.map((id) => findTrack(id)).filter((t): t is MusicTrack => Boolean(t))
+      : (stations.find((s) => s.id === viewId)?.tracks ?? []);
+  const viewStation = stations.find((s) => s.id === viewId);
+  const viewMinutes = Math.round(viewTracks.reduce((n, t) => n + t.duration, 0) / 60);
+  const isFav = track ? favorites.includes(track.id) : false;
+  const sleepActive = music.sleepEndsAt !== null || music.stopAfterTrack;
 
   return (
     <>
@@ -295,261 +121,286 @@ const MusicPlayerSidebar: React.FC<MusicPlayerSidebarProps> = ({ isOpen, onToggl
         aria-expanded={isOpen}
       >
         <Music size={20} />
-        {isPlaying && !isOpen && (
-          <div className={styles.playingIndicator}>
-            <span></span>
-            <span></span>
-            <span></span>
-          </div>
+        {music.isPlaying && (
+          <span className={styles.eq} aria-hidden>
+            <span />
+            <span />
+            <span />
+          </span>
         )}
       </button>
 
       <aside className={`${styles.sidebar} ${isOpen ? styles.sidebarOpen : ''}`} aria-label="Music player" aria-hidden={!isOpen} inert={!isOpen}>
-        <div className={styles.sidebarContent}>
-          <div className={styles.header}>
-            <div className={styles.headerTitle}>
-              <Music size={20} />
-              <span>Music Player</span>
+        <header className={styles.header}>
+          <div className={styles.headerTitle}>
+            <Music size={18} />
+            <span>Music</span>
+          </div>
+          <button className={styles.iconButton} onClick={onToggle} aria-label="Close music player">
+            <X size={18} />
+          </button>
+        </header>
+
+        <div className={styles.scroll}>
+          {/* Now playing */}
+          <section className={styles.now} aria-live="polite">
+            <div className={styles.cover}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={coverSrc(playingStation)} alt="" />
+              <div className={styles.coverShade} />
+              <span className={styles.coverStation}>{playingStation.name}</span>
+              {music.isPlaying && (
+                <span className={`${styles.eq} ${styles.coverEq}`} aria-hidden>
+                  <span />
+                  <span />
+                  <span />
+                </span>
+              )}
             </div>
-            <button className={styles.closeButton} onClick={onToggle} aria-label="Close music player">
-              <X size={18} />
-            </button>
-          </div>
-
-          {/* A real, visible player: YouTube requires >=200px, and iOS often only starts
-              playback from a tap inside the video. The sidebar slides off-screen when
-              closed but stays mounted, so music keeps playing. */}
-          <div className={styles.videoFrame}>
-            {activated && currentTrack ? (
-              <YouTube
-                videoId={currentTrack.videoId}
-                className={styles.videoPlayer}
-                iframeClassName={styles.videoIframe}
-                title={`YouTube player: ${currentTrack.title}`}
-                onReady={onReady}
-                onStateChange={onStateChange}
-                onError={onError}
-                opts={{
-                  width: '100%',
-                  height: '100%',
-                  playerVars: { autoplay: 1, playsinline: 1, rel: 0, modestbranding: 1 },
-                }}
-              />
-            ) : (
-              currentTrack && (
-                <button type="button" className={styles.videoPoster} onClick={playPause} aria-label={`Play ${currentTrack.title}`}>
-                  {!thumbFailed[currentTrack.videoId] && !currentTrack.noThumb && (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      src={thumb(currentTrack.videoId)}
-                      alt=""
-                      referrerPolicy="no-referrer"
-                      onError={() => setThumbFailed((f) => ({ ...f, [currentTrack.videoId]: true }))}
-                      // Live streams get YouTube's 120px grey placeholder instead of a 404.
-                      onLoad={(e) => e.currentTarget.naturalWidth <= 120 && setThumbFailed((f) => ({ ...f, [currentTrack.videoId]: true }))}
-                    />
-                  )}
-                  {(thumbFailed[currentTrack.videoId] || currentTrack.noThumb) && (
-                    <span className={styles.videoPosterTitle}>
-                      <Music size={16} /> {currentTrack.title}
-                    </span>
-                  )}
-                  <span className={styles.videoPosterPlay}>
-                    <Play size={28} />
-                  </span>
-                </button>
-              )
-            )}
-            {playError !== null && currentTrack && (
-              <div className={styles.videoError} role="alert">
-                <p>
-                  {playError === 101 || playError === 150
-                    ? 'YouTube won’t play this one inside other sites right now.'
-                    : playError === 100
-                      ? 'This video was removed from YouTube.'
-                      : 'YouTube couldn’t play this video here.'}
-                </p>
-                <div className={styles.videoErrorActions}>
-                  <a href={`https://www.youtube.com/watch?v=${currentTrack.videoId}`} target="_blank" rel="noopener noreferrer">
-                    Open on YouTube
-                  </a>
-                  {tracks.length > 1 && (
-                    <button type="button" onClick={() => step(1)}>
-                      Next station
-                    </button>
-                  )}
-                </div>
+            <div className={styles.meta}>
+              <div className={styles.metaText}>
+                <h2 className={styles.title}>{track?.title ?? 'Nothing playing'}</h2>
+                <a className={styles.artist} href={MUSIC_ARTIST.url} target="_blank" rel="noopener noreferrer">
+                  {MUSIC_ARTIST.name}
+                </a>
               </div>
-            )}
-          </div>
-
-          <div className={styles.nowPlaying}>
-            {currentTrack ? (
-              <>
-                <div className={styles.trackThumbnail}>
-                  {!thumbFailed[currentTrack.videoId] ? (
-                    // eslint-disable-next-line @next/next/no-img-element
-                    <img
-                      key={currentTrack.videoId}
-                      src={thumb(currentTrack.videoId)}
-                      alt=""
-                      loading="lazy"
-                      referrerPolicy="no-referrer"
-                      width={60}
-                      height={60}
-                      className={styles.thumbnail}
-                      onError={() => setThumbFailed((f) => ({ ...f, [currentTrack.videoId]: true }))}
-                    />
-                  ) : (
-                    <div className={styles.thumbnailFallback} style={{ display: 'flex' }}>
-                      <Music size={24} />
-                    </div>
-                  )}
-                </div>
-                <div className={styles.trackInfo}>
-                  <h3 className={styles.trackTitle}>{currentTrack.title}</h3>
-                  <a href={currentTrack.channelUrl} target="_blank" rel="noopener noreferrer" className={styles.channelLink}>
-                    {currentTrack.channelName}
-                  </a>
-                </div>
-              </>
-            ) : (
-              <div className={styles.trackInfo}>
-                <h3 className={styles.trackTitle}>Your playlist is empty</h3>
-              </div>
-            )}
-          </div>
-
-          <div className={styles.controls}>
-            <button
-              className={`${styles.controlButton} ${isShuffled ? styles.active : ''}`}
-              onClick={() => setIsShuffled(!isShuffled)}
-              aria-pressed={isShuffled}
-              aria-label="Shuffle"
-            >
-              <Shuffle size={18} />
-            </button>
-            <button className={styles.controlButton} onClick={() => step(-1)} aria-label="Previous track" disabled={!tracks.length}>
-              <SkipBack size={18} />
-            </button>
-            <button
-              className={styles.playButton}
-              onClick={playPause}
-              disabled={!currentTrack || (activated && isLoading && !playerReady)}
-              aria-label={isPlaying ? 'Pause' : 'Play'}
-            >
-              {isLoading ? <div className={styles.buttonSpinner}></div> : isPlaying ? <Pause size={20} /> : <Play size={20} />}
-            </button>
-            <button className={styles.controlButton} onClick={() => step(1)} aria-label="Next track" disabled={!tracks.length}>
-              <SkipForward size={18} />
-            </button>
-            <button
-              className={`${styles.controlButton} ${isRepeating ? styles.active : ''}`}
-              onClick={() => setIsRepeating(!isRepeating)}
-              aria-pressed={isRepeating}
-              aria-label="Repeat track"
-            >
-              <Repeat size={18} />
-            </button>
-          </div>
-
-          <div className={styles.volumeSection}>
-            <button className={styles.volumeButton} onClick={toggleMute} aria-label={isMuted ? 'Unmute' : 'Mute'}>
-              {isMuted || volume === 0 ? <VolumeX size={20} /> : <Volume2 size={20} />}
-            </button>
-            <input
-              type="range"
-              min="0"
-              max="100"
-              value={volume}
-              onChange={(e) => setVolume(parseInt(e.target.value, 10))}
-              className={styles.volumeSlider}
-              aria-label="Music volume"
-            />
-            <span className={styles.volumeValue}>{volume}%</span>
-          </div>
-
-          <div className={styles.playlistToggle}>
-            <span className={styles.playlistButton}>
-              <List size={16} />
-              <span>Playlist</span>
-            </span>
-            <div style={{ display: 'flex', gap: 8 }}>
-              {hidden.length > 0 && (
-                <button className={styles.addTrackButton} onClick={restoreDefaults} title="Restore removed stations">
-                  <RotateCcw size={14} />
+              {track && (
+                <button
+                  className={`${styles.iconButton} ${isFav ? styles.fav : ''}`}
+                  onClick={() => music.toggleFavorite(track.id)}
+                  aria-pressed={isFav}
+                  aria-label={isFav ? 'Remove from favourites' : 'Add to favourites'}
+                >
+                  <Heart size={18} fill={isFav ? 'currentColor' : 'none'} />
                 </button>
               )}
-              <button className={styles.addTrackButton} onClick={() => setIsFormVisible(!isFormVisible)} aria-expanded={isFormVisible}>
-                <Plus size={16} />
-                <span>Add track</span>
+            </div>
+
+            <Progress />
+
+            {music.error && (
+              <p className={styles.error} role="alert">
+                {music.error}
+              </p>
+            )}
+
+            <div className={styles.controls}>
+              <button
+                className={`${styles.iconButton} ${music.shuffle ? styles.on : ''}`}
+                onClick={music.toggleShuffle}
+                aria-pressed={music.shuffle}
+                aria-label="Shuffle"
+                title="Shuffle"
+              >
+                <Shuffle size={18} />
+              </button>
+              <button className={styles.iconButton} onClick={music.prev} aria-label="Previous track" title="Previous">
+                <SkipBack size={20} fill="currentColor" />
+              </button>
+              <button className={styles.play} onClick={music.toggle} aria-label={music.isPlaying ? 'Pause' : 'Play'}>
+                {music.isLoading && music.isPlaying ? (
+                  <Loader2 size={26} className={styles.spin} />
+                ) : music.isPlaying ? (
+                  <Pause size={26} fill="currentColor" />
+                ) : (
+                  <Play size={26} fill="currentColor" className={styles.playIcon} />
+                )}
+              </button>
+              <button className={styles.iconButton} onClick={music.next} aria-label="Next track" title="Next">
+                <SkipForward size={20} fill="currentColor" />
+              </button>
+              <button
+                className={`${styles.iconButton} ${music.repeat !== 'off' ? styles.on : ''}`}
+                onClick={music.cycleRepeat}
+                aria-label={`Repeat: ${music.repeat === 'all' ? 'station' : music.repeat === 'one' ? 'this track' : 'off'}`}
+                title={music.repeat === 'all' ? 'Repeat station' : music.repeat === 'one' ? 'Repeat track' : 'Repeat off'}
+              >
+                {music.repeat === 'one' ? <Repeat1 size={18} /> : <Repeat size={18} />}
               </button>
             </div>
-          </div>
 
-          {isFormVisible && (
-            <form className={styles.addTrackForm} onSubmit={addNewTrack}>
-              <div className={styles.formHeader}>
-                <h4>Add a YouTube video</h4>
-                <button type="button" className={styles.formCloseButton} onClick={() => setIsFormVisible(false)} aria-label="Cancel">
-                  <X size={16} />
-                </button>
-              </div>
-              <div className={styles.formInputs}>
-                <input
-                  type="url"
-                  inputMode="url"
-                  placeholder="https://youtube.com/watch?v=…"
-                  value={newTrackUrl}
-                  onChange={(e) => {
-                    setNewTrackUrl(e.target.value);
-                    setFormError('');
-                  }}
-                  className={styles.formInput}
-                  aria-label="YouTube link"
-                  required
-                />
-                <input
-                  type="text"
-                  placeholder="Title (optional)"
-                  value={newTrackTitle}
-                  onChange={(e) => setNewTrackTitle(e.target.value)}
-                  className={styles.formInput}
-                  aria-label="Title"
-                  maxLength={80}
-                />
-                {formError && <p className={styles.formError}>{formError}</p>}
-                <button type="submit" className={styles.addButton} disabled={!newTrackUrl.trim()}>
-                  <Plus size={14} />
-                  Add
-                </button>
-              </div>
-            </form>
-          )}
+            <div className={styles.toolbar}>
+              {music.volumeSupported ? (
+                <div className={styles.volume}>
+                  <button className={styles.iconButton} onClick={music.toggleMute} aria-label={music.muted ? 'Unmute' : 'Mute'}>
+                    {music.muted || music.volume === 0 ? <VolumeX size={18} /> : <Volume2 size={18} />}
+                  </button>
+                  <input
+                    type="range"
+                    min={0}
+                    max={100}
+                    value={music.muted ? 0 : music.volume}
+                    onChange={(e) => music.setVolume(Number(e.target.value))}
+                    className={styles.slider}
+                    style={{ '--fill': `${music.muted ? 0 : music.volume}%` } as React.CSSProperties}
+                    aria-label="Music volume"
+                  />
+                </div>
+              ) : (
+                <span className={styles.hint}>Use your device’s volume buttons</span>
+              )}
+              <button
+                className={`${styles.pill} ${sleepActive ? styles.pillOn : ''}`}
+                onClick={() => setShowSleep((v) => !v)}
+                aria-expanded={showSleep}
+                title="Sleep timer"
+              >
+                <Moon size={14} />
+                {music.sleepEndsAt ? <SleepCountdown endsAt={music.sleepEndsAt} /> : music.stopAfterTrack ? 'After track' : 'Sleep'}
+              </button>
+            </div>
 
-          <ul className={styles.playlist}>
-            {tracks.map((track, index) => (
-              <li key={track.videoId} className={`${styles.track} ${index === currentIndex ? styles.trackActive : ''}`}>
-                <button type="button" className={styles.trackSelect} onClick={() => goTo(track.videoId)} aria-current={index === currentIndex}>
-                  <span className={styles.trackNumber}>{index + 1}</span>
-                  <span className={styles.trackMeta}>
-                    <span className={styles.trackName}>{track.title}</span>
-                    <span className={styles.trackArtist}>{track.channelName}</span>
+            {showSleep && (
+              <div className={styles.sleepMenu} role="group" aria-label="Sleep timer">
+                {SLEEP_OPTIONS.map((o) => (
+                  <button
+                    key={o.label}
+                    className={styles.chip}
+                    onClick={() => {
+                      music.setSleepTimer(o.value);
+                      setShowSleep(false);
+                    }}
+                  >
+                    {o.label}
+                  </button>
+                ))}
+                {sleepActive && (
+                  <button
+                    className={`${styles.chip} ${styles.chipOff}`}
+                    onClick={() => {
+                      music.setSleepTimer(null);
+                      setShowSleep(false);
+                    }}
+                  >
+                    Off
+                  </button>
+                )}
+              </div>
+            )}
+
+            <label className={styles.sync}>
+              <Timer size={14} aria-hidden />
+              <span>Play during focus, pause on breaks</span>
+              <input type="checkbox" role="switch" checked={music.focusSync} onChange={(e) => music.setFocusSync(e.target.checked)} />
+            </label>
+          </section>
+
+          {/* Stations */}
+          <section className={styles.library} aria-label="Stations">
+            <div className={styles.stations} role="tablist" aria-label="Stations">
+              {stations.map((s) => (
+                <button
+                  key={s.id}
+                  role="tab"
+                  aria-selected={viewId === s.id}
+                  className={`${styles.station} ${viewId === s.id ? styles.stationActive : ''}`}
+                  onClick={() => setViewId(s.id)}
+                >
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={coverSrc(s)} alt="" loading="lazy" />
+                  <span className={styles.stationName}>
+                    {s.name}
+                    {stationId === s.id && music.isPlaying && <span className={styles.liveDot} aria-label="playing" />}
                   </span>
-                  {index === currentIndex && isPlaying && (
-                    <span className={styles.playingAnimation}>
-                      <span></span>
-                      <span></span>
-                      <span></span>
-                    </span>
-                  )}
                 </button>
-                <button type="button" className={styles.trackRemove} onClick={() => removeTrack(track)} aria-label={`Remove ${track.title}`}>
-                  <Trash2 size={14} />
+              ))}
+              <button
+                role="tab"
+                aria-selected={viewId === FAVORITES_ID}
+                className={`${styles.station} ${styles.stationFav} ${viewId === FAVORITES_ID ? styles.stationActive : ''}`}
+                onClick={() => setViewId(FAVORITES_ID)}
+              >
+                <Heart size={22} fill="currentColor" aria-hidden />
+                <span className={styles.stationName}>
+                  Favourites
+                  {stationId === FAVORITES_ID && music.isPlaying && <span className={styles.liveDot} aria-label="playing" />}
+                </span>
+              </button>
+            </div>
+
+            <div className={styles.listHeader}>
+              <div>
+                <h3>{viewId === FAVORITES_ID ? 'Favourites' : viewStation?.name}</h3>
+                <p>
+                  {viewId === FAVORITES_ID ? 'Tracks you’ve hearted' : viewStation?.tagline}
+                  {viewTracks.length > 0 && ` · ${viewTracks.length} tracks · ${viewMinutes} min`}
+                </p>
+              </div>
+              {viewTracks.length > 0 && (
+                <button
+                  className={styles.playStation}
+                  onClick={() => (stationId === viewId ? music.toggle() : music.playStation(viewId))}
+                  aria-label={stationId === viewId && music.isPlaying ? 'Pause station' : 'Play station'}
+                >
+                  {stationId === viewId && music.isPlaying ? <Pause size={16} fill="currentColor" /> : <Play size={16} fill="currentColor" />}
                 </button>
-              </li>
-            ))}
-          </ul>
+              )}
+            </div>
+
+            {viewTracks.length === 0 ? (
+              <div className={styles.empty}>
+                <ListMusic size={28} aria-hidden />
+                <p>Tap the heart on a song you like and it shows up here.</p>
+              </div>
+            ) : (
+              <ol className={styles.tracks}>
+                {viewTracks.map((t, i) => {
+                  const current = track?.id === t.id;
+                  const fav = favorites.includes(t.id);
+                  return (
+                    <li key={t.id} className={`${styles.trackRow} ${current ? styles.trackCurrent : ''}`}>
+                      <button
+                        type="button"
+                        className={styles.trackSelect}
+                        onClick={() => (current ? music.toggle() : music.playTrack(t.id, viewId))}
+                        aria-current={current}
+                      >
+                        <span className={styles.trackIndex}>
+                          {current && music.isPlaying ? (
+                            <span className={styles.eq} aria-hidden>
+                              <span />
+                              <span />
+                              <span />
+                            </span>
+                          ) : (
+                            i + 1
+                          )}
+                        </span>
+                        <span className={styles.trackMeta}>
+                          <span className={styles.trackTitle}>{t.title}</span>
+                          <span className={styles.trackSub}>
+                            {viewId === FAVORITES_ID ? stationOf(t).name : t.album}
+                          </span>
+                        </span>
+                        <span className={styles.trackTime}>{formatTime(t.duration)}</span>
+                      </button>
+                      <button
+                        type="button"
+                        className={`${styles.trackFav} ${fav ? styles.fav : ''}`}
+                        onClick={() => music.toggleFavorite(t.id)}
+                        aria-pressed={fav}
+                        aria-label={fav ? `Remove ${t.title} from favourites` : `Add ${t.title} to favourites`}
+                      >
+                        <Heart size={14} fill={fav ? 'currentColor' : 'none'} />
+                      </button>
+                    </li>
+                  );
+                })}
+              </ol>
+            )}
+          </section>
+
+          <footer className={styles.credits}>
+            Music by{' '}
+            <a href={MUSIC_ARTIST.url} target="_blank" rel="noopener noreferrer">
+              {MUSIC_ARTIST.name}
+            </a>
+            , released into the public domain (
+            <a href={MUSIC_LICENSE.url} target="_blank" rel="noopener noreferrer">
+              {MUSIC_LICENSE.name}
+            </a>
+            ). Streams from our own server — no ads, no tracking.
+          </footer>
         </div>
       </aside>
     </>

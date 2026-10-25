@@ -1,7 +1,8 @@
 # Lo-Fi.Study
 
-A focus space in the browser: Pomodoro timer, lo-fi music, ambient sound mixer,
-animated backgrounds, tasks, notes, calendar, focus stats with a leaderboard,
+A focus space in the browser: Pomodoro timer, a self-hosted lo-fi radio,
+ambient sound mixer, animated backgrounds, tasks, notes, flashcards, habits,
+stopwatch/timer, guided breathing, calendar, focus stats with a leaderboard,
 and a community chat. Everything works without an account (stored on the
 device); signing in syncs it to the server.
 
@@ -31,11 +32,24 @@ optional OAuth and analytics variables.
 
 ## Media
 
-Background loops live in `public/backgrounds/` as 1080p and 720p H.264
-(`-1080.mp4`, `-720.mp4`) plus a WebP poster. Phones, touch devices and
-data-saver connections get the 720p file; `prefers-reduced-motion` shows the
-poster only. Add a background by dropping the three files in and adding one
-line to `src/data/backgrounds.ts`.
+**Music** — `public/music/<station>/<track>.m4a`, listed in `src/data/music.ts`.
+110 tracks in 8 stations by [HoliznaCC0](https://freemusicarchive.org/music/holiznacc0/),
+all released under [CC0 1.0](https://creativecommons.org/publicdomain/zero/1.0/)
+(public domain), so we may host and stream them. AAC 64 kbps (48 kbps for the
+long ambient pieces), loudness-normalised to -16 LUFS. Nothing is loaded from
+YouTube or any other third party.
+
+**Backgrounds** — `public/backgrounds/` as 1080p and 720p H.264 (`-1080.mp4`,
+`-720.mp4`) plus a WebP poster. Phones, touch devices and data-saver
+connections get the 720p file. The illustrated loops are the original
+Lo-Fi.Study set; the real-footage loops come from Mixkit (Stock Video Free
+License) and were turned into seamless loops with a crossfade. Add a
+background by dropping the three files in and adding one line to
+`src/data/backgrounds.ts`.
+
+**Sounds** — `public/sounds/`. Birds, thunderstorm, wind, crickets and city are
+Mixkit sound effects (Sound Effects Free License); white, pink and brown noise
+are generated in the browser.
 
 ## Checks
 

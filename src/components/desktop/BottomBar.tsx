@@ -6,7 +6,8 @@ import {
   User,
   Image as ImageIcon,
   LogIn,
-  MessageSquareDot
+  MessageSquareDot,
+  LayoutGrid,
 } from 'lucide-react';
 import styles from '../../../styles/SelectionBar.module.css';
 import desktopStyles from '../../../styles/Desktop.module.css';
@@ -28,6 +29,8 @@ interface BottomBarProps {
   onRestoreWindow: (windowId: string) => void;
   onOpenBackgrounds: () => void;
   onAccountAction: () => void;
+  onOpenLauncher: () => void;
+  launcherOpen: boolean;
 }
 
 // Helper function to get app runtime info
@@ -78,7 +81,9 @@ export default function BottomBar({
   onMinimize,
   onRestoreWindow,
   onOpenBackgrounds,
-  onAccountAction
+  onAccountAction,
+  onOpenLauncher,
+  launcherOpen,
 }: BottomBarProps) {
   const ambient = useAmbient();
   const displayTime = currentTime || '--:--';
@@ -127,12 +132,8 @@ export default function BottomBar({
       {/* Apps */}
       <div className={desktopStyles.appBarSection}>
         {modernApps
-          .filter(app => {
-            if (app.id === 'account-settings') {
-              return false; // Hide from main app list, accessible via account button
-            }
-            return true;
-          })
+          // Pinned apps, plus any other app while its window is open.
+          .filter(app => app.id !== 'account-settings' && (app.dock || openWindows.some(w => w.app.id === app.id)))
           .map(app => {
             const openWindow = openWindows.find(w => w.app.id === app.id);
             const isOpen = !!openWindow;
@@ -187,6 +188,20 @@ export default function BottomBar({
 
       {/* Right Section */}
       <div className={desktopStyles.appBarSection}>
+        <button
+          onClick={onOpenLauncher}
+          className={`${styles.iconButton} ${launcherOpen ? styles.active : ''}`}
+          aria-label="All apps"
+          aria-expanded={launcherOpen}
+          aria-haspopup="dialog"
+        >
+          <LayoutGrid size={20} />
+          <div className={styles.tooltip}>
+            <div className="font-semibold">All apps</div>
+            <div className={desktopStyles.tooltipDescription}>Habits, stopwatch, breathing and more</div>
+          </div>
+        </button>
+
         <div className={desktopStyles.divider} />
 
         <button

@@ -8,7 +8,11 @@ import {
   Settings,
   Volume2,
   StickyNote,
-  MessageSquare
+  MessageSquare,
+  Layers,
+  Flame,
+  Wind,
+  Hourglass,
 } from 'lucide-react';
 import { chatStore } from '../lib/chat';
 import { DEFAULT_BACKGROUND, findBackground } from '@/data/backgrounds';
@@ -29,6 +33,11 @@ import MusicPlayerSidebar from './MusicPlayerSidebar';
 import StatsModal from './StatsModal';
 import SoundPlayer from './apps/SoundPlayer';
 import ChatApp from './apps/ChatApp';
+import Flashcards from './apps/Flashcards';
+import Habits from './apps/Habits';
+import Breathing from './apps/Breathing';
+import Stopwatch from './apps/Stopwatch';
+import AppLauncher from './desktop/AppLauncher';
 
 import TopBar from './desktop/TopBar';
 import BottomBar from './desktop/BottomBar';
@@ -38,13 +47,17 @@ import NotificationManager from './desktop/NotificationManager';
 import type { DesktopProps, ModernApp, ModernWindow, ModernNotification, Background } from './desktop/types';
 
 const modernApps: ModernApp[] = [
-  { id: 'pomodoro', name: 'Focus Timer', icon: Timer, component: PomodoroTimer, color: 'orange', description: 'Pomodoro technique for enhanced focus', category: 'study' },
-  { id: 'todo', name: 'Tasks', icon: CheckSquare, component: TodoList, color: 'blue', description: 'Organize your tasks and goals', category: 'study' },
-  { id: 'notes', name: 'Notes', icon: StickyNote, component: NotesApp, color: 'yellow', description: 'Write and organize your notes', category: 'productivity' },
-  { id: 'sound-player', name: 'Sound Mixer', icon: Volume2, component: SoundPlayer, color: 'purple', description: 'Mix relaxing sounds for focus', category: 'study' },
+  { id: 'pomodoro', name: 'Focus Timer', icon: Timer, component: PomodoroTimer, color: 'orange', description: 'Pomodoro sessions with breaks and a daily goal', category: 'study', dock: true },
+  { id: 'todo', name: 'Tasks', icon: CheckSquare, component: TodoList, color: 'blue', description: 'Plan tasks and track focus sessions per task', category: 'productivity', dock: true },
+  { id: 'notes', name: 'Notes', icon: StickyNote, component: NotesApp, color: 'yellow', description: 'Markdown notes with checklists', category: 'productivity', dock: true },
+  { id: 'flashcards', name: 'Flashcards', icon: Layers, component: Flashcards, color: 'green', description: 'Learn with spaced repetition', category: 'study', dock: true },
+  { id: 'sound-player', name: 'Sound Mixer', icon: Volume2, component: SoundPlayer, color: 'purple', description: 'Mix rain, fire, café and more', category: 'study', dock: true },
+  { id: 'habits', name: 'Habits', icon: Flame, component: Habits, color: 'pink', description: 'Build daily habits and keep streaks', category: 'productivity' },
+  { id: 'stopwatch', name: 'Stopwatch', icon: Hourglass, component: Stopwatch, color: 'purple', description: 'Stopwatch with laps and a countdown timer', category: 'tools' },
+  { id: 'breathing', name: 'Breathe', icon: Wind, component: Breathing, color: 'cyan', description: 'Guided breathing to reset between sessions', category: 'study' },
   { id: 'calculator', name: 'Calculator', icon: CalculatorIcon, component: Calculator, color: 'orange', description: 'Quick calculations', category: 'tools' },
-  { id: 'chat', name: 'Chat', icon: MessageSquare, component: ChatApp, color: 'purple', description: 'Chat with other students', category: 'entertainment' },
-  { id: 'account-settings', name: 'Account', icon: Settings, component: AccountSettings, color: 'blue', description: 'Manage your account', category: 'study' },
+  { id: 'chat', name: 'Chat', icon: MessageSquare, component: ChatApp, color: 'purple', description: 'Chat with other students', category: 'entertainment', dock: true },
+  { id: 'account-settings', name: 'Account', icon: Settings, component: AccountSettings, color: 'blue', description: 'Manage your account', category: 'tools' },
 ];
 
 // Preferred floating-window sizes (desktop/tablet); phones use full-screen sheets.
@@ -56,6 +69,10 @@ const WINDOW_SIZES: Record<string, { width: number; height: number }> = {
   'sound-player': { width: 360, height: 640 },
   'account-settings': { width: 440, height: 560 },
   chat: { width: 400, height: 580 },
+  flashcards: { width: 420, height: 620 },
+  habits: { width: 400, height: 600 },
+  stopwatch: { width: 360, height: 520 },
+  breathing: { width: 360, height: 520 },
 };
 
 const COMPACT_BREAKPOINT = 640;
@@ -85,6 +102,8 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
   const [isMusicSidebarOpen, setIsMusicSidebarOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [showStats, setShowStats] = useState(false);
+  const [showLauncher, setShowLauncher] = useState(false);
+  const [dim, setDim] = useState(0);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   const openWindowsRef = useRef<ModernWindow[]>([]);
@@ -133,6 +152,7 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
     const local = findBackground(settings.selectedBackground);
     if (local) setCurrentBackground(local);
     if (typeof settings.backgroundMotion === 'boolean') setMotionPref(settings.backgroundMotion);
+    if (typeof settings.backgroundDim === 'number') setDim(Math.min(80, Math.max(0, settings.backgroundDim)));
   }, []);
 
   useEffect(() => {
@@ -177,6 +197,11 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
   const handleMotionChange = useCallback((value: boolean) => {
     setMotionPref(value);
     db.saveSettings({ backgroundMotion: value });
+  }, []);
+
+  const handleDimChange = useCallback((value: number) => {
+    setDim(value);
+    db.saveSettings({ backgroundDim: value });
   }, []);
 
   const handleBackgroundChange = useCallback((background: Background) => {
@@ -237,6 +262,16 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
     []
   );
 
+  // Other components can ask for an app by id (e.g. Tasks → "focus on this").
+  useEffect(() => {
+    const onOpenApp = (e: Event) => {
+      const app = modernApps.find((a) => a.id === (e as CustomEvent<string>).detail);
+      if (app) openApp(app);
+    };
+    window.addEventListener('lofi:open-app', onOpenApp);
+    return () => window.removeEventListener('lofi:open-app', onOpenApp);
+  }, [openApp]);
+
   const closeWindow = useCallback((windowId: string) => {
     setOpenWindows((prev) => prev.filter((w) => w.id !== windowId));
   }, []);
@@ -274,7 +309,7 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
   // Keyboard: Escape minimizes the top-most window when no modal is open.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape' || showBackgrounds || showCalendar || showStats) return;
+      if (e.key !== 'Escape' || showBackgrounds || showCalendar || showStats || showLauncher) return;
       const visible = openWindowsRef.current.filter((w) => !w.isMinimized);
       if (!visible.length) return;
       const top = visible.reduce((a, b) => (a.zIndex > b.zIndex ? a : b));
@@ -282,7 +317,7 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [showBackgrounds, showCalendar, showStats, minimizeWindow]);
+  }, [showBackgrounds, showCalendar, showStats, showLauncher, minimizeWindow]);
 
   const currentTime = now ? now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
   const currentDate = now ? now.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' }) : '';
@@ -319,6 +354,7 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
         />
       )}
       <div className={desktopStyles.backgroundShade} aria-hidden />
+      {dim > 0 && <div className={desktopStyles.backgroundDim} style={{ opacity: dim / 100 }} aria-hidden />}
 
       <main className={desktopStyles.workspace} aria-busy={authLoading}>
         <TopBar
@@ -351,6 +387,8 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
           onRestoreWindow={restoreWindow}
           onOpenBackgrounds={() => setShowBackgrounds(true)}
           onAccountAction={openAccount}
+          onOpenLauncher={() => setShowLauncher((v) => !v)}
+          launcherOpen={showLauncher}
         />
       </main>
 
@@ -364,7 +402,13 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
           onCategoryChange={setSelectedCategory}
           motion={!stillOnly}
           onMotionChange={handleMotionChange}
+          dim={dim}
+          onDimChange={handleDimChange}
         />
+      )}
+
+      {showLauncher && (
+        <AppLauncher apps={modernApps.filter((a) => a.id !== 'account-settings')} onOpen={openApp} onClose={() => setShowLauncher(false)} />
       )}
 
       {showCalendar && <Calendar isVisible={showCalendar} onClose={() => setShowCalendar(false)} />}

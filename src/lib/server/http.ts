@@ -130,6 +130,14 @@ export function bool(value: unknown, field: string, fallback?: boolean): boolean
   throw new HttpError(400, `${field} must be a boolean`);
 }
 
+export function int(value: unknown, field: string, min: number, max: number, fallback?: number): number {
+  if (value === undefined && fallback !== undefined) return fallback;
+  if (typeof value !== 'number' || !Number.isInteger(value) || value < min || value > max) {
+    throw new HttpError(400, `${field} must be a whole number between ${min} and ${max}`);
+  }
+  return value;
+}
+
 export const DATE_RE = /^\d{4}-\d{2}-\d{2}$/;
 export const TIME_RE = /^([01]\d|2[0-3]):[0-5]\d$/;
 

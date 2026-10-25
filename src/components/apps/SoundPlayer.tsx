@@ -1,7 +1,7 @@
 "use client";
 
 import React from 'react';
-import { CloudRain, Waves, Droplets, Snowflake, Flame, Keyboard, Coffee, Volume2, VolumeX, Pause, Play, Square } from 'lucide-react';
+import { CloudRain, CloudLightning, Waves, Droplets, Snowflake, Flame, Keyboard, Coffee, Volume2, VolumeX, Pause, Play, Square, Bird, Moon, Wind, Building2, AudioLines } from 'lucide-react';
 import { useAmbient, AMBIENT_SOUNDS, AMBIENT_PRESETS } from '../../contexts/AmbientContext';
 import styles from '../../../styles/SoundPlayer.module.css';
 
@@ -13,6 +13,14 @@ const ICONS: Record<string, React.ElementType> = {
   fire: Flame,
   coffee: Coffee,
   keyboard: Keyboard,
+  thunder: CloudLightning,
+  birds: Bird,
+  crickets: Moon,
+  wind: Wind,
+  city: Building2,
+  white: AudioLines,
+  pink: AudioLines,
+  brown: AudioLines,
 };
 
 export default function SoundPlayer() {
@@ -107,7 +115,7 @@ export default function SoundPlayer() {
         })}
       </ul>
 
-      <p className={styles.hint}>Sounds keep playing when you close this window.</p>
+      <p className={styles.hint}>Sounds keep playing when you close this window. Brown noise helps many people focus.</p>
     </div>
   );
 }

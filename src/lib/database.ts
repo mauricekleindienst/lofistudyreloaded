@@ -13,6 +13,10 @@ export interface Todo {
   category: 'work' | 'personal' | 'study' | 'health';
   due_date?: string | null;
   position?: number;
+  /** focus sessions spent on this task */
+  pomodoros?: number;
+  /** planned focus sessions (0 = no estimate) */
+  estimate?: number;
   created_at?: string;
   updated_at?: string;
 }
@@ -21,6 +25,41 @@ export interface Note {
   id: string;
   title: string;
   content: string;
+  pinned?: boolean;
+  color?: string;
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface FlashCard {
+  id: string;
+  front: string;
+  back: string;
+  /** Leitner box 0-5 */
+  box: number;
+  /** next review day, YYYY-MM-DD */
+  due: string;
+}
+
+export interface Deck {
+  id: string;
+  title: string;
+  color?: string;
+  cards: FlashCard[];
+  created_at?: string;
+  updated_at?: string;
+}
+
+export interface Habit {
+  id: string;
+  name: string;
+  emoji: string;
+  color?: string;
+  /** YYYY-MM-DD days the habit was done */
+  days: string[];
+  /** times per week */
+  target: number;
+  position?: number;
   created_at?: string;
   updated_at?: string;
 }
@@ -60,6 +99,12 @@ export interface UserSettings {
   pomodoroDurations?: { pomodoro: number; shortBreak: number; longBreak: number };
   pomodoroVolume?: number;
   pomodoroMuted?: boolean;
+  pomodoroAutoBreaks?: boolean;
+  pomodoroAutoFocus?: boolean;
+  pomodoroLongEvery?: number;
+  pomodoroGoal?: number;
+  backgroundMotion?: boolean;
+  backgroundDim?: number;
   [key: string]: unknown;
 }
 
@@ -71,6 +116,8 @@ const KEY = {
   todos: 'lofi:guest:todos',
   notes: 'lofi:guest:notes',
   appointments: 'lofi:guest:appointments',
+  decks: 'lofi:guest:decks',
+  habits: 'lofi:guest:habits',
   pomodoro: 'lofi:guest:pomodoro',
   settings: 'lofi:settings',
 } as const;
@@ -152,6 +199,8 @@ const local = {
   todos: localCollection<Todo>(KEY.todos),
   notes: localCollection<Note>(KEY.notes),
   appointments: localCollection<Appointment>(KEY.appointments),
+  decks: localCollection<Deck>(KEY.decks),
+  habits: localCollection<Habit>(KEY.habits),
 };
 
 function reportError(action: string, err: unknown) {
@@ -236,6 +285,16 @@ class DatabaseService {
     this.update<Appointment>('/api/appointments', local.appointments, id, c, 'appointment');
   deleteAppointment = (id: string) => this.remove<Appointment>('/api/appointments', local.appointments, id, 'appointment');
 
+  getDecks = () => this.list<Deck>('/api/decks', local.decks, 'flashcards');
+  saveDeck = (d: New<Deck>) => this.create<Deck>('/api/decks', local.decks, d, 'deck');
+  updateDeck = (id: string, c: Partial<Deck>) => this.update<Deck>('/api/decks', local.decks, id, c, 'deck');
+  deleteDeck = (id: string) => this.remove<Deck>('/api/decks', local.decks, id, 'deck');
+
+  getHabits = () => this.list<Habit>('/api/habits', local.habits, 'habits');
+  saveHabit = (h: New<Habit>) => this.create<Habit>('/api/habits', local.habits, h, 'habit');
+  updateHabit = (id: string, c: Partial<Habit>) => this.update<Habit>('/api/habits', local.habits, id, c, 'habit');
+  deleteHabit = (id: string) => this.remove<Habit>('/api/habits', local.habits, id, 'habit');
+
   // --- pomodoro ---
 
   async recordPomodoro(category: string, minutes: number): Promise<boolean> {
@@ -304,7 +363,9 @@ class DatabaseService {
   // --- guest -> account ---
 
   hasGuestData(): boolean {
-    return local.todos.all().length + local.notes.all().length + local.appointments.all().length > 0;
+    return (
+      local.todos.all().length + local.notes.all().length + local.appointments.all().length + local.decks.all().length + local.habits.all().length > 0
+    );
   }
 
   /** After sign-in: move anything created as a guest into the account. */
@@ -317,18 +378,18 @@ class DatabaseService {
         return rest;
       });
     try {
-      const res = await api<{ imported: { todos: number; notes: number; appointments: number } }>('/api/account/import', {
+      const res = await api<{ imported: Record<string, number> }>('/api/account/import', {
         method: 'POST',
         json: {
           todos: strip(local.todos.all()),
           notes: strip(local.notes.all()),
           appointments: strip(local.appointments.all()),
+          decks: strip(local.decks.all()),
+          habits: strip(local.habits.all()),
         },
       });
-      local.todos.clear();
-      local.notes.clear();
-      local.appointments.clear();
-      return res.imported.todos + res.imported.notes + res.imported.appointments;
+      Object.values(local).forEach((store) => store.clear());
+      return Object.values(res.imported).reduce((a, b) => a + b, 0);
     } catch (err) {
       reportError('Importing your guest data', err);
       return 0;

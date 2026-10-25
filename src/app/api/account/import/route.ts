@@ -1,7 +1,7 @@
 import { ObjectId } from 'mongodb';
 import { collections } from '@/lib/server/mongo';
 import { route, json, readJson, requireUser, rateLimit, HttpError } from '@/lib/server/http';
-import { parseAppointment, parseNote, parseTodo } from '@/lib/server/resources';
+import { parseAppointment, parseDeck, parseHabit, parseNote, parseTodo } from '@/lib/server/resources';
 
 export const runtime = 'nodejs';
 
@@ -49,9 +49,27 @@ export const POST = route(async (request) => {
     .filter(Boolean)
     .map((a) => ({ ...a!, _id: new ObjectId(), userId, createdAt: now, updatedAt: now }));
 
+  const decks = list(body.decks, 'decks')
+    .slice(0, 200)
+    .map((d) => safe(() => parseDeck(d, false)))
+    .filter(Boolean)
+    .map((d) => ({ ...d!, _id: new ObjectId(), userId, createdAt: now, updatedAt: now }));
+  const habitsCol = await collections.habits();
+  const lastHabit = await habitsCol.find({ userId }).sort({ position: -1 }).limit(1).next();
+  let habitPosition = lastHabit?.position ?? 0;
+  const habits = list(body.habits, 'habits')
+    .slice(0, 50)
+    .map((h) => safe(() => parseHabit(h, false)))
+    .filter(Boolean)
+    .map((h) => ({ ...h!, _id: new ObjectId(), userId, position: ++habitPosition, createdAt: now, updatedAt: now }));
+
   if (todos.length) await todosCol.insertMany(todos as never[]);
+  if (decks.length) await (await collections.decks()).insertMany(decks as never[]);
+  if (habits.length) await habitsCol.insertMany(habits as never[]);
   if (notes.length) await (await collections.notes()).insertMany(notes as never[]);
   if (appointments.length) await (await collections.appointments()).insertMany(appointments as never[]);
 
-  return json({ imported: { todos: todos.length, notes: notes.length, appointments: appointments.length } });
+  return json({
+    imported: { todos: todos.length, notes: notes.length, appointments: appointments.length, decks: decks.length, habits: habits.length },
+  });
 });

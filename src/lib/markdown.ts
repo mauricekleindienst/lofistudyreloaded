@@ -8,6 +8,7 @@ const escapeHtml = (text: string) =>
 function inline(text: string): string {
   return escapeHtml(text)
     .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/(^|[\s(])(https?:\/\/[^\s<)]+)/g, '$1<a href="$2" target="_blank" rel="noopener noreferrer nofollow">$2</a>')
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/__(.+?)__/g, '<u>$1</u>')
     .replace(/~~(.+?)~~/g, '<del>$1</del>')
@@ -29,7 +30,7 @@ export function renderMarkdown(source: string): string {
     list = null;
   };
 
-  for (const raw of lines) {
+  for (const [lineNo, raw] of lines.entries()) {
     const line = raw.trimEnd();
     let m: RegExpMatchArray | null;
 
@@ -57,7 +58,13 @@ export function renderMarkdown(source: string): string {
         out.push(`<${kind}>`);
         list = kind;
       }
-      out.push(`<li>${inline(m[1])}</li>`);
+      const task = kind === 'ul' && m[1].match(/^\[([ xX])\]\s+(.*)$/);
+      if (task) {
+        const done = task[1] !== ' ';
+        out.push(
+          `<li class="task${done ? ' done' : ''}"><input type="checkbox" data-line="${lineNo}"${done ? ' checked' : ''} aria-label="Toggle item"> <span>${inline(task[2])}</span></li>`
+        );
+      } else out.push(`<li>${inline(m[1])}</li>`);
     } else {
       closeList();
       paragraph.push(line);
@@ -68,11 +75,26 @@ export function renderMarkdown(source: string): string {
   return out.join('');
 }
 
+/** Flips the `- [ ]` checkbox on the given line. */
+export function toggleTask(source: string, lineNo: number): string {
+  const lines = source.replace(/\r\n?/g, '\n').split('\n');
+  const line = lines[lineNo];
+  if (line === undefined) return source;
+  lines[lineNo] = line.replace(/^(\s*[-*+]\s+)\[([ xX])\]/, (_, pre: string, mark: string) => `${pre}[${mark === ' ' ? 'x' : ' '}]`);
+  return lines.join('\n');
+}
+
+export function countWords(source: string): number {
+  return (source.match(/[\p{L}\p{N}]+(?:['’-][\p{L}\p{N}]+)*/gu) ?? []).length;
+}
+
 /** Plain-text excerpt for note cards. */
 export function stripMarkdown(source: string, max = 150): string {
   const text = source
     .replace(/^#{1,3}\s+/gm, '')
     .replace(/^\s*>\s?/gm, '')
+    .replace(/^\s*[-*+]\s+\[[xX]\]\s+/gm, '☑ ')
+    .replace(/^\s*[-*+]\s+\[ \]\s+/gm, '☐ ')
     .replace(/^\s*([-*+]|\d+[.)])\s+/gm, '• ')
     .replace(/^(-{3,}|\*{3,})$/gm, '')
     .replace(/(\*\*|__|~~|`)/g, '')

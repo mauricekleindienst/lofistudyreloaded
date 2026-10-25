@@ -517,3 +517,42 @@
 .wallpaperOverlay {
   z-index: 2;
 }
+
+/* --- dim control --- */
+.dimControl {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 10px 0 4px;
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.dimControl input {
+  flex: 1;
+  max-width: 260px;
+  accent-color: var(--accent-color);
+}
+
+.dimValue {
+  min-width: 36px;
+  font-variant-numeric: tabular-nums;
+  color: var(--text-tertiary);
+}
+
+@media (max-width: 640px) {
+  .headerActions .motionToggle span {
+    display: none;
+  }
+}
+
+@media (max-width: 480px) {
+  .title {
+    font-size: 17px;
+    white-space: nowrap;
+  }
+
+  .subtitle {
+    display: none;
+  }
+}
