@@ -1,39 +1,26 @@
-import { MetadataRoute } from 'next'
+import type { MetadataRoute } from 'next';
+import { SITE_DESCRIPTION, SITE_NAME } from '@/lib/site';
 
 export default function manifest(): MetadataRoute.Manifest {
   return {
-    name: 'Lo-Fi.Study - Focus & Productivity App',
-    short_name: 'Lo-Fi.Study',
-    description: 'Boost your productivity with Lo-Fi.Study - the ultimate focus companion featuring Pomodoro timer, ambient sounds, and progress tracking.',
-    start_url: '/',
-    display: 'standalone',
-    background_color: '#667eea',
-    theme_color: '#667eea',
-    orientation: 'portrait-primary',
+    name: `${SITE_NAME} — Focus & Study Space`,
+    short_name: SITE_NAME,
+    description: SITE_DESCRIPTION,
+    id: '/',
+    start_url: '/?source=pwa',
     scope: '/',
+    display: 'standalone',
+    background_color: '#12141a',
+    theme_color: '#12141a',
     lang: 'en',
-    categories: ['productivity', 'utilities', 'education'],
+    categories: ['productivity', 'education', 'music'],
     icons: [
-      {
-        src: '/favicon.ico',
-        sizes: '32x32',
-        type: 'image/x-icon',
-      },
-      {
-        src: '/favicon.ico',
-        sizes: '16x16',
-        type: 'image/x-icon',
-      }
+      { src: '/icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
+      { src: '/icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
+      { src: '/icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
     ],
     screenshots: [
-      {
-        src: '/og-image.svg',
-        sizes: '1200x630',
-        type: 'image/svg+xml',
-        form_factor: 'wide',
-        label: 'Lo-Fi.Study Desktop Interface'
-      }
+      { src: '/og-image.png', sizes: '1200x630', type: 'image/png', form_factor: 'wide', label: 'Lo-Fi.Study focus space' },
     ],
-    prefer_related_applications: false
-  }
+  };
 }

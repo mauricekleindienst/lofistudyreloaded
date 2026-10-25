@@ -256,6 +256,12 @@
 }
 
 .wallpaperBox {
+  display: block;
+  width: 100%;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
   position: relative;
   aspect-ratio: 16/9;
   border-radius: 16px;
@@ -457,5 +463,16 @@
   
   .actionLabel {
     display: none;
+  }
+}
+
+@media (max-width: 640px) {
+  .wallpaperGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .wallpaperBox {
+    border-radius: 12px;
   }
 }

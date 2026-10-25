@@ -1,6 +1,6 @@
 "use client";
-import { useState, useEffect } from 'react';
-import { 
+import { useState, useEffect, useMemo } from 'react';
+import {
   X,
   Plus,
   CheckSquare,
@@ -9,181 +9,81 @@ import {
   BookOpen,
   Zap,
   Loader2,
-  LogIn
 } from 'lucide-react';
 import todoStyles from '../../../styles/Todo.module.css';
 import { useAppState } from '../../contexts/AppStateContext';
 import { useDataPersistence } from '../../hooks/useDataPersistence';
+import type { Todo } from '../../lib/database';
 
-interface Todo {
-  id: number;
-  text: string;
-  completed: boolean;
-  priority: 'low' | 'medium' | 'high';
-  category: 'work' | 'personal' | 'study' | 'health';
-  dueDate?: string;
-}
+type Priority = Todo['priority'];
+type Category = Todo['category'];
 
 const TodoList: React.FC = () => {
   const { updateTodoState } = useAppState();
-  const { 
-    isAuthenticated, 
-    loadTodos, 
-    saveTodo, 
-    updateTodo, 
-    deleteTodo: deleteTodoFromDb 
-  } = useDataPersistence();
-    const [todos, setTodos] = useState<Todo[]>([]);
+  const { db, isAuthenticated, authLoading } = useDataPersistence();
+  const [todos, setTodos] = useState<Todo[]>([]);
+  const [loading, setLoading] = useState(true);
   const [newTodo, setNewTodo] = useState('');
-  const [newPriority, setNewPriority] = useState<'low' | 'medium' | 'high'>('medium');
-  const [newCategory, setNewCategory] = useState<'work' | 'personal' | 'study' | 'health'>('work');  const [filter, setFilter] = useState<'all' | 'active' | 'completed'>('all');
+  const [newPriority, setNewPriority] = useState<Priority>('medium');
+  const [newCategory, setNewCategory] = useState<Category>('work');
+  const [filter, setFilter] = useState<'all' | 'active' | 'completed'>('all');
   const [isSaving, setIsSaving] = useState(false);
-  // Load todos when user becomes authenticated
+
+  // (Re)load whenever the user signs in or out
   useEffect(() => {
-    const loadUserTodos = async () => {
-      if (isAuthenticated) {
-        // Loading todos for authenticated user
-        const userTodos = await loadTodos();
-        const formattedTodos: Todo[] = userTodos.map(todo => ({
-          id: todo.id!,
-          text: todo.text,
-          completed: todo.completed,
-          priority: todo.priority || 'medium',
-          category: todo.category || 'work',
-          dueDate: todo.due_date
-        }));
-        setTodos(formattedTodos);
-      } else {
-        // Loading default todos for offline mode
-        // Load default todos when not authenticated
-        setTodos([
-          { 
-            id: 1, 
-            text: "Review project proposal", 
-            completed: false,
-            priority: 'high',
-            category: 'work'
-          },
-          { 
-            id: 2, 
-            text: "Complete TypeScript tutorial", 
-            completed: true,
-            priority: 'medium',
-            category: 'study'
-          },
-          { 
-            id: 3, 
-            text: "Plan weekend activities", 
-            completed: false,
-            priority: 'low',
-            category: 'personal'
-          }
-        ]);
-      }
+    if (authLoading) return;
+    let cancelled = false;
+    setLoading(true);
+    db.getTodos().then((items) => {
+      if (cancelled) return;
+      setTodos(items);
+      setLoading(false);
+    });
+    return () => {
+      cancelled = true;
     };
+  }, [db, isAuthenticated, authLoading]);
 
-    loadUserTodos();
-  }, [isAuthenticated, loadTodos]);
-
-  // Update context whenever todos change
   useEffect(() => {
-    const pendingCount = todos.filter(todo => !todo.completed).length;
-    updateTodoState({ pendingCount });
+    updateTodoState({ pendingCount: todos.filter(todo => !todo.completed).length });
   }, [todos, updateTodoState]);
-  const addTodo = async () => {
-    if (newTodo.trim()) {
-      const tempId = Date.now();
-      const newTodoItem: Todo = { 
-        id: tempId, 
-        text: newTodo, 
-        completed: false,
-        priority: newPriority,
-        category: newCategory
-      };
 
-      // Optimistically update UI
-      setTodos([...todos, newTodoItem]);
+  const addTodo = async (e?: React.FormEvent) => {
+    e?.preventDefault();
+    const text = newTodo.trim();
+    if (!text || isSaving) return;
+
+    setIsSaving(true);
+    const saved = await db.saveTodo({ text, completed: false, priority: newPriority, category: newCategory });
+    setIsSaving(false);
+    if (saved) {
+      setTodos(prev => [...prev, saved]);
       setNewTodo('');
-        if (isAuthenticated) {
-        setIsSaving(true);
-        try {
-          const savedTodo = await saveTodo({
-            text: newTodo,
-            completed: false,
-            priority: newPriority,
-            category: newCategory
-          });
-
-          if (savedTodo) {
-            // Replace temp todo with saved todo
-            setTodos(prev => prev.map(todo => 
-              todo.id === tempId 
-                ? { ...newTodoItem, id: savedTodo.id! }
-                : todo            ));
-          } else {
-            throw new Error('Failed to save todo - no data returned');
-          }
-        } catch (error) {
-          // Revert on error
-          setTodos(prev => prev.filter(todo => todo.id !== tempId));          console.error('Failed to save todo:', error);
-        } finally {
-          setIsSaving(false);
-        }
-      } else {
-        // Todo added to local state (not authenticated)
-      }
     }
   };
-  const toggleTodo = async (id: number) => {
+
+  const toggleTodo = async (id: string) => {
     const todo = todos.find(t => t.id === id);
     if (!todo) return;
-
-    const updatedTodo = { ...todo, completed: !todo.completed };
-    
-    // Optimistically update UI
-    setTodos(todos.map(t => 
-      t.id === id ? updatedTodo : t
-    ));
-
-    if (isAuthenticated) {
-      try {
-        const result = await updateTodo(id, { completed: !todo.completed });
-        if (result) {
-          // Todo completion updated successfully
-        }
-      } catch (error) {
-        // Revert on error
-        setTodos(todos.map(t => 
-          t.id === id ? todo : t
-        ));
-        console.error('Failed to update todo completion:', error);
-      }
-    } else {
-      // Todo completion toggled locally (not authenticated)
+    setTodos(prev => prev.map(t => (t.id === id ? { ...t, completed: !t.completed } : t)));
+    const result = await db.updateTodo(id, { completed: !todo.completed });
+    if (!result) {
+      setTodos(prev => prev.map(t => (t.id === id ? todo : t)));
     }
   };
-  const deleteTodo = async (id: number) => {
-    const todoToDelete = todos.find(t => t.id === id);
-    if (!todoToDelete) return;
 
-    // Optimistically update UI
-    setTodos(todos.filter(todo => todo.id !== id));
-
-    if (isAuthenticated) {
-      try {
-        const success = await deleteTodoFromDb(id);
-        if (success) {
-          // Todo deleted successfully from database
-        } else {
-          throw new Error('Failed to delete todo from database');
-        }
-      } catch (error) {
-        // Revert on error
-        setTodos(prev => [...prev, todoToDelete]);
-        console.error('Failed to delete todo:', error);
-      }
-    } else {
-      // Todo deleted locally (not authenticated)
+  const deleteTodo = async (id: string) => {
+    const index = todos.findIndex(t => t.id === id);
+    if (index < 0) return;
+    const removed = todos[index];
+    setTodos(prev => prev.filter(t => t.id !== id));
+    const ok = await db.deleteTodo(id);
+    if (!ok) {
+      setTodos(prev => {
+        const next = [...prev];
+        next.splice(index, 0, removed);
+        return next;
+      });
     }
   };
 
@@ -197,25 +97,12 @@ const TodoList: React.FC = () => {
     }
   };
 
-  const filteredTodos = todos.filter(todo => {
+  const filteredTodos = useMemo(() => todos.filter(todo => {
     if (filter === 'active') return !todo.completed;
     if (filter === 'completed') return todo.completed;
     return true;
-  });
+  }), [todos, filter]);
   const completedCount = todos.filter(t => t.completed).length;
-
-  // If user is not authenticated, show sign-in message
-  if (!isAuthenticated) {
-    return (
-      <div className={todoStyles.container}>
-        <div className={todoStyles.signInContainer}>
-          <LogIn size={48} className={todoStyles.signInIcon} />
-          <h2>Sign in to use Tasks</h2>
-          <p>Please sign in to create and manage your tasks.</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className={todoStyles.content}>
@@ -235,21 +122,23 @@ const TodoList: React.FC = () => {
       )}
 
       {/* Add Todo Form */}
-      <div className={todoStyles.addSection}>
+      <form className={todoStyles.addSection} onSubmit={addTodo}>
         <div className={todoStyles.inputGroup}>
           <input
             type="text"
             placeholder="What needs to be done?"
+            aria-label="New task"
             value={newTodo}
+            maxLength={500}
             onChange={(e) => setNewTodo(e.target.value)}
-            onKeyPress={(e) => e.key === 'Enter' && addTodo()}
             className={todoStyles.taskInput}
             disabled={isSaving}
           />
-          <button 
-            onClick={addTodo} 
+          <button
+            type="submit"
             className={todoStyles.addButton}
             disabled={isSaving || !newTodo.trim()}
+            aria-label="Add task"
           >
             {isSaving ? <Loader2 size={18} className={todoStyles.spinner} /> : <Plus size={18} />}
           </button>
@@ -258,7 +147,8 @@ const TodoList: React.FC = () => {
         <div className={todoStyles.optionsRow}>
           <select
             value={newCategory}
-            onChange={(e) => setNewCategory(e.target.value as 'work' | 'personal' | 'study' | 'health')}
+            onChange={(e) => setNewCategory(e.target.value as Category)}
+            aria-label="Category"
             className={todoStyles.categorySelect}
             disabled={isSaving}
           >
@@ -269,7 +159,8 @@ const TodoList: React.FC = () => {
           </select>
           <select
             value={newPriority}
-            onChange={(e) => setNewPriority(e.target.value as 'low' | 'medium' | 'high')}
+            onChange={(e) => setNewPriority(e.target.value as Priority)}
+            aria-label="Priority"
             className={todoStyles.prioritySelect}
             disabled={isSaving}
           >
@@ -278,7 +169,7 @@ const TodoList: React.FC = () => {
             <option value="high">🔴 High</option>
           </select>
         </div>
-      </div>
+      </form>
 
       {/* Filter Tabs */}
       <div className={todoStyles.filterTabs}>
@@ -309,6 +200,8 @@ const TodoList: React.FC = () => {
             <button
               onClick={() => toggleTodo(todo.id)}
               className={`${todoStyles.checkButton} ${todo.completed ? todoStyles.checked : ''}`}
+              aria-label={todo.completed ? 'Mark as not done' : 'Mark as done'}
+              aria-pressed={todo.completed}
             >
               <div className={todoStyles.checkmark}>
                 {todo.completed && <CheckSquare size={16} />}
@@ -331,13 +224,20 @@ const TodoList: React.FC = () => {
             <button
               onClick={() => deleteTodo(todo.id)}
               className={todoStyles.deleteButton}
+              aria-label="Delete task"
             >
               <X size={16} />
             </button>
           </div>
         ))}
         
-        {filteredTodos.length === 0 && (
+        {loading && (
+          <div className={todoStyles.emptyState}>
+            <Loader2 size={24} className={todoStyles.spinner} />
+          </div>
+        )}
+
+        {!loading && filteredTodos.length === 0 && (
           <div className={todoStyles.emptyState}>
             <div className={todoStyles.emptyIcon}>
               {filter === 'completed' ? '🎉' : filter === 'active' ? '📝' : '✨'}

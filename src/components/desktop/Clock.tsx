@@ -20,7 +20,7 @@ interface TimerState {
 }
 
 export default function Clock({ isExpanded, onToggle, onClose }: ClockProps) {
-  const [currentTime, setCurrentTime] = useState(new Date());
+  const [currentTime, setCurrentTime] = useState<Date | null>(null);
   const [timer, setTimer] = useState<TimerState>({
     minutes: 0,
     seconds: 0,
@@ -48,6 +48,7 @@ export default function Clock({ isExpanded, onToggle, onClose }: ClockProps) {
 
   // Update current time every second
   useEffect(() => {
+    setCurrentTime(new Date());
     const interval = setInterval(() => {
       const now = new Date();
       setCurrentTime(now);
@@ -163,11 +164,10 @@ export default function Clock({ isExpanded, onToggle, onClose }: ClockProps) {
             {timer.isRunning ? (
               `${String(timer.minutes).padStart(2, '0')}:${String(timer.seconds).padStart(2, '0')}`
             ) : (
-              currentTime.toLocaleTimeString('en-US', { 
-                hour: '2-digit', 
+              currentTime?.toLocaleTimeString([], {
+                hour: '2-digit',
                 minute: '2-digit',
-                hour12: false
-              })
+              }) ?? '--:--'
             )}
           </span>
         </div>

@@ -912,3 +912,11 @@
   max-width: 300px;
   line-height: 1.5;
 }
+
+.emptyState .emptyTitle {
+  font-size: 15px;
+}
+
+.emptyState .emptyMessage {
+  font-size: 13px;
+}

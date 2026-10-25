@@ -1,22 +1,11 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { X, CheckSquare, Play, Images, Pause, Search, Film } from 'lucide-react';
+import { X, CheckSquare, Play, Images, Search } from 'lucide-react';
 import { backgrounds } from '@/data/backgrounds';
 import styles from '../../../styles/BackgroundSelector.module.css';
 import Image from 'next/image';
-
-interface Background {
-  id: number;
-  src: string;
-  alt: string;
-  note: string;
-  createdby: string;
-  priority: boolean;
-  category: string;
-  isYoutube?: boolean;
-  videoId?: string;
-}
+import type { Background } from './types';
 
 interface BackgroundSelectorProps {
   showBackgrounds: boolean;
@@ -33,8 +22,6 @@ const categories = [
   { id: 'urban', name: 'Urban', icon: '🏙️' },
   { id: 'cozy', name: 'Cozy', icon: '🏠' },
   { id: 'gaming', name: 'Gaming', icon: '🎮' },
-  { id: 'scenery', name: 'Scenery', icon: '🏔️' },
-  { id: 'cafe', name: 'Cafe', icon: '☕' },
 ];
 
 export default function BackgroundSelector({
@@ -89,6 +76,13 @@ export default function BackgroundSelector({
     setVisibleCount(20);
     setErrorVideos(new Set());
   }, [selectedCategory, searchQuery]);
+
+  useEffect(() => {
+    if (!showBackgrounds) return;
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [showBackgrounds, onClose]);
 
   if (!showBackgrounds) return null;
 
@@ -170,9 +164,12 @@ export default function BackgroundSelector({
               const isSelected = currentBackground.id === bg.id;
               
               return (
-                <div
+                <button
+                  type="button"
                   key={bg.id}
                   className={`${styles.wallpaperBox} ${isSelected ? styles.selected : ''}`}
+                  aria-label={`Use background: ${bg.alt}`}
+                  aria-pressed={isSelected}
                   onClick={() => {
                     onBackgroundChange(bg);
                     onClose();
@@ -182,14 +179,13 @@ export default function BackgroundSelector({
                 >
                   <div className={styles.imageWrapper}>
                     <Image
-                      src={`/thumbnails/${bg.id}.jpg`}
+                      src={bg.poster}
                       alt={bg.alt}
                       fill
                       sizes="(max-width: 480px) 50vw, (max-width: 768px) 33vw, 25vw"
                       className={styles.wallpaperImage}
                       loading="lazy"
-                      onError={(e) => {
-                        e.currentTarget.src = '/thumbnails/placeholder.jpg';
+                      onError={() => {
                         setErrorVideos(prev => new Set(prev).add(bg.id));
                       }}
                     />
@@ -220,7 +216,7 @@ export default function BackgroundSelector({
                       </div>
                     </div>
                   </div>
-                </div>
+                </button>
               );
             })}
           </div>

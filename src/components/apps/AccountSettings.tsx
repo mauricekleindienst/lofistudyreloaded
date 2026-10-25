@@ -1,412 +1,301 @@
 "use client";
 
-import React, { useState, useEffect } from 'react';
-import { User, Mail, Shield, Save, Edit3, Download, Trash2, LogOut, CheckCircle, AlertCircle } from 'lucide-react';
+import React, { useEffect, useState } from 'react';
+import { User, Mail, Shield, Save, Edit3, Download, Trash2, LogOut, CheckCircle, AlertCircle, LogIn } from 'lucide-react';
 import { useAuth } from '../../contexts/AuthContext';
-import { useUserProfile } from '../../hooks/useUserProfile';
-import { createClient } from '../../utils/supabase/client';
+import { openAuthModal } from '../../lib/ui';
 import styles from '../../../styles/AccountSettings.module.css';
 
+type Message = { type: 'success' | 'error'; text: string } | null;
+
 const AccountSettings: React.FC = () => {
-  const { user, authUser, signOut } = useAuth();
-  const { userProfile, updateProfile, loading: profileLoading, error: profileError } = useUserProfile(authUser);
-  const [activeTab, setActiveTab] = useState('profile');
+  const { user, signOut, updateProfile, changePassword, deleteAccount } = useAuth();
+  const [activeTab, setActiveTab] = useState<'profile' | 'security'>('profile');
+
   const [isEditing, setIsEditing] = useState(false);
-  const [isLoading, setIsLoading] = useState(false);
-  const [deleteConfirm, setDeleteConfirm] = useState('');
+  const [displayName, setDisplayName] = useState('');
+  const [profileMessage, setProfileMessage] = useState<Message>(null);
+  const [savingProfile, setSavingProfile] = useState(false);
+
+  const [currentPassword, setCurrentPassword] = useState('');
+  const [newPassword, setNewPassword] = useState('');
+  const [passwordMessage, setPasswordMessage] = useState<Message>(null);
+  const [savingPassword, setSavingPassword] = useState(false);
+
   const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
-  const [saveMessage, setSaveMessage] = useState<{ type: 'success' | 'error', text: string } | null>(null);
-  const supabase = createClient();
-  
-  const [settings, setSettings] = useState({
-    displayName: '',
-    email: '',
-    theme: 'dark',
-    notifications: true,
-    autoSave: true,
-    syncEnabled: true,
-    language: 'en'
-  });
+  const [deleteConfirm, setDeleteConfirm] = useState('');
+  const [deletePassword, setDeletePassword] = useState('');
+  const [deleteError, setDeleteError] = useState('');
+  const [deleting, setDeleting] = useState(false);
 
-  // Update settings when user profile loads
   useEffect(() => {
-    if (user && userProfile) {
-      setSettings(prev => ({
-        ...prev,
-        displayName: userProfile.full_name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
-        email: user.email || ''
-      }));
-    } else if (user) {
-      setSettings(prev => ({
-        ...prev,
-        displayName: user.user_metadata?.full_name || user.email?.split('@')[0] || 'User',
-        email: user.email || ''
-      }));
-    }
-  }, [user, userProfile]);const tabs = [
-    { id: 'profile', label: 'Profile', icon: User },
-    { id: 'security', label: 'Security', icon: Shield }
-  ];
-  const handleSaveSettings = async () => {
-    if (!authUser) return;
-    
-    setIsLoading(true);
-    setSaveMessage(null);
-    
-    try {
-      // Update the user profile with new display name
-      const success = await updateProfile({
-        full_name: settings.displayName
-      });
-      
-      if (success) {
-        setIsEditing(false);
-        setSaveMessage({ type: 'success', text: 'Profile updated successfully!' });
-        
-        // Clear success message after 3 seconds
-        setTimeout(() => setSaveMessage(null), 3000);
-      } else {
-        throw new Error('Failed to update profile');
-      }
-    } catch (error) {
-      console.error('Error saving settings:', error);
-      setSaveMessage({ 
-        type: 'error', 
-        text: 'Failed to save changes. Please try again.' 
-      });
-      
-      // Clear error message after 5 seconds
-      setTimeout(() => setSaveMessage(null), 5000);
-    } finally {
-      setIsLoading(false);
+    if (user && !isEditing) setDisplayName(user.full_name);
+  }, [user, isEditing]);
+
+  if (!user) {
+    return (
+      <div className={styles.accountSettings}>
+        <div className={styles.section} style={{ textAlign: 'center' }}>
+          <LogIn size={40} style={{ margin: '0 auto 12px', opacity: 0.8 }} />
+          <h3>You&apos;re using Lo-Fi.Study as a guest</h3>
+          <p className={styles.helpText}>
+            Your tasks, notes and stats are saved on this device. Create a free account to sync them everywhere and
+            join the leaderboard and chat.
+          </p>
+          <button className={styles.saveButton} onClick={openAuthModal} style={{ margin: '16px auto 0' }}>
+            <LogIn size={16} /> Sign in or create account
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  const flash = (set: (m: Message) => void, message: Message, ms = 4000) => {
+    set(message);
+    window.setTimeout(() => set(null), ms);
+  };
+
+  const handleSaveProfile = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingProfile(true);
+    const { error } = await updateProfile({ full_name: displayName.trim() });
+    setSavingProfile(false);
+    if (error) {
+      flash(setProfileMessage, { type: 'error', text: error }, 6000);
+    } else {
+      setIsEditing(false);
+      flash(setProfileMessage, { type: 'success', text: 'Profile updated' });
     }
   };
 
-  // Security Functions
-  const handleChangePassword = async () => {
-    if (!user?.email) return;
-    
-    setIsLoading(true);
-    try {
-      const { error } = await supabase.auth.resetPasswordForEmail(user.email, {
-        redirectTo: `${window.location.origin}/auth/recovery`,
-      });
-      
-      if (error) throw error;
-      
-      alert('Password reset email sent! Check your inbox.');
-    } catch (error) {
-      console.error('Error sending password reset:', error);
-      alert('Failed to send password reset email. Please try again.');
-    } finally {
-      setIsLoading(false);
+  const handleChangePassword = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (newPassword.length < 8) {
+      flash(setPasswordMessage, { type: 'error', text: 'New password must be at least 8 characters' }, 6000);
+      return;
+    }
+    setSavingPassword(true);
+    const { error } = await changePassword(currentPassword, newPassword);
+    setSavingPassword(false);
+    if (error) {
+      flash(setPasswordMessage, { type: 'error', text: error }, 6000);
+    } else {
+      setCurrentPassword('');
+      setNewPassword('');
+      flash(setPasswordMessage, { type: 'success', text: 'Password saved. Other devices were signed out.' });
     }
   };
-  const handleDownloadData = async () => {
-    if (!user?.id) return;
-    
-    setIsLoading(true);
-    try {
-      // Fetch user data from all tables - using more generic table names
-      const [todosRes, notesRes, sessionsRes, profileRes] = await Promise.all([
-        supabase.from('todos').select('*').eq('user_id', user.id).then(res => ({ data: res.data || [], error: res.error })),
-        supabase.from('notes').select('*').eq('user_id', user.id).then(res => ({ data: res.data || [], error: res.error })),
-        supabase.from('pomodoro_sessions').select('*').eq('user_id', user.id).then(res => ({ data: res.data || [], error: res.error })),
-        supabase.from('profiles').select('*').eq('id', user.id).then(res => ({ data: res.data || [], error: res.error }))
-      ]);
 
-      // Log any errors but continue with available data
-      if (todosRes.error) console.error('Todos table not found or accessible:', todosRes.error);
-      if (notesRes.error) console.error('Notes table not found or accessible:', notesRes.error);
-      if (sessionsRes.error) console.error('Sessions table not found or accessible:', sessionsRes.error);
-      if (profileRes.error) console.error('Profiles table not found or accessible:', profileRes.error);
-
-      const userData = {
-        account_info: {
-          id: user.id,
-          email: user.email,
-          created_at: user.created_at,
-          last_sign_in_at: user.last_sign_in_at,
-          metadata: user.user_metadata,
-          app_metadata: user.app_metadata
-        },
-        profile: profileRes.data?.[0] || null,
-        todos: todosRes.data || [],
-        notes: notesRes.data || [],
-        pomodoro_sessions: sessionsRes.data || [],
-        export_info: {
-          exported_at: new Date().toISOString(),
-          exported_by: user.email,
-          total_items: (todosRes.data?.length || 0) + (notesRes.data?.length || 0) + (sessionsRes.data?.length || 0)
-        }      };
-
-      // Create and download file
-      const dataStr = JSON.stringify(userData, null, 2);
-      const dataBlob = new Blob([dataStr], { type: 'application/json' });
-      
-      // Create download link
-      const url = URL.createObjectURL(dataBlob);
-      const link = document.createElement('a');
-      link.href = url;
-      link.download = `lofistudy-backup-${new Date().toISOString().split('T')[0]}.json`;
-      
-      // Trigger download
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      
-      // Clean up
-      URL.revokeObjectURL(url);
-      
-      // Show success message with better formatting
-      const totalItems = userData.export_info.total_items;
-      const message = `✅ Your data has been downloaded successfully!\n\n📊 Exported ${totalItems} items:\n• ${userData.todos.length} todos\n• ${userData.notes.length} notes\n• ${userData.pomodoro_sessions.length} focus sessions\n\n💾 File saved as: ${link.download}`;
-      alert(message);
-    } catch (error) {
-      console.error('Error downloading data:', error);
-      alert('❌ Failed to download data. Please try again.\n\nError: ' + (error instanceof Error ? error.message : 'Unknown error'));
-    } finally {
-      setIsLoading(false);
-    }
+  const handleDelete = async () => {
+    setDeleting(true);
+    setDeleteError('');
+    const { error } = await deleteAccount(deletePassword);
+    setDeleting(false);
+    if (error) setDeleteError(error);
   };
-  const handleDeleteAccount = async () => {
-    if (!user?.id || deleteConfirm !== 'DELETE') return;
-    
-    setIsLoading(true);
-    try {
-      // First, try to delete user data from all tables
-      const deletePromises = [];      // Try to delete from each table, but don't fail if table doesn't exist
-      try {
-        deletePromises.push(supabase.from('todos').delete().eq('user_id', user.id));
-      } catch {
-        // Todos table not accessible for deletion
-      }
-      
-      try {
-        deletePromises.push(supabase.from('notes').delete().eq('user_id', user.id));      } catch {
-        // Notes table not accessible for deletion
-      }
-      
-      try {
-        deletePromises.push(supabase.from('pomodoro_sessions').delete().eq('user_id', user.id));
-      } catch {
-        // Sessions table not accessible for deletion
-      }
-      
-      try {
-        deletePromises.push(supabase.from('profiles').delete().eq('id', user.id));
-      } catch {
-        // Profiles table not accessible for deletion
-      }
 
-      // Execute all deletion promises
-      await Promise.allSettled(deletePromises);
-
-      // Try to delete the auth user - this might require RLS policies or admin functions
-      try {
-        // Since admin functions might not be available in client-side code,
-        // we'll use the regular auth methods
-        const { error } = await supabase.auth.signOut();
-        if (error) throw error;
-        
-        alert('Account deletion initiated. Your data has been removed and you have been signed out.\n\nNote: Complete account deletion may require additional steps. Please contact support if needed.');
-      } catch (authError) {
-        console.error('Auth deletion error:', authError);
-        // Even if auth deletion fails, we can still sign out the user
-        await signOut();
-        alert('Your data has been deleted and you have been signed out.\n\nFor complete account deletion, please contact support.');
-      }
-      
-    } catch (error) {
-      console.error('Error deleting account:', error);
-      alert('Failed to delete account completely. Some data may have been removed.\n\nPlease contact support for assistance.\n\nError: ' + (error instanceof Error ? error.message : 'Unknown error'));
-    } finally {
-      setIsLoading(false);
-      setShowDeleteConfirm(false);
-      setDeleteConfirm('');
-    }
-  };
   return (
     <div className={styles.accountSettings}>
-      {/* Navigation Tabs */}
-      <div className={styles.tabNavigation}>
-        {tabs.map((tab) => {
-          const IconComponent = tab.icon;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`${styles.tabButton} ${activeTab === tab.id ? styles.active : ''}`}
-            >
-              <IconComponent size={16} />
-              {tab.label}
-            </button>
-          );
-        })}
+      <div className={styles.tabNavigation} role="tablist">
+        {([
+          { id: 'profile', label: 'Profile', icon: User },
+          { id: 'security', label: 'Security', icon: Shield },
+        ] as const).map(({ id, label, icon: Icon }) => (
+          <button
+            key={id}
+            role="tab"
+            aria-selected={activeTab === id}
+            onClick={() => setActiveTab(id)}
+            className={`${styles.tabButton} ${activeTab === id ? styles.active : ''}`}
+          >
+            <Icon size={16} />
+            {label}
+          </button>
+        ))}
       </div>
 
-      {/* Tab Content */}
       <div className={styles.tabContent}>
         {activeTab === 'profile' && (
           <div className={styles.profileTab}>
-            <div className={styles.section}>
+            <form className={styles.section} onSubmit={handleSaveProfile}>
               <div className={styles.sectionHeader}>
-                <h3>Profile Information</h3>
-                <button 
+                <h3>Profile</h3>
+                <button
+                  type="button"
                   onClick={() => {
-                    if (isEditing) {
-                      // Cancel editing - reset to original values
-                      if (user && userProfile) {
-                        setSettings(prev => ({
-                          ...prev,
-                          displayName: userProfile.full_name || user.user_metadata?.full_name || user.email?.split('@')[0] || 'User'
-                        }));
-                      }
-                      setSaveMessage(null);
-                    }
                     setIsEditing(!isEditing);
+                    setProfileMessage(null);
                   }}
                   className={styles.editButton}
-                  disabled={isLoading || profileLoading}
+                  disabled={savingProfile}
                 >
                   <Edit3 size={16} />
                   {isEditing ? 'Cancel' : 'Edit'}
                 </button>
               </div>
-              
-              {saveMessage && (
-                <div className={`${styles.message} ${styles[saveMessage.type]}`}>
-                  {saveMessage.type === 'success' ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
-                  {saveMessage.text}
+
+              {profileMessage && (
+                <div className={`${styles.message} ${styles[profileMessage.type]}`} role="status">
+                  {profileMessage.type === 'success' ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
+                  {profileMessage.text}
                 </div>
               )}
 
               <div className={styles.formGroup}>
-                <label>Display Name</label>
+                <label htmlFor="account-name">Display name</label>
                 <input
+                  id="account-name"
                   type="text"
-                  value={settings.displayName}
-                  onChange={(e) => setSettings(prev => ({ ...prev, displayName: e.target.value }))}
-                  disabled={!isEditing || isLoading || profileLoading}
+                  value={displayName}
+                  maxLength={40}
+                  onChange={(e) => setDisplayName(e.target.value)}
+                  disabled={!isEditing || savingProfile}
                   className={styles.input}
-                  placeholder="Enter your display name"
+                  autoComplete="nickname"
                 />
-                {profileError && (
-                  <small className={styles.errorText}>
-                    Error loading profile: {profileError}
-                  </small>
-                )}
+                <small className={styles.helpText}>Shown on the leaderboard and in chat.</small>
               </div>
 
               <div className={styles.formGroup}>
-                <label>Email Address</label>
+                <label>Email</label>
                 <div className={styles.emailField}>
                   <Mail size={16} />
-                  <span>{settings.email}</span>
+                  <span>{user.email}</span>
                 </div>
-                <small className={styles.helpText}>
-                  Email cannot be changed directly. Contact support if needed.
-                </small>
+                {user.providers.length > 0 && (
+                  <small className={styles.helpText}>Linked: {user.providers.join(', ')}</small>
+                )}
               </div>
 
               {isEditing && (
                 <div className={styles.actionButtons}>
-                  <button 
-                    onClick={handleSaveSettings} 
-                    className={styles.saveButton}
-                    disabled={isLoading || profileLoading}
-                  >
+                  <button type="submit" className={styles.saveButton} disabled={savingProfile || displayName.trim().length < 2}>
                     <Save size={16} />
-                    {isLoading ? 'Saving...' : 'Save Changes'}
+                    {savingProfile ? 'Saving…' : 'Save changes'}
                   </button>
                 </div>
               )}
-            </div>
+            </form>
+          </div>
+        )}
 
-           
-          </div>        )}        {activeTab === 'security' && (
+        {activeTab === 'security' && (
           <div className={styles.securityTab}>
-            <div className={styles.section}>
-              <h3>Account Security</h3>
-              
-             
+            <form className={styles.section} onSubmit={handleChangePassword}>
+              <h3>{user.has_password ? 'Change password' : 'Set a password'}</h3>
+              {!user.has_password && (
+                <p className={styles.helpText}>Add a password to also sign in with your email.</p>
+              )}
+              {passwordMessage && (
+                <div className={`${styles.message} ${styles[passwordMessage.type]}`} role="status">
+                  {passwordMessage.type === 'success' ? <CheckCircle size={16} /> : <AlertCircle size={16} />}
+                  {passwordMessage.text}
+                </div>
+              )}
+              {user.has_password && (
+                <div className={styles.formGroup}>
+                  <label htmlFor="current-password">Current password</label>
+                  <input
+                    id="current-password"
+                    type="password"
+                    className={styles.input}
+                    value={currentPassword}
+                    onChange={(e) => setCurrentPassword(e.target.value)}
+                    autoComplete="current-password"
+                    required
+                  />
+                </div>
+              )}
+              <div className={styles.formGroup}>
+                <label htmlFor="new-password">New password</label>
+                <input
+                  id="new-password"
+                  type="password"
+                  className={styles.input}
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  autoComplete="new-password"
+                  minLength={8}
+                  required
+                />
+                <small className={styles.helpText}>At least 8 characters.</small>
+              </div>
+              <button type="submit" className={styles.saveButton} disabled={savingPassword}>
+                <Shield size={16} />
+                {savingPassword ? 'Saving…' : 'Save password'}
+              </button>
+            </form>
 
+            <div className={styles.section}>
+              <h3>Your data</h3>
               <div className={styles.securityActions}>
-                <button 
-                  className={styles.actionButton}
-                  onClick={handleChangePassword}
-                  disabled={isLoading}
-                >
-                  <Shield size={16} />
-                  {isLoading ? 'Sending...' : 'Change Password'}
-                </button>
-                
-                <button 
-                  className={styles.actionButton}
-                  onClick={handleDownloadData}
-                  disabled={isLoading}
-                >
+                <a className={styles.actionButton} href="/api/account/export" download>
                   <Download size={16} />
-                  {isLoading ? 'Downloading...' : 'Download My Data'}
-                </button>
-                
-                <button 
-                  className={`${styles.actionButton} ${styles.logoutButton}`}
-                  onClick={() => signOut()}
-                  disabled={isLoading}
-                >
+                  Download my data
+                </a>
+                <button className={`${styles.actionButton} ${styles.logoutButton}`} onClick={() => signOut()}>
                   <LogOut size={16} />
-                  Sign Out
+                  Sign out
                 </button>
               </div>
             </div>
 
             <div className={styles.section}>
-              <h3>Danger Zone</h3>
-              
-              <div>
-            
-
-                {!showDeleteConfirm ? (
-                  <button 
-                    className={`${styles.actionButton} ${styles.danger}`}
-                    onClick={() => setShowDeleteConfirm(true)}
-                  >
-                    <Trash2 size={16} />
-                    Delete Account
-                  </button>
-                ) : (
-                  <div className={styles.deleteConfirmation}>
-                    <p>Type <strong>DELETE</strong> to confirm account deletion:</p>
+              <h3>Danger zone</h3>
+              {!showDeleteConfirm ? (
+                <button className={`${styles.actionButton} ${styles.danger}`} onClick={() => setShowDeleteConfirm(true)}>
+                  <Trash2 size={16} />
+                  Delete account
+                </button>
+              ) : (
+                <div className={styles.deleteConfirmation}>
+                  <p>
+                    This permanently deletes your account, tasks, notes, appointments, stats and chat messages. Type{' '}
+                    <strong>DELETE</strong> to confirm:
+                  </p>
+                  <input
+                    type="text"
+                    value={deleteConfirm}
+                    onChange={(e) => setDeleteConfirm(e.target.value)}
+                    placeholder="DELETE"
+                    aria-label="Type DELETE to confirm"
+                    className={styles.confirmInput}
+                  />
+                  {user.has_password && (
                     <input
-                      type="text"
-                      value={deleteConfirm}
-                      onChange={(e) => setDeleteConfirm(e.target.value)}
-                      placeholder="Type DELETE here"
+                      type="password"
+                      value={deletePassword}
+                      onChange={(e) => setDeletePassword(e.target.value)}
+                      placeholder="Your password"
+                      aria-label="Your password"
+                      autoComplete="current-password"
                       className={styles.confirmInput}
                     />
-                    <div className={styles.confirmButtons}>
-                      <button 
-                        className={styles.cancelButton}
-                        onClick={() => {
-                          setShowDeleteConfirm(false);
-                          setDeleteConfirm('');
-                        }}
-                      >
-                        Cancel
-                      </button>
-                      <button 
-                        className={`${styles.actionButton} ${styles.danger}`}
-                        onClick={handleDeleteAccount}
-                        disabled={deleteConfirm !== 'DELETE' || isLoading}
-                      >
-                        <Trash2 size={16} />
-                        {isLoading ? 'Deleting...' : 'Confirm Delete'}
-                      </button>
-                    </div>
+                  )}
+                  {deleteError && <small className={styles.errorText}>{deleteError}</small>}
+                  <div className={styles.confirmButtons}>
+                    <button
+                      className={styles.cancelButton}
+                      onClick={() => {
+                        setShowDeleteConfirm(false);
+                        setDeleteConfirm('');
+                        setDeletePassword('');
+                        setDeleteError('');
+                      }}
+                    >
+                      Cancel
+                    </button>
+                    <button
+                      className={`${styles.actionButton} ${styles.danger}`}
+                      onClick={handleDelete}
+                      disabled={deleteConfirm !== 'DELETE' || (user.has_password && !deletePassword) || deleting}
+                    >
+                      <Trash2 size={16} />
+                      {deleting ? 'Deleting…' : 'Delete forever'}
+                    </button>
                   </div>
-                )}
-              </div>
+                </div>
+              )}
             </div>
           </div>
         )}

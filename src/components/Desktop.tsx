@@ -10,15 +10,15 @@ import {
   StickyNote,
   MessageSquare
 } from 'lucide-react';
-import { subscribeToMessages } from '../lib/chat';
-import { backgrounds, DEFAULT_BACKGROUND } from '@/data/backgrounds';
+import { chatStore } from '../lib/chat';
+import { DEFAULT_BACKGROUND, findBackground } from '@/data/backgrounds';
 import desktopStyles from '../../styles/Desktop.module.css';
 import { useAppState } from '../contexts/AppStateContext';
 import { useAuth } from '../contexts/AuthContext';
-import { useDataPersistence } from '../hooks/useDataPersistence';
+import { db } from '../lib/database';
+import type { ToastDetail } from '../lib/api';
 import { useResponsive } from '../hooks/useResponsive';
 
-// Import individual app components
 import PomodoroTimer from './apps/PomodoroTimer';
 import TodoList from './apps/TodoList';
 import Calculator from './apps/Calculator';
@@ -29,1058 +29,325 @@ import MusicPlayerSidebar from './MusicPlayerSidebar';
 import StatsModal from './StatsModal';
 import SoundPlayer from './apps/SoundPlayer';
 import ChatApp from './apps/ChatApp';
-// Removed Weather app
 
-// Import desktop components
 import TopBar from './desktop/TopBar';
 import BottomBar from './desktop/BottomBar';
 import WindowManager from './desktop/WindowManager';
 import BackgroundSelector from './desktop/BackgroundSelector';
-import VideoErrorBoundary from './desktop/VideoErrorBoundary';
 import NotificationManager from './desktop/NotificationManager';
-import { type DesktopProps, type ModernApp, type ModernWindow, type ModernNotification, type Background } from './desktop/types';
+import type { DesktopProps, ModernApp, ModernWindow, ModernNotification, Background } from './desktop/types';
 
-// Modern Apps Configuration
 const modernApps: ModernApp[] = [
-  {
-    id: 'pomodoro',
-    name: 'Focus Timer',
-    icon: Timer,
-    component: PomodoroTimer,
-    color: 'orange',
-    description: 'Pomodoro technique for enhanced focus',
-    category: 'study'
-  },
-  {
-    id: 'todo',
-    name: 'Tasks',
-    icon: CheckSquare,
-    component: TodoList,
-    color: 'blue',
-    description: 'Organize your tasks and goals',
-    category: 'study'
-  },
-  {
-    id: 'calculator',
-    name: 'Calculator',
-    icon: CalculatorIcon,
-    component: Calculator,
-    color: 'orange',
-    description: 'Basic calculator for quick calculations',
-    category: 'study'
-  },
-  {
-    id: 'sound-player',
-    name: 'Sound Mixer',
-    icon: Volume2,
-    component: SoundPlayer,
-    color: 'purple',
-    description: 'Mix relaxing sounds for focus',
-    category: 'study'
-  },
-  {
-    id: 'chat',
-    name: 'Chat',
-    icon: MessageSquare,
-    component: ChatApp,
-    color: 'purple',
-    description: 'Chat with other users',
-    category: 'entertainment'
-  },
-  {
-    id: 'notes',
-    name: 'Notes',
-    icon: StickyNote,
-    component: NotesApp,
-    color: 'yellow',
-    description: 'Write and organize your notes',
-    category: 'productivity'
-  },
-  {
-    id: 'account-settings',
-    name: 'Account Settings',
-    icon: Settings,
-    component: AccountSettings,
-    color: 'blue',
-    description: 'Manage your account and preferences',
-    category: 'study'
-  }
-
+  { id: 'pomodoro', name: 'Focus Timer', icon: Timer, component: PomodoroTimer, color: 'orange', description: 'Pomodoro technique for enhanced focus', category: 'study' },
+  { id: 'todo', name: 'Tasks', icon: CheckSquare, component: TodoList, color: 'blue', description: 'Organize your tasks and goals', category: 'study' },
+  { id: 'notes', name: 'Notes', icon: StickyNote, component: NotesApp, color: 'yellow', description: 'Write and organize your notes', category: 'productivity' },
+  { id: 'sound-player', name: 'Sound Mixer', icon: Volume2, component: SoundPlayer, color: 'purple', description: 'Mix relaxing sounds for focus', category: 'study' },
+  { id: 'calculator', name: 'Calculator', icon: CalculatorIcon, component: Calculator, color: 'orange', description: 'Quick calculations', category: 'tools' },
+  { id: 'chat', name: 'Chat', icon: MessageSquare, component: ChatApp, color: 'purple', description: 'Chat with other students', category: 'entertainment' },
+  { id: 'account-settings', name: 'Account', icon: Settings, component: AccountSettings, color: 'blue', description: 'Manage your account', category: 'study' },
 ];
 
-// Main Modern Desktop Component
+// Preferred floating-window sizes (desktop/tablet); phones use full-screen sheets.
+const WINDOW_SIZES: Record<string, { width: number; height: number }> = {
+  pomodoro: { width: 340, height: 470 },
+  todo: { width: 380, height: 600 },
+  notes: { width: 820, height: 600 },
+  calculator: { width: 300, height: 440 },
+  'sound-player': { width: 320, height: 480 },
+  'account-settings': { width: 440, height: 560 },
+  chat: { width: 400, height: 580 },
+};
+
+const COMPACT_BREAKPOINT = 640;
+
 const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
-  // Access app state context
   const { appStates, updateChatState } = useAppState();
-  const { user, isConfigured } = useAuth();
-  const {
-    isAuthenticated,
-    saveSelectedBackground,
-    loadSelectedBackground
-  } = useDataPersistence();
+  const { user, loading: authLoading } = useAuth();
+  const { viewport, isClient } = useResponsive();
+  const compact = isClient && viewport.width > 0 && viewport.width < COMPACT_BREAKPOINT;
 
-  // Responsive utilities
-  const { getResponsiveSize: getResponsiveSizeUtil, breakpointInfo, isClient: isResponsiveClient } = useResponsive();
-
-  // State management
   const [openWindows, setOpenWindows] = useState<ModernWindow[]>([]);
-  const [highestZIndex, setHighestZIndex] = useState(100);
+  const zCounter = useRef(100);
   const [currentBackground, setCurrentBackground] = useState<Background>(DEFAULT_BACKGROUND);
+  const [videoReady, setVideoReady] = useState(false);
+  const [videoFailed, setVideoFailed] = useState(false);
+  const [useMobileVideo, setUseMobileVideo] = useState(false);
+  const [reduceMotion, setReduceMotion] = useState(false);
   const [showBackgrounds, setShowBackgrounds] = useState(false);
-  const [currentTime, setCurrentTime] = useState('');
-  const [currentDate, setCurrentDate] = useState('');
-  const [isClient, setIsClient] = useState(false);
+  const [now, setNow] = useState<Date | null>(null);
   const [notifications, setNotifications] = useState<ModernNotification[]>([]);
   const [showCalendar, setShowCalendar] = useState(false);
-  const [backgroundSaveLoading, setBackgroundSaveLoading] = useState(false);
   const [isMusicSidebarOpen, setIsMusicSidebarOpen] = useState(false);
   const [selectedCategory, setSelectedCategory] = useState('all');
   const [showStats, setShowStats] = useState(false);
-  const [isTransitioning, setIsTransitioning] = useState(false);
+  const videoRef = useRef<HTMLVideoElement>(null);
 
-  // Ref to track current open windows without triggering effect re-runs
   const openWindowsRef = useRef<ModernWindow[]>([]);
-
   useEffect(() => {
     openWindowsRef.current = openWindows;
   }, [openWindows]);
 
-  // Enhanced video buffering state
-  const [videoLoadError, setVideoLoadError] = useState(false);
-  const [retryCount, setRetryCount] = useState(0);
-  const [preloadedVideos, setPreloadedVideos] = useState<Map<string, HTMLVideoElement>>(new Map());
-  const [currentlyBuffering, setCurrentlyBuffering] = useState<string[]>([]);
-  const [bufferHealths, setBufferHealths] = useState<Map<string, number>>(new Map());
-
-  // Refs for event handling
-  const videoRef = useRef<HTMLVideoElement>(null);
-  const bufferCheckIntervalRef = useRef<NodeJS.Timeout | null>(null);
-  const processingBackgroundsRef = useRef<Set<string>>(new Set());
-  const preloadManagerRef = useRef<{
-    preloadVideo: (background: Background) => Promise<HTMLVideoElement>;
-    getBufferedVideo: (backgroundId: string) => HTMLVideoElement | null;
-    clearOldBuffers: (keepCount?: number) => void;
-    getBufferHealth: (backgroundId: string) => number;
-  } | null>(null);
-
-  // Initialize client-side rendering flag
+  // --- environment: clock, data-saver, reduced motion ---
   useEffect(() => {
-    setIsClient(true);
+    setNow(new Date());
+    const timer = setInterval(() => setNow(new Date()), 15_000);
+
+    const conn = (navigator as Navigator & { connection?: { saveData?: boolean; effectiveType?: string } }).connection;
+    const slow = Boolean(conn?.saveData) || ['slow-2g', '2g', '3g'].includes(conn?.effectiveType ?? '');
+    setUseMobileVideo(slow || window.innerWidth < 1100 || window.matchMedia('(pointer: coarse)').matches);
+
+    const motion = window.matchMedia('(prefers-reduced-motion: reduce)');
+    setReduceMotion(motion.matches);
+    const onMotion = (e: MediaQueryListEvent) => setReduceMotion(e.matches);
+    motion.addEventListener('change', onMotion);
+    return () => {
+      clearInterval(timer);
+      motion.removeEventListener('change', onMotion);
+    };
   }, []);
 
-  // Advanced Video Buffer Management System
+  // --- toasts from anywhere in the app ---
+  const pushNotification = useCallback((message: string, type: ModernNotification['type'] = 'info') => {
+    const id = `${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+    setNotifications((prev) => [...prev.slice(-3), { id, message, type }]);
+    window.setTimeout(() => setNotifications((prev) => prev.filter((n) => n.id !== id)), type === 'error' ? 7000 : 4500);
+  }, []);
+
   useEffect(() => {
-    const createBufferManager = () => {
-      const MAX_BUFFERED_VIDEOS = 5;
-      const MIN_BUFFER_HEALTH = 0.3; // 30% buffered considered healthy
-
-      const preloadVideo = async (background: Background): Promise<HTMLVideoElement> => {
-        return new Promise((resolve) => {
-          if (preloadedVideos.has(background.id.toString())) {
-            const existingVideo = preloadedVideos.get(background.id.toString())!;
-            resolve(existingVideo);
-            return;
-          }
-
-          const video = document.createElement('video');
-          video.preload = 'auto';
-          video.muted = true;
-          video.loop = true;
-          video.playsInline = true;
-          video.crossOrigin = 'anonymous';
-
-          let progressTimer: NodeJS.Timeout | null = null;
-          let timeoutTimer: NodeJS.Timeout | null = null;
-
-          const updateProgress = () => {
-            if (video.buffered.length > 0) {
-              const bufferedEnd = video.buffered.end(video.buffered.length - 1);
-              const duration = video.duration || 0;
-              const progress = duration > 0 ? bufferedEnd / duration : 0;
-
-              setBufferHealths(prev => new Map(prev.set(background.id.toString(), progress)));
-
-              if (progress >= MIN_BUFFER_HEALTH) {
-                if (progressTimer) clearInterval(progressTimer);
-                resolve(video);
-              }
-            }
-          };
-
-          const onLoadedMetadata = () => {
-            progressTimer = setInterval(updateProgress, 500);
-            timeoutTimer = setTimeout(() => {
-              if (progressTimer) clearInterval(progressTimer);
-              // Accept video even if not fully buffered after timeout
-              resolve(video);
-            }, 10000); // 10 second timeout
-          };
-
-          const onError = () => {
-            if (progressTimer) clearInterval(progressTimer);
-            if (timeoutTimer) clearTimeout(timeoutTimer);
-            // Remove from preloaded videos if it failed
-            setPreloadedVideos(prev => {
-              const newMap = new Map(prev);
-              newMap.delete(background.id.toString());
-              return newMap;
-            });
-
-          };
-
-          const onCanPlay = () => {
-            updateProgress();
-          };
-
-          video.addEventListener('loadedmetadata', onLoadedMetadata);
-          video.addEventListener('error', onError);
-          video.addEventListener('canplay', onCanPlay);
-          video.addEventListener('progress', updateProgress);
-
-          video.src = background.src;
-          video.load();
-
-          // Store the video element immediately to prevent duplicates
-          setPreloadedVideos(prev => {
-            if (prev.has(background.id.toString())) {
-              return prev; // Already exists, don't create new Map
-            }
-            return new Map(prev.set(background.id.toString(), video));
-          });
-        });
-      };
-
-      const getBufferedVideo = (backgroundId: string): HTMLVideoElement | null => {
-        return preloadedVideos.get(backgroundId) || null;
-      };
-
-      const clearOldBuffers = (keepCount = MAX_BUFFERED_VIDEOS) => {
-        const entries = Array.from(preloadedVideos.entries());
-        if (entries.length > keepCount) {
-          const toRemove = entries.slice(0, entries.length - keepCount);
-          toRemove.forEach(([id, video]) => {
-            video.pause();
-            video.src = '';
-            video.load();
-            setPreloadedVideos(prev => {
-              const newMap = new Map(prev);
-              newMap.delete(id);
-              return newMap;
-            });
-          });
-        }
-      };
-
-      const getBufferHealth = (backgroundId: string): number => {
-        return bufferHealths.get(backgroundId) || 0;
-      };
-
-      return { preloadVideo, getBufferedVideo, clearOldBuffers, getBufferHealth };
+    const onToast = (e: Event) => {
+      const { message, type } = (e as CustomEvent<ToastDetail>).detail;
+      pushNotification(message, type);
     };
-
-    preloadManagerRef.current = createBufferManager();
-
-    // Cleanup on unmount
+    const onOpenAuth = () => onShowAuth();
+    window.addEventListener('lofi:toast', onToast);
+    window.addEventListener('lofi:open-auth', onOpenAuth);
     return () => {
-      if (bufferCheckIntervalRef.current) {
-        clearInterval(bufferCheckIntervalRef.current);
-      }
-      // Clean up all preloaded videos
-      if (preloadManagerRef.current) {
-        preloadManagerRef.current.clearOldBuffers(0); // Clear all
-      }
+      window.removeEventListener('lofi:toast', onToast);
+      window.removeEventListener('lofi:open-auth', onOpenAuth);
     };
-  }, [bufferHealths, preloadedVideos]); // Add missing dependencies
+  }, [pushNotification, onShowAuth]);
 
-  // Intelligent preloading effect
+  // --- background: restore the saved choice (device first, then account) ---
   useEffect(() => {
-    if (!preloadManagerRef.current || !isClient) return;
+    const local = findBackground(db.getLocalSettings().selectedBackground);
+    if (local) setCurrentBackground(local);
+  }, []);
 
-    const preloadPopularBackgrounds = async () => {
-      // Preload the most popular/commonly used backgrounds
-      const priorityBackgrounds = backgrounds
-        .filter(bg => bg.src.endsWith('.mp4')) // All backgrounds are videos
-        .slice(0, 3); // Preload first 3 video backgrounds
+  useEffect(() => {
+    const fromAccount = findBackground(user?.settings?.selectedBackground);
+    if (fromAccount) setCurrentBackground(fromAccount);
+  }, [user?.id, user?.settings?.selectedBackground]);
 
-      for (const background of priorityBackgrounds) {
-        const backgroundId = background.id.toString();
+  useEffect(() => {
+    setVideoReady(false);
+    setVideoFailed(false);
+  }, [currentBackground.id, useMobileVideo]);
 
-        // Skip if already processing or already preloaded
-        if (processingBackgroundsRef.current.has(backgroundId) ||
-          preloadedVideos.has(backgroundId)) {
-          continue;
-        }
-
-        processingBackgroundsRef.current.add(backgroundId);
-        setCurrentlyBuffering(prev => [...prev, backgroundId]);
-
-        try {
-          await preloadManagerRef.current!.preloadVideo(background);
-        } catch (error) {
-          console.warn(`Failed to preload background ${background.id}:`, error);
-        } finally {
-          processingBackgroundsRef.current.delete(backgroundId);
-          setCurrentlyBuffering(prev => prev.filter(id => id !== backgroundId));
-        }
-      }
+  // Autoplay can be refused (iOS low-power mode); the poster stays visible then.
+  useEffect(() => {
+    const video = videoRef.current;
+    if (!video || reduceMotion) return;
+    video.play().catch(() => undefined);
+    const onVisibility = () => {
+      if (document.visibilityState === 'visible') video.play().catch(() => undefined);
+      else video.pause();
     };
+    document.addEventListener('visibilitychange', onVisibility);
+    return () => document.removeEventListener('visibilitychange', onVisibility);
+  }, [currentBackground.id, useMobileVideo, reduceMotion]);
 
-    // Start preloading after a short delay to not interfere with initial load
-    const timer = setTimeout(preloadPopularBackgrounds, 3000);
-    return () => clearTimeout(timer);
-  }, [isClient]); // Remove currentlyBuffering and preloadedVideos from deps
-
-  // Update time and date every second
-  useEffect(() => {
-    if (!isClient) return;
-
-    const updateDateTime = () => {
-      const now = new Date();
-      setCurrentTime(now.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }));
-      setCurrentDate(now.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' }));
-    };
-
-    updateDateTime();
-    const timer = setInterval(updateDateTime, 1000);
-    return () => clearInterval(timer);
-  }, [isClient]);
-
-  // Enhanced Video loading and error handling with buffering support
-  const handleVideoLoad = useCallback(() => {
-    if (videoRef.current) {
-      setVideoLoadError(false);
-      setRetryCount(0);
-
-      // Start buffer health monitoring
-      if (bufferCheckIntervalRef.current) {
-        clearInterval(bufferCheckIntervalRef.current);
-      }
-
-      bufferCheckIntervalRef.current = setInterval(() => {
-        if (videoRef.current && videoRef.current.buffered.length > 0) {
-          const bufferedEnd = videoRef.current.buffered.end(videoRef.current.buffered.length - 1);
-          const duration = videoRef.current.duration || 0;
-          const progress = duration > 0 ? bufferedEnd / duration : 0;
-
-          // Update buffer health for current background
-          setBufferHealths(prev => new Map(prev.set(currentBackground.id.toString(), progress)));
-        }
-      }, 1000);
-
-      // Only play the video
-      videoRef.current.play().catch(console.error);
-    }
-  }, [currentBackground.id]);
-
-  const handleVideoError = useCallback(() => {
-    console.error('Video failed to load:', currentBackground.src);
-    setVideoLoadError(true);
-
-    // Stop buffer monitoring
-    if (bufferCheckIntervalRef.current) {
-      clearInterval(bufferCheckIntervalRef.current);
-    }
-
-    // Try using preloaded version first
-    if (preloadManagerRef.current) {
-      const bufferedVideo = preloadManagerRef.current.getBufferedVideo(currentBackground.id.toString());
-      if (bufferedVideo && videoRef.current) {
-        // Using preloaded video as fallback
-        videoRef.current.src = bufferedVideo.src;
-        videoRef.current.load();
-        return;
-      }
-    }
-
-    // Retry mechanism - try up to 3 times
-    if (retryCount < 3 && currentBackground.id !== DEFAULT_BACKGROUND.id) {
-      setTimeout(() => {
-        setRetryCount(prev => prev + 1);
-        if (videoRef.current) {
-          videoRef.current.load(); // Force reload
-        }
-      }, 2000 * (retryCount + 1)); // Exponential backoff
-    } else {
-      // Final fallback to default background
-      if (currentBackground.id !== DEFAULT_BACKGROUND.id) {
-        console.error('Background video failed to load. Using default background.');
-        setCurrentBackground(DEFAULT_BACKGROUND);
-      }
-    }
-  }, [currentBackground.src, currentBackground.id, retryCount]); // Remove showNotification dependency
-
-  // Enhanced video loading with preload hint and buffer management
-  const handleVideoLoadStart = useCallback(() => {
-    setVideoLoadError(false);
-
-    // Check if we have this video preloaded
-    if (preloadManagerRef.current) {
-      const bufferedVideo = preloadManagerRef.current.getBufferedVideo(currentBackground.id.toString());
-      const bufferHealth = preloadManagerRef.current.getBufferHealth(currentBackground.id.toString());
-
-      if (bufferedVideo && bufferHealth > 0.3) {
-        // Using preloaded video
-      }
-    }
-  }, [currentBackground.id]);
-
-  // Enhanced background video effect with buffer management
-  useEffect(() => {
-    setRetryCount(0); // Reset retry count when background changes
-    setVideoLoadError(false);
-
-    // Clear any existing buffer monitoring
-    if (bufferCheckIntervalRef.current) {
-      clearInterval(bufferCheckIntervalRef.current);
-    }
-
-    // Check if we have this video preloaded and ready
-    if (preloadManagerRef.current) {
-      const bufferedVideo = preloadManagerRef.current.getBufferedVideo(currentBackground.id.toString());
-      const bufferHealth = preloadManagerRef.current.getBufferHealth(currentBackground.id.toString());
-
-      if (bufferedVideo && bufferHealth > 0.3) {
-        // Instantly switching to preloaded background
-
-        if (videoRef.current) {
-          videoRef.current.src = bufferedVideo.src;
-          videoRef.current.currentTime = bufferedVideo.currentTime;
-          videoRef.current.play().catch(() => {
-            // Video autoplay was prevented
-          });
-        }
-        return;
-      }
-    }
-
-    // Fallback to normal loading
-    if (videoRef.current) {
-      videoRef.current.play().catch(() => {
-        // Video autoplay was prevented
-      });
-    }
-  }, [currentBackground]);
-
-  // Separate effect for preloading videos to avoid infinite loops
-  useEffect(() => {
-    if (!preloadManagerRef.current) {
-      return;
-    }
-
-    const backgroundId = currentBackground.id.toString();
-
-    // Skip if already processing or already preloaded
-    if (processingBackgroundsRef.current.has(backgroundId) ||
-      preloadedVideos.has(backgroundId)) {
-      return;
-    }
-
-    const preloadCurrentBackground = async () => {
-      try {
-        processingBackgroundsRef.current.add(backgroundId);
-        setCurrentlyBuffering(prev => [...prev, backgroundId]);
-        await preloadManagerRef.current!.preloadVideo(currentBackground);
-        // Successfully preloaded background
-      } catch (error) {
-        console.warn(`Failed to preload background ${currentBackground.id}:`, error);
-      } finally {
-        processingBackgroundsRef.current.delete(backgroundId);
-        setCurrentlyBuffering(prev => prev.filter(id => id !== backgroundId));
-      }
-    };
-
-    preloadCurrentBackground();
-  }, [currentBackground.id]); // Remove preloadedVideos and currentlyBuffering from deps
-
-  // Load saved background when user authenticates
-  useEffect(() => {
-    const loadSavedBackground = async () => {
-      if (isAuthenticated) {
-        try {
-          const savedBackgroundId = await loadSelectedBackground();
-          if (savedBackgroundId) {
-            const savedBackground = backgrounds.find(bg => bg.id.toString() === savedBackgroundId);
-            if (savedBackground) {
-              setCurrentBackground(savedBackground);
-            }
-          }
-        } catch (error) {
-          console.error('Failed to load saved background:', error);
-        }
-      }
-    };
-    loadSavedBackground();
-  }, [isAuthenticated, loadSelectedBackground]);
-
-  // Control video playback
-  useEffect(() => {
-    if (videoRef.current && currentBackground?.src) {
-      // Play the video when background changes
-      videoRef.current.play().catch((error) => {
-        console.error('Failed to play background video:', error);
-      });
-    }
-  }, [currentBackground?.src]);
-
-  // Reset unread count when chat is opened or restored
-  useEffect(() => {
-    if (!isClient) return;
-    const isChatVisible = openWindowsRef.current.some(w => w.app.id === 'chat' && !w.isMinimized);
-    if (isChatVisible && appStates.chat.unreadCount > 0) {
-      updateChatState({ unreadCount: 0 });
-    }
-  }, [openWindows, appStates.chat.unreadCount, updateChatState, isClient]);
-
-  // Global chat listener for unread count
-  useEffect(() => {
-    if (!isClient) return;
-
-    const unsubscribe = subscribeToMessages((message) => {
-      // Always update last message timestamp for any activity
-      updateChatState({ lastMessageTimestamp: Date.now() });
-
-      // Don't count own messages for the unread badge, except for our test bot
-      if (user && message.user_id === user.id && message.username !== 'Lofi Bot 🤖') return;
-
-      const isChatVisible = openWindowsRef.current.some(w => w.app.id === 'chat' && !w.isMinimized);
-      if (!isChatVisible) {
-        updateChatState(prev => ({ unreadCount: prev.unreadCount + 1 }));
-      }
-    });
-
-    return () => unsubscribe();
-  }, [isClient, updateChatState, user]);
-
-  // Handle background change with database persistence and intelligent preloading
-  const handleBackgroundChange = useCallback(async (background: Background) => {
-    // Check if video is already buffered for instant switching
-    if (preloadManagerRef.current) {
-      const bufferedVideo = preloadManagerRef.current.getBufferedVideo(background.id.toString());
-      const bufferHealth = preloadManagerRef.current.getBufferHealth(background.id.toString());
-      const isInstantSwitch = bufferedVideo !== null && bufferHealth > 0.3;
-      if (isInstantSwitch) {
-        // Instant switch
-      } else {
-        setIsTransitioning(true);
-        setTimeout(() => {
-          setIsTransitioning(false);
-        }, 500);
-      }
-    }
-
+  const handleBackgroundChange = useCallback((background: Background) => {
     setCurrentBackground(background);
+    db.saveSettings({ selectedBackground: String(background.id) });
+  }, []);
 
+  // --- chat unread badge (only signed-in users poll in the background) ---
+  useEffect(() => {
+    const isChatVisible = openWindows.some((w) => w.app.id === 'chat' && !w.isMinimized);
+    if (isChatVisible && appStates.chat.unreadCount > 0) updateChatState({ unreadCount: 0 });
+  }, [openWindows, appStates.chat.unreadCount, updateChatState]);
 
-
-    // Save to localStorage for non-authenticated users
-    try {
-      localStorage.setItem('selectedBackground', background.id.toString());
-    } catch (error) {
-      console.warn('Failed to save background to localStorage:', error);
-    }
-
-    // Save to database for authenticated users
-    if (isAuthenticated) {
-      setBackgroundSaveLoading(true);
-      try {
-        const success = await saveSelectedBackground(background.id.toString());
-        if (!success) {
-          console.warn('Failed to save background preference to database');
-        }
-      } catch (error) {
-        console.error('Error saving background preference:', error);
-      } finally {
-        setBackgroundSaveLoading(false);
-      }
-    }
-
-    // Clean up old buffers and preload nearby backgrounds
-    if (preloadManagerRef.current) {
-      preloadManagerRef.current.clearOldBuffers(5);
-
-      // Preload next and previous backgrounds for smooth navigation
-      const currentIndex = backgrounds.findIndex(bg => bg.id === background.id);
-      const nextBackgrounds = [
-        backgrounds[currentIndex + 1],
-        backgrounds[currentIndex - 1],
-        backgrounds[currentIndex + 2]
-      ].filter(Boolean);
-
-      nextBackgrounds.forEach(nextBg => {
-        if (!currentlyBuffering.includes(nextBg.id.toString()) &&
-          !preloadedVideos.has(nextBg.id.toString())) {
-          setCurrentlyBuffering(prev => [...prev, nextBg.id.toString()]);
-          preloadManagerRef.current!.preloadVideo(nextBg)
-            .then(() => {
-              // Preloaded nearby background
-            })
-            .catch(error => {
-              console.warn(`Failed to preload nearby background ${nextBg.id}:`, error);
-            })
-            .finally(() => {
-              setCurrentlyBuffering(prev => prev.filter(id => id !== nextBg.id.toString()));
-            });
-        }
-      });
-    }
-  }, [isAuthenticated, saveSelectedBackground, currentlyBuffering, preloadedVideos]);
-
-  // Get responsive size for each app type based on viewport
-  const getResponsiveSize = useCallback((appId: string) => {
-    if (!isClient) return { width: 350, height: 300, minWidth: 300, minHeight: 250 };
-
-    // Enhanced base sizes with better mobile considerations
-    const baseSizes: Record<string, {
-      width: number;
-      height: number;
-      minWidth: number;
-      minHeight: number;
-      aspectRatio?: number; // Optional aspect ratio for responsive scaling
-    }> = {
-      'pomodoro': {
-        width: 320,
-        height: 450,
-        minWidth: 280,
-        minHeight: 360,
-        aspectRatio: 0.71 // width/height
-      },
-      'todo': {
-        width: 350,
-        height: 600,
-        minWidth: 320,
-        minHeight: 400,
-        aspectRatio: 0.56
-      },
-      'music': {
-        width: 300,
-        height: 240,
-        minWidth: 280,
-        minHeight: 200,
-        aspectRatio: 1.25
-      },
-      'notes': {
-        width: 800,
-        height: 600,
-        minWidth: 400,
-        minHeight: 300,
-        aspectRatio: 1.33
-      },
-      'calculator': {
-        width: 280,
-        height: 380,
-        minWidth: 240,
-        minHeight: 320,
-        aspectRatio: 0.74
-      },
-      'sound-player': {
-        width: 280,
-        height: 400,
-        minWidth: 280,
-        minHeight: 300,
-        aspectRatio: 0.79
-      },
-      'account-settings': {
-        width: 400,
-        height: 500,
-        minWidth: 340,
-        minHeight: 400,
-        aspectRatio: 0.8
-      },
-      'chatbot': {
-        width: 420,
-        height: 600,
-        minWidth: 350,
-        minHeight: 450,
-        aspectRatio: 0.7
-      }
-    };
-
-    const baseSize = baseSizes[appId] || {
-      width: 380,
-      height: 450,
-      minWidth: 320,
-      minHeight: 350,
-      aspectRatio: 0.84
-    };
-
-    // Use the responsive utility to calculate size
-    return getResponsiveSizeUtil(baseSize.width, baseSize.height, {
-      aspectRatio: baseSize.aspectRatio,
-      minWidth: baseSize.minWidth,
-      minHeight: baseSize.minHeight,
-      maxWidthPercent: breakpointInfo.maxWidthPercent,
-      maxHeightPercent: breakpointInfo.maxHeightPercent
+  useEffect(() => {
+    if (!user) return;
+    return chatStore.subscribe((state) => {
+      const incoming = state.lastBatch.filter((m) => m.user_id !== user.id);
+      if (incoming.length === 0) return;
+      updateChatState({ lastMessageTimestamp: Date.now() });
+      const isChatVisible = openWindowsRef.current.some((w) => w.app.id === 'chat' && !w.isMinimized);
+      if (!isChatVisible) updateChatState((prev) => ({ unreadCount: prev.unreadCount + incoming.length }));
     });
-  }, [isClient, getResponsiveSizeUtil, breakpointInfo]);
+  }, [user, updateChatState]);
 
-  // App management functions
-  const openApp = useCallback((app: ModernApp) => {
-    const existingWindow = openWindows.find(w => w.app.id === app.id);
+  // --- window management ---
+  const nextZ = () => ++zCounter.current;
 
-    if (existingWindow) {
-      // Bring to front if already open
-      setOpenWindows(prev => prev.map(w =>
-        w.id === existingWindow.id
-          ? { ...w, zIndex: highestZIndex + 1, isMinimized: false }
-          : w
-      ));
-      setHighestZIndex(prev => prev + 1);
-      return;
-    }
-
-    const windowCount = openWindows.length;
-    const size = getResponsiveSize(app.id);
-
-    // Responsive positioning logic
-    const getResponsivePosition = () => {
-      if (!isResponsiveClient) {
-        return { x: 80 + (windowCount * 30), y: 60 + (windowCount * 30) };
-      }
-
-      // Base offset calculations using responsive utilities
-      let baseOffsetX = 60;
-      let baseOffsetY = 40;
-      let cascadeOffset = 25;
-
-      // Adjust for different breakpoints
-      if (breakpointInfo.name === 'xs') {
-        baseOffsetX = 10;
-        baseOffsetY = 10;
-        cascadeOffset = 10;
-      } else if (breakpointInfo.name === 'sm') {
-        baseOffsetX = 20;
-        baseOffsetY = 20;
-        cascadeOffset = 15;
-      } else if (breakpointInfo.name === 'md') {
-        baseOffsetX = 40;
-        baseOffsetY = 30;
-        cascadeOffset = 20;
-      }
-
-      // Calculate position with cascade
-      let x = baseOffsetX + (windowCount * cascadeOffset);
-      let y = baseOffsetY + (windowCount * cascadeOffset);
-
-      // Get viewport constraints from responsive utility
-      const viewport = {
-        width: window.innerWidth,
-        height: window.innerHeight
-      };
-
-      // Prevent windows from going off-screen
-      const maxX = viewport.width - size.width - 20;
-      const maxY = viewport.height - size.height - (breakpointInfo.isMobile ? 80 : 60);
-
-      // Reset cascade if we're going off-screen
-      if (x > maxX || y > maxY) {
-        // Start a new cascade row/column
-        const resetCount = Math.floor(windowCount / 4); // Reset every 4 windows
-        x = baseOffsetX + (resetCount * cascadeOffset * 2);
-        y = baseOffsetY + ((windowCount % 4) * cascadeOffset);
-
-        // Final bounds check
-        x = Math.min(Math.max(x, 10), maxX);
-        y = Math.min(Math.max(y, 10), maxY);
-      }
-
-      // For very small screens, center the window
-      if (breakpointInfo.name === 'xs') {
-        x = Math.max((viewport.width - size.width) / 2, 5);
-        y = Math.max((viewport.height - size.height) / 2, 30);
-      }
-
-      return { x, y };
-    };
-
-    const newWindow: ModernWindow = {
-      id: `${app.id}-${Date.now()}`,
-      app,
-      isMinimized: false,
-      position: getResponsivePosition(),
-      size,
-      zIndex: highestZIndex + 1
-    };
-
-    setOpenWindows([...openWindows, newWindow]);
-    setHighestZIndex(prev => prev + 1);
-  }, [openWindows, highestZIndex, getResponsiveSize]);
+  const openApp = useCallback(
+    (app: ModernApp) => {
+      setOpenWindows((prev) => {
+        const existing = prev.find((w) => w.app.id === app.id);
+        if (existing) {
+          return prev.map((w) => (w.id === existing.id ? { ...w, zIndex: nextZ(), isMinimized: false } : w));
+        }
+        const vw = window.innerWidth;
+        const vh = window.innerHeight;
+        const preferred = WINDOW_SIZES[app.id] ?? { width: 380, height: 480 };
+        const size = {
+          width: Math.min(preferred.width, vw - 24),
+          height: Math.min(preferred.height, vh - 150),
+        };
+        // Tile new windows left-to-right next to the visible ones; cascade once the row is full.
+        const visible = prev.filter((w) => !w.isMinimized);
+        const rightEdge = visible.reduce((max, w) => Math.max(max, w.position.x + w.size.width), 0);
+        const top = Math.max(84, Math.min(96, vh - size.height - 100));
+        let position = { x: visible.length ? rightEdge + 16 : 24, y: top };
+        if (position.x + size.width > vw - 12) {
+          const cascade = (visible.length % 6) * 32;
+          position = {
+            x: Math.max(12, Math.min(24 + cascade, vw - size.width - 12)),
+            y: Math.max(76, Math.min(top + cascade, vh - size.height - 96)),
+          };
+        }
+        return [...prev, { id: `${app.id}-${Date.now()}`, app, isMinimized: false, position, size, zIndex: nextZ() }];
+      });
+    },
+    []
+  );
 
   const closeWindow = useCallback((windowId: string) => {
-    setOpenWindows(openWindows.filter(w => w.id !== windowId));
-  }, [openWindows]);
+    setOpenWindows((prev) => prev.filter((w) => w.id !== windowId));
+  }, []);
 
   const minimizeWindow = useCallback((windowId: string) => {
-    setOpenWindows(prev => prev.map(w =>
-      w.id === windowId ? { ...w, isMinimized: true } : w
-    ));
+    setOpenWindows((prev) => prev.map((w) => (w.id === windowId ? { ...w, isMinimized: true } : w)));
   }, []);
 
   const restoreWindow = useCallback((windowId: string) => {
-    setOpenWindows(prev => prev.map(w =>
-      w.id === windowId ? { ...w, isMinimized: false, zIndex: highestZIndex + 1 } : w
-    ));
-    setHighestZIndex(prev => prev + 1);
-  }, [highestZIndex]);
+    setOpenWindows((prev) => prev.map((w) => (w.id === windowId ? { ...w, isMinimized: false, zIndex: nextZ() } : w)));
+  }, []);
 
   const bringToFront = useCallback((windowId: string) => {
-    setOpenWindows(prev => prev.map(w =>
-      w.id === windowId ? { ...w, zIndex: highestZIndex + 1 } : w
-    ));
-    setHighestZIndex(prev => prev + 1);
-  }, [highestZIndex]);
+    setOpenWindows((prev) => {
+      const top = Math.max(0, ...prev.map((w) => w.zIndex));
+      const target = prev.find((w) => w.id === windowId);
+      if (!target || target.zIndex === top) return prev;
+      return prev.map((w) => (w.id === windowId ? { ...w, zIndex: nextZ() } : w));
+    });
+  }, []);
 
-  // Enhanced loading screen: Wait until client-side hydration AND background is loaded/buffered
-  // Improved: Add a timeout fallback so loading screen can't get stuck forever
-  const [forceReady, setForceReady] = useState(false);
-  const [backgroundLoadedFromDB, setBackgroundLoadedFromDB] = useState(!isAuthenticated);
-  const isFirstMountRef = useRef(true);
-  const [hasMounted, setHasMounted] = useState(false);
+  const moveWindow = useCallback((windowId: string, position: { x: number; y: number }) => {
+    setOpenWindows((prev) => prev.map((w) => (w.id === windowId ? { ...w, position } : w)));
+  }, []);
 
-  // Compute raw ready state for effect dependency
-  const rawBackgroundReady = currentBackground?.src
-    ? !currentlyBuffering.includes(currentBackground.id.toString()) && !videoLoadError && backgroundLoadedFromDB
-    : true;
+  const openAccount = useCallback(() => {
+    if (!user) {
+      onShowAuth();
+      return;
+    }
+    const app = modernApps.find((a) => a.id === 'account-settings');
+    if (app) openApp(app);
+  }, [user, onShowAuth, openApp]);
 
+  // Keyboard: Escape minimizes the top-most window when no modal is open.
   useEffect(() => {
-    if (!isClient || rawBackgroundReady) return;
-    if (!isFirstMountRef.current) return;
-    const timer = setTimeout(() => {
-      setForceReady(true);
-    }, 8000); // 8 seconds max loading screen
-    return () => clearTimeout(timer);
-  }, [isClient, rawBackgroundReady]);
-
-  // Load saved background when user authenticates (only block loading on first mount)
-  useEffect(() => {
-    if (!isFirstMountRef.current) return;
-    const loadSavedBackground = async () => {
-      if (isAuthenticated) {
-        try {
-          const savedBackgroundId = await loadSelectedBackground();
-          if (savedBackgroundId) {
-            const savedBackground = backgrounds.find(bg => bg.id.toString() === savedBackgroundId);
-            if (savedBackground) {
-              setCurrentBackground(savedBackground);
-            }
-          }
-        } catch (error) {
-          console.error('Failed to load saved background:', error);
-        }
-        setBackgroundLoadedFromDB(true);
-      } else {
-        setBackgroundLoadedFromDB(true);
-      }
+    const onKey = (e: KeyboardEvent) => {
+      if (e.key !== 'Escape' || showBackgrounds || showCalendar || showStats) return;
+      const visible = openWindowsRef.current.filter((w) => !w.isMinimized);
+      if (!visible.length) return;
+      const top = visible.reduce((a, b) => (a.zIndex > b.zIndex ? a : b));
+      minimizeWindow(top.id);
     };
-    loadSavedBackground();
-    // After first mount, never block loading again
-    isFirstMountRef.current = false;
-    setHasMounted(true);
-  }, [isAuthenticated, loadSelectedBackground]);
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [showBackgrounds, showCalendar, showStats, minimizeWindow]);
 
-  // Only block loading screen on first mount
-  const isBackgroundReady = hasMounted ? true : (forceReady || rawBackgroundReady);
+  const currentTime = now ? now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+  const currentDate = now ? now.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' }) : '';
 
-  if (!isClient || !isBackgroundReady) {
-    return (
-      <div className={desktopStyles.desktop}>
-        <div className={desktopStyles.loadingState}>
-          {/* Centered spinner and progress bar for better feedback */}
-          <div className={desktopStyles.loadingDecorations}>
-            <div className={desktopStyles.floatingDot}></div>
-            <div className={desktopStyles.floatingDot}></div>
-            <div className={desktopStyles.floatingDot}></div>
-            <div className={desktopStyles.floatingDot}></div>
-          </div>
-
-          <div className={desktopStyles.bookLoader}>
-            <div className={desktopStyles.modernSpinner}>
-              <div className={desktopStyles.spinnerRing}></div>
-              <div className={desktopStyles.spinnerRing}></div>
-              <div className={desktopStyles.spinnerRing}></div>
-              <div className={desktopStyles.spinnerCenter}></div>
-            </div>
-          </div>
-
-          <div className={desktopStyles.loadingText}>LoFi.Study</div>
-          <div className={desktopStyles.loadingSubtext}>
-            {currentlyBuffering.length > 0
-              ? "Loading background..."
-              : "Preparing your focus environment"}
-          </div>
-
-          <div className={desktopStyles.infiniteLoadingBackground}>
-            <div className={desktopStyles.infiniteLoaderBar}>
-              <div className={desktopStyles.infiniteLoaderFill}></div>
-            </div>
-          </div>
-
-          {/* Always show progress bar, even if buffering is slow */}
-          <div className={desktopStyles.loadingProgress}>
-            <div
-              className={desktopStyles.progressBar}
-              style={{
-                width: `${Math.min(
-                  100,
-                  Math.round(
-                    (preloadManagerRef.current?.getBufferHealth(
-                      currentBackground.id.toString()
-                    ) ?? 0) * 100
-                  )
-                )}%`,
-                background: currentlyBuffering.length > 0 ? '#ffb347' : '#6c63ff',
-                transition: 'width 0.5s cubic-bezier(0.4,0,0.2,1)',
-                height: '8px',
-                borderRadius: '4px',
-                boxShadow: '0 2px 8px rgba(0,0,0,0.15)'
-              }}
-            ></div>
-          </div>
-        </div>
-      </div>
-    );
-  }
+  const videoSrc = useMobileVideo ? currentBackground.srcMobile : currentBackground.src;
 
   return (
     <div className={desktopStyles.desktop}>
-      {/* Background Video with Enhanced Buffering wrapped in ErrorBoundary */}
-      <VideoErrorBoundary fallback={<div className={desktopStyles.backgroundFallback}><div className={desktopStyles.fallbackContent}><p>Background system unavailable</p></div></div>}>
-        <div>
-          {currentBackground?.src && (
-            <>
-              {/* Animated video */}
-              <video
-                ref={videoRef}
-                className={desktopStyles.backgroundVideo}
-                src={currentBackground.src}
-                autoPlay
-                muted
-                loop
-                playsInline
-                preload="auto"
-                onLoadStart={handleVideoLoadStart}
-                onCanPlay={handleVideoLoad}
-                onError={handleVideoError}
-                style={{
-                  opacity: videoLoadError ? 0 : 1,
-                  transition: 'opacity 0.3s ease'
-                }}
-              />
-            </>
-          )}
-
-
-
-          {/* Fallback for video errors */}
-          {videoLoadError && (
-            <div className={desktopStyles.backgroundFallback}>
-              <div className={desktopStyles.fallbackContent}>
-                <p>Background video unavailable</p>
-                <button
-                  onClick={() => setCurrentBackground(DEFAULT_BACKGROUND)}
-                  className={desktopStyles.fallbackButton}
-                >
-                  Use Default Background
-                </button>
-              </div>
-            </div>
-          )}
-
-
-        </div>
-      </VideoErrorBoundary>
-
-      {/* Desktop UI Components */}
-      <TopBar
-        user={user}
-        onToggleStats={() => setShowStats(!showStats)}
-        onShare={() => { }} // Empty function for now
-        onAccountAction={() => {
-          if (!user) {
-            onShowAuth();
-          } else {
-            const accountSettingsApp = modernApps.find(app => app.id === 'account-settings');
-            if (accountSettingsApp) {
-              openApp(accountSettingsApp);
-            }
-          }
-        }}
+      {/* Poster first (instant), video fades in over it once it can play */}
+      <div
+        className={desktopStyles.backgroundPoster}
+        style={{ backgroundImage: `url(${currentBackground.poster})` }}
+        aria-hidden
       />
+      {!reduceMotion && !videoFailed && (
+        <video
+          key={videoSrc}
+          ref={videoRef}
+          className={desktopStyles.backgroundVideo}
+          src={videoSrc}
+          poster={currentBackground.poster}
+          autoPlay
+          muted
+          loop
+          playsInline
+          preload="auto"
+          disablePictureInPicture
+          aria-hidden
+          tabIndex={-1}
+          onCanPlay={() => setVideoReady(true)}
+          onError={() => setVideoFailed(true)}
+          style={{ opacity: videoReady ? 1 : 0 }}
+        />
+      )}
+      <div className={desktopStyles.backgroundShade} aria-hidden />
 
-      <BottomBar
-        currentTime={currentTime}
-        currentDate={currentDate}
-        modernApps={modernApps}
-        openWindows={openWindows}
-        appStates={appStates}
-        user={user}
-        isConfigured={isConfigured}
-        backgroundSaveLoading={backgroundSaveLoading}
-        onOpenCalendar={() => setShowCalendar(true)}
-        onOpenApp={openApp}
-        onMinimize={minimizeWindow}
-        onRestoreWindow={restoreWindow}
-        onOpenBackgrounds={() => setShowBackgrounds(true)}
-        onAccountAction={() => {
-          if (!user) {
-            onShowAuth();
-          } else {
-            const accountSettingsApp = modernApps.find(app => app.id === 'account-settings');
-            if (accountSettingsApp) {
-              openApp(accountSettingsApp);
-            }
-          }
-        }}
-      />
+      <main className={desktopStyles.workspace} aria-busy={authLoading}>
+        <TopBar
+          user={user}
+          onToggleStats={() => setShowStats((v) => !v)}
+          onAccountAction={openAccount}
+          onToggleMusic={() => setIsMusicSidebarOpen((v) => !v)}
+        />
 
-      <WindowManager
-        openWindows={openWindows}
-        onMinimize={minimizeWindow}
-        onClose={closeWindow}
-        onBringToFront={bringToFront}
-      />
+        <WindowManager
+          openWindows={openWindows}
+          compact={compact}
+          onMinimize={minimizeWindow}
+          onClose={closeWindow}
+          onBringToFront={bringToFront}
+          onMove={moveWindow}
+        />
 
-      {/* Background Selector Modal */}
+        <BottomBar
+          currentTime={currentTime}
+          currentDate={currentDate}
+          modernApps={modernApps}
+          openWindows={openWindows}
+          appStates={appStates}
+          user={user}
+          onOpenCalendar={() => setShowCalendar(true)}
+          onOpenApp={openApp}
+          onMinimize={minimizeWindow}
+          onRestoreWindow={restoreWindow}
+          onOpenBackgrounds={() => setShowBackgrounds(true)}
+          onAccountAction={openAccount}
+        />
+      </main>
+
       {showBackgrounds && (
         <BackgroundSelector
           showBackgrounds={showBackgrounds}
           currentBackground={currentBackground}
           selectedCategory={selectedCategory}
-          onClose={() => {
-            setShowBackgrounds(false);
-          }}
+          onClose={() => setShowBackgrounds(false)}
           onBackgroundChange={handleBackgroundChange}
           onCategoryChange={setSelectedCategory}
         />
       )}
 
-      {/* Calendar Modal */}
-      {showCalendar && (
-        <Calendar
-          isVisible={showCalendar}
-          onClose={() => setShowCalendar(false)}
-        />
-      )}
+      {showCalendar && <Calendar isVisible={showCalendar} onClose={() => setShowCalendar(false)} />}
 
-      {/* Stats Modal */}
-      {showStats && (
-        <StatsModal
-          isOpen={showStats}
-          onClose={() => setShowStats(false)}
-        />
-      )}
+      {showStats && <StatsModal isOpen={showStats} onClose={() => setShowStats(false)} onSignIn={onShowAuth} />}
 
-      {/* Music Player Sidebar */}
-      <MusicPlayerSidebar
-        isOpen={isMusicSidebarOpen}
-        onToggle={() => setIsMusicSidebarOpen(!isMusicSidebarOpen)}
-      />
+      <MusicPlayerSidebar isOpen={isMusicSidebarOpen} onToggle={() => setIsMusicSidebarOpen((v) => !v)} />
 
-      {/* Notification System */}
       <NotificationManager
         notifications={notifications}
-        onRemoveNotification={(id: string) => {
-          setNotifications(prev => prev.filter(n => n.id !== id));
-        }}
+        onRemoveNotification={(id: string) => setNotifications((prev) => prev.filter((n) => n.id !== id))}
       />
     </div>
   );

@@ -447,22 +447,17 @@
 }
 
 /* Unauthenticated state styling - only apply to account button */
+/* Signed out: a friendly accent, not an error state */
 .iconButton.accountButton:not(.authenticatedUser) {
-  background: rgba(239, 68, 68, 0.08) !important;
-  border: 1px solid rgba(239, 68, 68, 0.3) !important;
-  color: rgba(239, 68, 68, 0.9) !important;
+  background: rgba(255, 123, 0, 0.1);
+  border-color: rgba(255, 123, 0, 0.35);
+  color: #ffb066;
 }
 
 .iconButton.accountButton:not(.authenticatedUser):hover {
-  background: rgba(239, 68, 68, 0.15) !important;
-  border-color: rgba(239, 68, 68, 0.5) !important;
+  background: rgba(255, 123, 0, 0.18);
+  border-color: rgba(255, 123, 0, 0.55);
   transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(239, 68, 68, 0.2) !important;
-}
-
-.iconButton.accountButton:not(.authenticatedUser):hover::before {
-  background: linear-gradient(135deg, #ef4444, #dc2626) !important;
-  opacity: 1 !important;
 }
 
 /* Warning indicator for unauthenticated users */
@@ -472,11 +467,9 @@
   right: -2px;
   width: 12px;
   height: 12px;
-  background: linear-gradient(135deg, #ef4444, #dc2626);
+  background: var(--accent-color, #ff7b00);
   border: 2px solid var(--bg-primary);
   border-radius: 50%;
-  box-shadow: 0 0 8px rgba(239, 68, 68, 0.4);
-  animation: warningPulse 2s ease-in-out infinite;
   z-index: 2;
 }
 
@@ -648,4 +641,96 @@
 /* Utility Classes */
 .hidden {
   display: none;
+}
+
+/* ------------------------------------------------------------------ */
+/* Dock on touch devices / small screens                               */
+/* ------------------------------------------------------------------ */
+.selectionBar {
+  bottom: max(24px, env(safe-area-inset-bottom));
+}
+
+@media (hover: none) {
+  .tooltip {
+    display: none;
+  }
+}
+
+@media (max-width: 900px) {
+  .timeDisplay {
+    display: none;
+  }
+
+  .timeButton {
+    min-width: 0;
+    width: 44px;
+    padding: 0;
+    justify-content: center;
+  }
+}
+
+@media (max-width: 640px) {
+  .selectionBar {
+    left: max(8px, env(safe-area-inset-left));
+    right: max(8px, env(safe-area-inset-right));
+    bottom: max(10px, env(safe-area-inset-bottom));
+    transform: none;
+    max-width: none;
+    padding: 8px;
+    gap: 6px;
+    border-radius: 20px;
+    justify-content: flex-start;
+    overflow-x: auto;
+    overflow-y: visible;
+    scrollbar-width: none;
+    scroll-snap-type: x proximity;
+  }
+
+  .selectionBar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .selectionBar > * {
+    gap: 6px;
+    flex-shrink: 0;
+  }
+
+  .iconButton,
+  .timeButton {
+    width: 44px;
+    height: 44px;
+    min-width: 44px;
+    scroll-snap-align: start;
+  }
+
+  .runtimeInfo {
+    font-size: 9px;
+  }
+}
+
+@media (max-width: 640px) {
+  /* Account + sign-in live in the top bar on phones */
+  .accountButton {
+    display: none !important;
+  }
+
+  .selectionBar [class*="divider"] {
+    display: none;
+  }
+
+  .iconButton,
+  .timeButton {
+    width: 42px;
+    height: 42px;
+    min-width: 42px;
+  }
+
+  .selectionBar,
+  .selectionBar > * {
+    gap: 4px;
+  }
+
+  .selectionBar {
+    justify-content: space-between;
+  }
 }

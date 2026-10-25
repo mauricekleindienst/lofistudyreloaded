@@ -1,7 +1,6 @@
 "use client";
 
-import React, { useEffect, useState } from 'react';
-import Image from 'next/image';
+import React from 'react';
 import {
   Clock,
   User,
@@ -9,39 +8,11 @@ import {
   LogIn,
   MessageSquareDot
 } from 'lucide-react';
-import { User as SupabaseUser } from '@supabase/supabase-js';
 import styles from '../../../styles/SelectionBar.module.css';
 import desktopStyles from '../../../styles/Desktop.module.css';
 import { type AppStates } from '../../contexts/AppStateContext';
-
-// Extended user type that includes custom users table fields
-interface ExtendedUser extends SupabaseUser {
-  avatar_url?: string;
-  full_name?: string;
-  premium?: boolean;
-  streak_count?: number;
-  total_focus_time?: number;
-  settings?: Record<string, unknown>;
-}
-
-interface ModernApp {
-  id: string;
-  name: string;
-  icon: React.ComponentType<{ size?: number; className?: string }>;
-  component: React.ComponentType;
-  category: 'productivity' | 'entertainment' | 'tools' | 'study';
-  color: string;
-  description: string;
-}
-
-interface ModernWindow {
-  id: string;
-  app: ModernApp;
-  position: { x: number; y: number };
-  size: { width: number; height: number };
-  isMinimized: boolean;
-  zIndex: number;
-}
+import type { AppUser } from '../../contexts/AuthContext';
+import type { ModernApp, ModernWindow } from './types';
 
 interface BottomBarProps {
   currentTime: string;
@@ -49,9 +20,7 @@ interface BottomBarProps {
   modernApps: ModernApp[];
   openWindows: ModernWindow[];
   appStates: AppStates;
-  user: ExtendedUser | null;
-  isConfigured: boolean;
-  backgroundSaveLoading: boolean;
+  user: AppUser | null;
   onOpenCalendar: () => void;
   onOpenApp: (app: ModernApp) => void;
   onMinimize: (windowId: string) => void;
@@ -63,9 +32,8 @@ interface BottomBarProps {
 // Helper function to get app runtime info
 const getAppRuntimeInfo = (app: ModernApp, window: ModernWindow | undefined, appStates: AppStates) => {
   if (app.id === 'pomodoro') {
-    if (!window) return null; // Pomodoro timer only makes sense if app is open
-    // Show timer when running OR when time is not at default values
-    if (appStates.pomodoro.isRunning || appStates.pomodoro.minutes !== 25 || appStates.pomodoro.seconds !== 0) {
+    // The timer keeps running when its window is closed, so show it whenever it runs.
+    if (appStates.pomodoro.isRunning) {
       return `${appStates.pomodoro.minutes.toString().padStart(2, '0')}:${appStates.pomodoro.seconds.toString().padStart(2, '0')}`;
     }
     return null;
@@ -95,22 +63,7 @@ const getAppRuntimeInfo = (app: ModernApp, window: ModernWindow | undefined, app
   return null;
 };
 
-// Helper function to get avatar URL from user object
-const getUserAvatarUrl = (user: ExtendedUser | null): string | null => {
-  if (!user) return null;
-
-  // Check custom users table avatar_url first
-  if (user.avatar_url) return user.avatar_url;
-
-  // Check Supabase auth user metadata
-  if (user.user_metadata?.avatar_url) return user.user_metadata.avatar_url;
-
-  // Check other common OAuth avatar fields
-  if (user.user_metadata?.picture) return user.user_metadata.picture;
-  if (user.user_metadata?.avatar) return user.user_metadata.avatar;
-
-  return null;
-};
+const getUserAvatarUrl = (user: AppUser | null): string | null => user?.avatar_url || null;
 
 export default function BottomBar({
   currentTime,
@@ -119,8 +72,6 @@ export default function BottomBar({
   openWindows,
   appStates,
   user,
-  isConfigured,
-  backgroundSaveLoading,
   onOpenCalendar,
   onOpenApp,
   onMinimize,
@@ -128,15 +79,8 @@ export default function BottomBar({
   onOpenBackgrounds,
   onAccountAction
 }: BottomBarProps) {
-  const [isClient, setIsClient] = useState(false);
-
-  useEffect(() => {
-    setIsClient(true);
-  }, []);
-
-  // Prevent hydration mismatch by not rendering time-sensitive content until client-side
-  const displayTime = isClient ? currentTime : '--:--';
-  const displayDate = isClient ? currentDate : 'Loading...';
+  const displayTime = currentTime || '--:--';
+  const displayDate = currentDate || '\u00a0';
 
   // Handle app button click - minimize if open, restore if minimized, open if closed
   const handleAppButtonClick = (app: ModernApp) => {
@@ -155,12 +99,13 @@ export default function BottomBar({
   };
 
   return (
-    <div className={styles.selectionBar}>
+    <nav className={styles.selectionBar} aria-label="Dock">
       {/* Time and Date */}
       <div className={desktopStyles.appBarSection}>        <button
         onClick={onOpenCalendar}
         className={styles.timeButton}
         title="Open Calendar"
+        aria-label={`Calendar — ${displayTime}, ${displayDate}`}
       >
 
         <Clock size={20} />
@@ -194,12 +139,9 @@ export default function BottomBar({
             // Determine the icon to use
             let CurrentIcon = app.icon;
 
-            // Special case for chat: show dot icon if there was recent activity (last 5 mins)
-            if (app.id === 'chat') {
-              const isRecentlyActive = appStates.chat.lastMessageTimestamp && (Date.now() - appStates.chat.lastMessageTimestamp < 5 * 60 * 1000);
-              if (isRecentlyActive) {
-                CurrentIcon = MessageSquareDot;
-              }
+            // Chat shows a dotted icon while there are unread messages
+            if (app.id === 'chat' && appStates.chat.unreadCount > 0) {
+              CurrentIcon = MessageSquareDot;
             }
 
             const runtimeInfo = getAppRuntimeInfo(app, openWindow, appStates);
@@ -209,6 +151,8 @@ export default function BottomBar({
                 <button
                   onClick={() => handleAppButtonClick(app)}
                   className={`${styles.iconButton} ${isOpen ? styles.active : ''} ${isMinimized ? styles.minimized : ''}`}
+                  aria-label={app.name}
+                  aria-pressed={isOpen && !isMinimized}
                 >
                   <CurrentIcon size={22} />
 
@@ -241,6 +185,7 @@ export default function BottomBar({
         <button
           onClick={onOpenBackgrounds}
           className={styles.iconButton}
+          aria-label="Change background"
         >
           <ImageIcon size={20} />
           <div className={styles.tooltip}>
@@ -252,16 +197,18 @@ export default function BottomBar({
         <button
           onClick={onAccountAction}
           className={`${styles.iconButton} ${styles.accountButton} ${user ? styles.authenticatedUser : ''}`}
-          disabled={!isConfigured}
+          aria-label={user ? 'Account' : 'Sign in'}
         >
           {user ? (
             <div className={styles.userAvatar}>
               {getUserAvatarUrl(user) ? (
-                <Image
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
                   src={getUserAvatarUrl(user)!}
-                  alt="User Avatar"
+                  alt=""
                   width={32}
                   height={32}
+                  referrerPolicy="no-referrer"
                   className={styles.avatarImage}
                   onError={(e) => {
                     // Fallback to icon if image fails to load
@@ -285,34 +232,19 @@ export default function BottomBar({
           {user ? (
             <div className={styles.authenticatedIndicator}></div>
           ) : (
-            isConfigured && <div className={styles.unauthenticatedIndicator}></div>
+            <div className={styles.unauthenticatedIndicator}></div>
           )}
           <div className={styles.tooltip}>
             <div className="font-semibold">
-              {!isConfigured ? 'Auth Disabled' : user ? 'Account' : 'Sign In'}
+              {user ? 'Account' : 'Sign In'}
             </div>
             <div className={desktopStyles.tooltipDescription}>
-              {!isConfigured
-                ? 'Authentication not configured'
-                : user
-                  ? `Signed in as ${user.full_name || user.user_metadata?.full_name || user.email}`
-                  : 'Save your progress & sync data'
-              }
+              {user ? `Signed in as ${user.full_name || user.email}` : 'Sync your progress across devices'}
             </div>
           </div>
         </button>
 
-        {/* Data Sync Status - Only show syncing indicator, not local mode */}
-        {backgroundSaveLoading && (
-          <div className={`${styles.statusIndicator} ${styles.syncing}`}>
-            <div className={styles.syncSpinner}></div>
-            <div className={styles.tooltip}>
-              <div className="font-semibold">Syncing...</div>
-              <div className={desktopStyles.tooltipDescription}>Saving your preferences</div>
-            </div>
-          </div>
-        )}
       </div>
-    </div>
+    </nav>
   );
 }

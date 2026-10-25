@@ -1,173 +1,192 @@
 "use client";
 
-import { createContext, useContext, useEffect, useState } from 'react';
-import { User, Session } from '@supabase/supabase-js';
-import { createClient } from '../utils/supabase/client';
-import { useUserProfile, ExtendedUser } from '../hooks/useUserProfile';
+import { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import { api, ApiError, toast } from '../lib/api';
+import { db } from '../lib/database';
+
+export type OAuthProvider = 'discord' | 'github' | 'google';
+
+export interface AppUser {
+  id: string;
+  email: string;
+  full_name: string;
+  avatar_url: string | null;
+  has_password: boolean;
+  providers: string[];
+  settings: Record<string, unknown>;
+  created_at: string;
+}
+
+type Result = { error: string | null };
 
 interface AuthContextType {
-  user: ExtendedUser | null;
-  authUser: User | null;
-  session: Session | null;
+  user: AppUser | null;
   loading: boolean;
-  isConfigured: boolean;
-  signIn: (email: string, password: string) => Promise<{ error: unknown }>;
-  signUp: (email: string, password: string) => Promise<{ error: unknown }>;
+  providers: OAuthProvider[];
+  signIn: (email: string, password: string) => Promise<Result>;
+  signUp: (email: string, password: string, fullName?: string) => Promise<Result>;
   signOut: () => Promise<void>;
-  signInWithProvider: (provider: 'discord' | 'github' | 'google') => Promise<{ error: unknown }>;
+  signInWithProvider: (provider: OAuthProvider) => void;
+  updateProfile: (changes: { full_name?: string; avatar_url?: string | null }) => Promise<Result>;
+  changePassword: (currentPassword: string, newPassword: string) => Promise<Result>;
+  deleteAccount: (password: string) => Promise<Result>;
+  refresh: () => Promise<void>;
 }
 
 const AuthContext = createContext<AuthContextType | undefined>(undefined);
 
+const message = (err: unknown) => (err instanceof ApiError ? err.message : 'Something went wrong, please try again.');
+
 export function AuthProvider({ children }: { children: React.ReactNode }) {
-  const [authUser, setAuthUser] = useState<User | null>(null);
-  const [session, setSession] = useState<Session | null>(null);
+  const [user, setUser] = useState<AppUser | null>(null);
   const [loading, setLoading] = useState(true);
-  const [isConfigured, setIsConfigured] = useState(false);
-  const [supabase] = useState(() => createClient());
+  const [providers, setProviders] = useState<OAuthProvider[]>([]);
 
-  // Use the user profile hook to get extended user data
-  const { getExtendedUser, createProfile, userProfile } = useUserProfile(authUser);
+  // Keep the data layer in sync *during render*, so child effects that run in
+  // the same commit already talk to the right backend (account vs. guest storage).
+  db.setAuthenticated(Boolean(user));
 
-  // Auto-create user profile for new users (especially OAuth users)
-  useEffect(() => {
-    const createUserProfileIfNeeded = async () => {
-      if (authUser && !userProfile && isConfigured) {
-        try {
-          const profileData = {
-            id: authUser.id,
-            email: authUser.email || '',
-            full_name: authUser.user_metadata?.full_name || authUser.user_metadata?.name || '',
-            avatar_url: authUser.user_metadata?.avatar_url || authUser.user_metadata?.picture || '',
-            premium: false,
-            streak_count: 0,
-            total_focus_time: 0,
-            settings: {}
-          };
-
-          await createProfile(profileData);
-        } catch (error) {
-          console.error('Failed to create user profile:', error);
-        }
-      }
-    };
-
-    createUserProfileIfNeeded();
-  }, [authUser, userProfile, createProfile, isConfigured]);
-
-  useEffect(() => {
-    // Check if Supabase is properly configured
-    const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
-    
-    const configured = supabaseUrl && 
-                     supabaseKey && 
-                     supabaseUrl !== 'your_supabase_project_url' && 
-                     supabaseKey !== 'your_supabase_anon_key';
-    
-    setIsConfigured(!!configured);
-
-    if (!configured) {
-      console.warn('Supabase not configured. Authentication features will be disabled.');
-      setLoading(false);
-      return;
+  const applyUser = useCallback(async (next: AppUser | null, { importGuest = false } = {}) => {
+    db.setAuthenticated(Boolean(next));
+    if (next && importGuest) {
+      const imported = await db.importGuestData();
+      if (imported > 0) toast(`Moved ${imported} item${imported === 1 ? '' : 's'} from this device into your account.`, 'success');
     }
+    setUser(next);
+  }, []);
 
-    // Get initial session
-    const getInitialSession = async () => {
-      try {
-        const { data: { session } } = await supabase.auth.getSession();
-        setSession(session);
-        setAuthUser(session?.user ?? null);
-      } catch (error) {
-        console.error('Error getting initial session:', error);
-      } finally {
-        setLoading(false);
-      }
-    };
-
-    getInitialSession();
-
-    // Listen for auth changes
-    const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      async (event, session) => {
-        setSession(session);
-        setAuthUser(session?.user ?? null);
-        setLoading(false);
-      }
-    );
-
-    return () => subscription.unsubscribe();
-  }, [supabase]);  const signIn = async (email: string, password: string) => {
-    if (!isConfigured) {
-      return { error: { message: 'Authentication not configured' } };
-    }    try {
-      const { error } = await supabase.auth.signInWithPassword({
-        email,
-        password,
-      });
-      return { error };
-    } catch {
-      return { error: { message: 'Authentication service unavailable' } };
-    }
-  };
-
-  const signUp = async (email: string, password: string) => {
-    if (!isConfigured) {
-      return { error: { message: 'Authentication not configured' } };
-    }    try {
-      const { error } = await supabase.auth.signUp({
-        email,
-        password,
-      });
-      return { error };
-    } catch {
-      return { error: { message: 'Authentication service unavailable' } };
-    }
-  };
-
-  const signOut = async () => {
-    if (!isConfigured) return;    try {
-      await supabase.auth.signOut();
-    } catch (err) {
-      console.error('Error signing out:', err);
-    }
-  };
-
-  const signInWithProvider = async (provider: 'discord' | 'github' | 'google') => {
-    if (!isConfigured) {
-      return { error: { message: 'Authentication not configured' } };
-    }
-    
+  const refresh = useCallback(async () => {
     try {
-      const { error } = await supabase.auth.signInWithOAuth({
-        provider,
-        options: {
-          redirectTo: `${window.location.origin}/auth/callback`
-        }      });
-      return { error };
+      const { user: me } = await api<{ user: AppUser | null }>('/api/auth/me');
+      await applyUser(me, { importGuest: true });
     } catch {
-      return { error: { message: 'Authentication service unavailable' } };
+      await applyUser(null);
     }
-  };
+  }, [applyUser]);
 
-  const value = {
-    user: getExtendedUser(),
-    authUser,
-    session,
-    loading,
-    isConfigured,
-    signIn,
-    signUp,
-    signOut,
-    signInWithProvider,
-  };
+  useEffect(() => {
+    let cancelled = false;
+    (async () => {
+      await refresh();
+      if (!cancelled) setLoading(false);
+    })();
+    api<{ providers: OAuthProvider[] }>('/api/auth/providers')
+      .then((r) => !cancelled && setProviders(r.providers))
+      .catch(() => undefined);
 
-  return (
-    <AuthContext value={value}>
-      {children}
-    </AuthContext>
+    // Surface OAuth redirect results (?auth_error=… / ?signed_in=1) once, then clean the URL.
+    const params = new URLSearchParams(window.location.search);
+    const authError = params.get('auth_error');
+    if (authError) toast(authError, 'error');
+    if (params.get('signed_in')) toast('Signed in — welcome!', 'success');
+    if (authError || params.get('signed_in')) {
+      params.delete('auth_error');
+      params.delete('signed_in');
+      const qs = params.toString();
+      window.history.replaceState(null, '', `${window.location.pathname}${qs ? `?${qs}` : ''}${window.location.hash}`);
+    }
+    return () => {
+      cancelled = true;
+    };
+  }, [refresh]);
+
+  const signIn = useCallback(
+    async (email: string, password: string): Promise<Result> => {
+      try {
+        const { user: me } = await api<{ user: AppUser }>('/api/auth/login', { method: 'POST', json: { email, password } });
+        await applyUser(me, { importGuest: true });
+        return { error: null };
+      } catch (err) {
+        return { error: message(err) };
+      }
+    },
+    [applyUser]
   );
+
+  const signUp = useCallback(
+    async (email: string, password: string, fullName?: string): Promise<Result> => {
+      try {
+        const { user: me } = await api<{ user: AppUser }>('/api/auth/register', {
+          method: 'POST',
+          json: { email, password, full_name: fullName },
+        });
+        await applyUser(me, { importGuest: true });
+        return { error: null };
+      } catch (err) {
+        return { error: message(err) };
+      }
+    },
+    [applyUser]
+  );
+
+  const signOut = useCallback(async () => {
+    try {
+      await api('/api/auth/logout', { method: 'POST' });
+    } catch {
+      // the cookie is httpOnly; if the request failed the session simply stays valid server-side
+    }
+    await applyUser(null);
+    toast('Signed out', 'info');
+  }, [applyUser]);
+
+  const signInWithProvider = useCallback((provider: OAuthProvider) => {
+    window.location.assign(`/api/auth/oauth/${provider}`);
+  }, []);
+
+  const updateProfile = useCallback(async (changes: { full_name?: string; avatar_url?: string | null }): Promise<Result> => {
+    try {
+      const { user: me } = await api<{ user: AppUser }>('/api/profile', { method: 'PATCH', json: changes });
+      setUser(me);
+      return { error: null };
+    } catch (err) {
+      return { error: message(err) };
+    }
+  }, []);
+
+  const changePassword = useCallback(async (currentPassword: string, newPassword: string): Promise<Result> => {
+    try {
+      await api('/api/auth/password', {
+        method: 'POST',
+        json: { current_password: currentPassword, new_password: newPassword },
+      });
+      setUser((u) => (u ? { ...u, has_password: true } : u));
+      return { error: null };
+    } catch (err) {
+      return { error: message(err) };
+    }
+  }, []);
+
+  const deleteAccount = useCallback(
+    async (password: string): Promise<Result> => {
+      try {
+        await api('/api/account', { method: 'DELETE', json: { confirm: 'DELETE', password } });
+        await applyUser(null);
+        return { error: null };
+      } catch (err) {
+        return { error: message(err) };
+      }
+    },
+    [applyUser]
+  );
+
+  const value = useMemo(
+    () => ({
+      user,
+      loading,
+      providers,
+      signIn,
+      signUp,
+      signOut,
+      signInWithProvider,
+      updateProfile,
+      changePassword,
+      deleteAccount,
+      refresh,
+    }),
+    [user, loading, providers, signIn, signUp, signOut, signInWithProvider, updateProfile, changePassword, deleteAccount, refresh]
+  );
+
+  return <AuthContext value={value}>{children}</AuthContext>;
 }
 
 export function useAuth() {

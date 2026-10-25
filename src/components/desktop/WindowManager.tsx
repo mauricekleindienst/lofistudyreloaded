@@ -1,250 +1,173 @@
 "use client";
 
-import React from 'react';
+import React, { useCallback, useEffect, useRef } from 'react';
 import { X, Minus } from 'lucide-react';
 import desktopStyles from '../../../styles/Desktop.module.css';
-
-interface ModernApp {
-  id: string;
-  name: string;
-  icon: React.ComponentType<{ size?: number; className?: string }>;
-  component: React.ComponentType;
-  category: 'productivity' | 'entertainment' | 'tools' | 'study';
-  color: string;
-  description: string;
-}
-
-interface ModernWindow {
-  id: string;
-  app: ModernApp;
-  position: { x: number; y: number };
-  size: { width: number; height: number };
-  isMinimized: boolean;
-  zIndex: number;
-  minSize?: { width: number; height: number };
-  maxSize?: { width: number; height: number };
-}
+import type { ModernWindow } from './types';
 
 interface WindowManagerProps {
   openWindows: ModernWindow[];
+  /** Phones get full-screen sheets instead of floating windows. */
+  compact: boolean;
   onMinimize: (windowId: string) => void;
   onClose: (windowId: string) => void;
   onBringToFront: (windowId: string) => void;
+  onMove: (windowId: string, position: { x: number; y: number }) => void;
 }
 
-interface DraggableProps {
-  children: React.ReactNode;
-  disabled?: boolean;
-  defaultPosition?: { x: number; y: number };
-  onStart?: () => void;
-  handle?: string;
-}
+const EDGE = 8;
+const TOP_SAFE = 8;
+const BOTTOM_SAFE = 96; // keep the title bar clear of the dock
 
-// Custom Draggable Hook with both Mouse and Touch support
-const useDraggable = (nodeRef: React.RefObject<HTMLElement | null>) => {
-  const [isDragging, setIsDragging] = React.useState(false);
-  const [dragOffset, setDragOffset] = React.useState({ x: 0, y: 0 });
-
-  // Get client coordinates from either mouse or touch event
-  const getClientCoordinates = (e: MouseEvent | TouchEvent | React.MouseEvent | React.TouchEvent) => {
-    if ('touches' in e) {
-      // Touch event
-      const touch = e.touches[0] || e.changedTouches[0];
-      return { clientX: touch.clientX, clientY: touch.clientY };
-    } else {
-      // Mouse event
-      return { clientX: e.clientX, clientY: e.clientY };
-    }
-  };
-
-  // Start dragging (mouse or touch)
-  const handleDragStart = React.useCallback((e: React.MouseEvent | React.TouchEvent) => {
-    if (!nodeRef.current) return;
-    
-    const rect = nodeRef.current.getBoundingClientRect();
-    const { clientX, clientY } = getClientCoordinates(e);
-    
-    setIsDragging(true);
-    setDragOffset({
-      x: clientX - rect.left,
-      y: clientY - rect.top
-    });
-
-    // Prevent default behavior (especially important for touch)
-    e.preventDefault();
-  }, [nodeRef]);
-
-  // Update position during drag (mouse or touch)
-  const updatePosition = React.useCallback((e: MouseEvent | TouchEvent) => {
-    if (!isDragging || !nodeRef.current) return;
-    
-    const { clientX, clientY } = getClientCoordinates(e);
-    const newX = clientX - dragOffset.x;
-    const newY = clientY - dragOffset.y;
-    
-    // Get viewport dimensions
-    const viewportWidth = window.innerWidth;
-    const viewportHeight = window.innerHeight;
-    const elementWidth = nodeRef.current.offsetWidth;
-    const elementHeight = nodeRef.current.offsetHeight;
-    
-    // Calculate maximum positions to keep window fully within viewport
-    const maxX = viewportWidth - elementWidth;
-    const maxY = viewportHeight - elementHeight;
-    
-    // Constrain position to viewport bounds
-    const boundedX = Math.max(0, Math.min(newX, maxX));
-    const boundedY = Math.max(0, Math.min(newY, maxY));
-    
-    // Use translate3d for better performance
-    nodeRef.current.style.transform = `translate3d(${boundedX}px, ${boundedY}px, 0)`;
-
-    // Prevent default behavior
-    e.preventDefault();
-  }, [isDragging, dragOffset.x, dragOffset.y]);
-
-  // End dragging
-  const handleDragEnd = React.useCallback(() => {
-    setIsDragging(false);
-  }, []);
-
-  React.useEffect(() => {
-    if (isDragging) {
-      // Add both mouse and touch event listeners
-      document.addEventListener('mousemove', updatePosition, { passive: false });
-      document.addEventListener('mouseup', handleDragEnd);
-      document.addEventListener('touchmove', updatePosition, { passive: false });
-      document.addEventListener('touchend', handleDragEnd);
-      document.addEventListener('touchcancel', handleDragEnd);
-      
-      return () => {
-        document.removeEventListener('mousemove', updatePosition);
-        document.removeEventListener('mouseup', handleDragEnd);
-        document.removeEventListener('touchmove', updatePosition);
-        document.removeEventListener('touchend', handleDragEnd);
-        document.removeEventListener('touchcancel', handleDragEnd);
-      };
-    }
-  }, [isDragging, updatePosition, handleDragEnd]);
-
+function clamp(pos: { x: number; y: number }, el: HTMLElement) {
+  const maxX = Math.max(EDGE, window.innerWidth - Math.min(el.offsetWidth, window.innerWidth) - EDGE);
+  const maxY = Math.max(TOP_SAFE, window.innerHeight - BOTTOM_SAFE);
   return {
-    isDragging,
-    handleMouseDown: handleDragStart,
-    handleTouchStart: handleDragStart
+    x: Math.round(Math.min(Math.max(pos.x, EDGE), maxX)),
+    y: Math.round(Math.min(Math.max(pos.y, TOP_SAFE), maxY)),
   };
-};
+}
 
-// Custom Draggable Component with Mouse and Touch support
-const CustomDraggable: React.FC<DraggableProps> = ({ 
-  children, 
-  disabled = false, 
-  defaultPosition = { x: 0, y: 0 },
-  onStart,
-  handle = '.window-handle'
-}) => {
-  const nodeRef = React.useRef<HTMLDivElement>(null);
-  const { isDragging, handleMouseDown, handleTouchStart } = useDraggable(nodeRef);
+function FloatingWindow({
+  win,
+  onMinimize,
+  onClose,
+  onBringToFront,
+  onMove,
+}: { win: ModernWindow } & Omit<WindowManagerProps, 'openWindows' | 'compact'>) {
+  const ref = useRef<HTMLDivElement>(null);
+  const drag = useRef<{ dx: number; dy: number; pointerId: number } | null>(null);
+  const pos = useRef(win.position);
 
-  React.useEffect(() => {
-    if (nodeRef.current && defaultPosition) {
-      // Use inline styles only for dynamic positioning to ensure performance
-      nodeRef.current.style.transform = `translate3d(${defaultPosition.x}px, ${defaultPosition.y}px, 0)`;
-    }
-  }, [defaultPosition]);
-
-  // Handle mouse drag start
-  const handleMouseDragStart = (e: React.MouseEvent) => {
-    if (disabled) return;
-    
-    const target = e.target as HTMLElement;
-    const handleElement = target.closest(handle);
-    if (!handleElement) return;
-    
-    if (onStart) onStart();
-    handleMouseDown(e);
+  const apply = (p: { x: number; y: number }) => {
+    pos.current = p;
+    if (ref.current) ref.current.style.transform = `translate3d(${p.x}px, ${p.y}px, 0)`;
   };
 
-  // Handle touch drag start
-  const handleTouchDragStart = (e: React.TouchEvent) => {
-    if (disabled) return;
-    
-    const target = e.target as HTMLElement;
-    const handleElement = target.closest(handle);
-    if (!handleElement) return;
-    
-    if (onStart) onStart();
-    handleTouchStart(e);
+  // Initial placement, and re-clamping if the viewport shrinks (rotation, resize).
+  useEffect(() => {
+    if (ref.current) apply(clamp(win.position, ref.current));
+    const onResize = () => ref.current && apply(clamp(pos.current, ref.current));
+    window.addEventListener('resize', onResize);
+    return () => window.removeEventListener('resize', onResize);
+  }, [win.position]);
+
+  const onPointerDown = useCallback(
+    (e: React.PointerEvent) => {
+      if ((e.target as HTMLElement).closest('button')) return;
+      if (e.button !== 0) return;
+      onBringToFront(win.id);
+      drag.current = { dx: e.clientX - pos.current.x, dy: e.clientY - pos.current.y, pointerId: e.pointerId };
+      (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
+    },
+    [onBringToFront, win.id]
+  );
+
+  const onPointerMove = (e: React.PointerEvent) => {
+    if (!drag.current || !ref.current) return;
+    apply(clamp({ x: e.clientX - drag.current.dx, y: e.clientY - drag.current.dy }, ref.current));
+  };
+
+  const endDrag = () => {
+    if (!drag.current) return;
+    drag.current = null;
+    onMove(win.id, pos.current);
   };
 
   return (
     <div
-      ref={nodeRef}
-      style={{ 
-        position: 'absolute',
-        touchAction: 'none' // Prevent default touch behaviors like scrolling
-      }}
-      onMouseDown={handleMouseDragStart}
-      onTouchStart={handleTouchDragStart}
-      className={isDragging ? desktopStyles.selectNone : ''}
+      ref={ref}
+      className={`${desktopStyles.window} ${win.isMinimized ? desktopStyles.minimized : ''}`}
+      style={{ zIndex: 30 + win.zIndex, width: win.size.width, height: win.size.height }}
+      onPointerDownCapture={() => onBringToFront(win.id)}
+      role="dialog"
+      aria-label={win.app.name}
+      aria-hidden={win.isMinimized}
     >
-      {children}
+      <div
+        className={desktopStyles.windowHeader}
+        onPointerDown={onPointerDown}
+        onPointerMove={onPointerMove}
+        onPointerUp={endDrag}
+        onPointerCancel={endDrag}
+        style={{ touchAction: 'none' }}
+      >
+        <div className={desktopStyles.windowTitleSection}>
+          <win.app.icon size={18} className={desktopStyles.whiteIcon} />
+          <span className={desktopStyles.windowTitle}>{win.app.name}</span>
+        </div>
+        <div className={desktopStyles.windowControls}>
+          <button onClick={() => onMinimize(win.id)} className={desktopStyles.windowButton} title="Minimize" aria-label={`Minimize ${win.app.name}`}>
+            <Minus size={14} />
+          </button>
+          <button
+            onClick={() => onClose(win.id)}
+            className={`${desktopStyles.windowButton} ${desktopStyles.closeButton}`}
+            title="Close"
+            aria-label={`Close ${win.app.name}`}
+          >
+            <X size={14} />
+          </button>
+        </div>
+      </div>
+      <div className={desktopStyles.windowContent}>
+        <win.app.component />
+      </div>
     </div>
   );
-};
+}
 
-export default function WindowManager({ 
-  openWindows, 
-  onMinimize, 
-  onClose, 
-  onBringToFront 
-}: WindowManagerProps) {
-  return (
-    <>
-      {openWindows.map(window => (
-        <CustomDraggable
-          key={window.id}
-          defaultPosition={window.position}
-          handle=".window-handle"
-          onStart={() => onBringToFront(window.id)}
-        >
+export default function WindowManager({ openWindows, compact, onMinimize, onClose, onBringToFront, onMove }: WindowManagerProps) {
+  if (compact) {
+    return (
+      <>
+        {openWindows.map((win) => (
           <div
-            className={`${desktopStyles.window} ${window.isMinimized ? desktopStyles.minimized : ''}`}
-            style={{ 
-              zIndex: 30 + window.zIndex,
-              width: window.size.width,
-              height: window.size.height
-            }}
+            key={win.id}
+            className={`${desktopStyles.sheet} ${win.isMinimized ? desktopStyles.sheetHidden : ''}`}
+            style={{ zIndex: 30 + win.zIndex }}
+            role="dialog"
+            aria-label={win.app.name}
+            aria-hidden={win.isMinimized}
           >
-            {/* Window Header */}
-            <div className={`window-handle ${desktopStyles.windowHeader}`}>
+            <div className={desktopStyles.windowHeader} style={{ cursor: 'default' }}>
               <div className={desktopStyles.windowTitleSection}>
-                <window.app.icon size={20} className={desktopStyles.whiteIcon} />
-                <span className={desktopStyles.windowTitle}>{window.app.name}</span>
+                <win.app.icon size={18} className={desktopStyles.whiteIcon} />
+                <span className={desktopStyles.windowTitle}>{win.app.name}</span>
               </div>
               <div className={desktopStyles.windowControls}>
-                <button
-                  onClick={() => onMinimize(window.id)}
-                  className={desktopStyles.windowButton}
-                  title="Minimize"
-                >
-                  <Minus size={14} />
+                <button onClick={() => onMinimize(win.id)} className={desktopStyles.windowButton} aria-label={`Hide ${win.app.name}`}>
+                  <Minus size={16} />
                 </button>
                 <button
-                  onClick={() => onClose(window.id)}
+                  onClick={() => onClose(win.id)}
                   className={`${desktopStyles.windowButton} ${desktopStyles.closeButton}`}
-                  title="Close"
+                  aria-label={`Close ${win.app.name}`}
                 >
-                  <X size={14} />
+                  <X size={16} />
                 </button>
               </div>
             </div>
-
-            {/* Window Content */}
             <div className={desktopStyles.windowContent}>
-              <window.app.component />
+              <win.app.component />
             </div>
           </div>
-        </CustomDraggable>
+        ))}
+      </>
+    );
+  }
+
+  return (
+    <>
+      {openWindows.map((win) => (
+        <FloatingWindow
+          key={win.id}
+          win={win}
+          onMinimize={onMinimize}
+          onClose={onClose}
+          onBringToFront={onBringToFront}
+          onMove={onMove}
+        />
       ))}
     </>
   );

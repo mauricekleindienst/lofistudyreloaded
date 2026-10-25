@@ -18,33 +18,14 @@ import {
   Calendar
 } from 'lucide-react';
 import { useAuth } from '../contexts/AuthContext';
-import { useDataPersistence } from '../hooks/useDataPersistence';
-import { PomodoroStats } from '../lib/database';
+import { db, type PomodoroStats, type LeaderboardEntry } from '../lib/database';
+import { daysAgo, localDate } from '../lib/api';
 import styles from '../../styles/StatsModal.module.css';
-import { createClient } from '../utils/supabase/client';
-
-// Create a single Supabase client instance
-const supabase = createClient();
 
 interface StatsModalProps {
   isOpen: boolean;
   onClose: () => void;
-}
-
-interface LeaderboardUser {
-  id: string;
-  email: string;
-  username?: string;
-  totalSessions: number;
-  totalFocusTime: number;
-  rank: number;
-}
-
-interface UserData {
-  id: string;
-  email?: string;
-  full_name?: string;
-  username?: string;
+  onSignIn: () => void;
 }
 
 const getCategoryIcon = (category: string) => {
@@ -63,16 +44,15 @@ const getCategoryIcon = (category: string) => {
   }
 };
 
-const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
-  const { user } = useAuth();
-  const { loadPomodoroStats } = useDataPersistence();
+const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, onSignIn }) => {
+  const { user, updateProfile } = useAuth();
 
-  // --- State Management ---
-  const [stats, setStats] = useState<PomodoroStats[] | null>(null);
+  // All of the user's stats rows; the range filters below are applied client-side.
+  const [allStats, setAllStats] = useState<PomodoroStats[] | null>(null);
   const [statsLoading, setStatsLoading] = useState(false);
   const [days, setDays] = useState(7);
 
-  const [leaderboardUsers, setLeaderboardUsers] = useState<LeaderboardUser[]>([]);
+  const [leaderboardUsers, setLeaderboardUsers] = useState<LeaderboardEntry[]>([]);
   const [leaderboardLoading, setLeaderboardLoading] = useState(false);
   const [leaderboardFilter, setLeaderboardFilter] = useState<'sessions' | 'time'>('sessions');
   const [leaderboardTimeRange, setLeaderboardTimeRange] = useState<7 | 30 | 'all'>(7);
@@ -81,272 +61,63 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
   const [showUsernameModal, setShowUsernameModal] = useState(false);
   const [usernameError, setUsernameError] = useState('');
   const [isUpdatingUsername, setIsUpdatingUsername] = useState(false);
-
-  // --- Data Loading Functions ---
+  const leaderboardRequest = useRef(0);
 
   const fetchStats = useCallback(async () => {
-    if (!user) {
-      setStats([]);
-      return;
-    }
-
     setStatsLoading(true);
-    try {
-      // Pass 0 for 'All Time' if days is 0, otherwise pass the number of days
-      const fetchedStats = await loadPomodoroStats(days);
-      setStats(fetchedStats || []);
-    } catch (error) {
-      console.error('[StatsModal] Failed to load stats:', error);
-      setStats([]);
-    } finally {
-      setStatsLoading(false);
-    }
-  }, [user, days, loadPomodoroStats]);
+    setAllStats(await db.getPomodoroStats());
+    setStatsLoading(false);
+  }, []);
 
   const fetchLeaderboard = useCallback(async () => {
-    if (!user) {
-      setLeaderboardUsers([]);
-      return;
-    }
-
+    const request = ++leaderboardRequest.current;
     setLeaderboardLoading(true);
-
-    try {
-      // 1. Fetch stats
-      let query = supabase
-        .from('pomodoro_stats')
-        .select('user_id, pomodoro_count, total_focus_time_minutes, date, username');
-
-      if (leaderboardTimeRange !== 'all') {
-        const startDate = new Date();
-        startDate.setDate(startDate.getDate() - leaderboardTimeRange);
-        query = query.gte('date', startDate.toISOString().split('T')[0]);
-      }
-
-      const { data: statsData, error: statsError } = await query;
-
-      if (statsError) {
-        console.error('[StatsModal] Failed to load leaderboard stats:', statsError);
-        setLeaderboardUsers([]);
-        return;
-      }
-
-      // 2. Aggregate data
-      const userStatsMap = new Map<string, {
-        id: string;
-        totalSessions: number;
-        totalFocusTime: number;
-        username?: string;
-      }>();
-
-      interface StatRecord {
-        user_id: string;
-        pomodoro_count?: number;
-        total_focus_time_minutes?: number;
-        date?: string;
-        username?: string;
-      }
-
-      (statsData as StatRecord[]).forEach((record) => {
-        const userId = record.user_id;
-
-        if (!userStatsMap.has(userId)) {
-          userStatsMap.set(userId, {
-            id: userId,
-            totalSessions: 0,
-            totalFocusTime: 0,
-            username: record.username
-          });
-        }
-
-        const userStats = userStatsMap.get(userId)!;
-        userStats.totalSessions += record.pomodoro_count || 0;
-        userStats.totalFocusTime += record.total_focus_time_minutes || 0;
-        if (record.username && !userStats.username) {
-          userStats.username = record.username;
-        }
-      });
-
-      // 3. Sort and Limit
-      const sortedStats = Array.from(userStatsMap.values())
-        .sort((a, b) => {
-          if (leaderboardFilter === 'sessions') {
-            return b.totalSessions - a.totalSessions;
-          } else {
-            return b.totalFocusTime - a.totalFocusTime;
-          }
-        })
-        .slice(0, 50);
-
-      // 4. Fetch User Details
-      const userIds = sortedStats.map(s => s.id);
-
-      // Ensure current user is in list if they have stats
-      if (user && !userIds.includes(user.id)) {
-        const currentUserStats = userStatsMap.get(user.id);
-        if (currentUserStats) {
-          userIds.push(user.id);
-          sortedStats.push(currentUserStats);
-        }
-      }
-
-      let usersData: UserData[] | null = null;
-
-      if (userIds.length > 0) {
-        const { data, error } = await supabase
-          .from('users')
-          .select('id, full_name') // Exclude username as it might not be in the schema
-          .in('id', userIds);
-
-        if (error) {
-          console.error('[StatsModal] Failed to load users:', error);
-        } else {
-          usersData = data;
-        }
-      }
-
-      const userInfoMap = new Map<string, { name: string; username?: string }>();
-      if (usersData) {
-        (usersData as UserData[]).forEach((userData) => {
-          userInfoMap.set(userData.id, {
-            name: userData.full_name || `User #${userData.id.slice(-4)}`,
-            username: undefined // 'users' table doesn't have username
-          });
-        });
-      }
-
-      // 5. Combine
-      const combinedUsers = sortedStats.map((stats) => {
-        const userInfo = userInfoMap.get(stats.id) || {
-          name: `User #${stats.id.slice(-4)}`,
-          username: undefined
-        };
-        return {
-          id: stats.id,
-          email: userInfo.name, // Using name as display text instead of email
-          username: stats.username || userInfo.username,
-          totalSessions: stats.totalSessions,
-          totalFocusTime: stats.totalFocusTime,
-          rank: 0
-        };
-      });
-
-      // Final Sort
-      const finalSortedUsers = leaderboardFilter === 'sessions'
-        ? combinedUsers.sort((a, b) => b.totalSessions - a.totalSessions)
-        : combinedUsers.sort((a, b) => b.totalFocusTime - a.totalFocusTime);
-
-      // Add Rank
-      const rankedUsers = finalSortedUsers.map((u, index) => ({
-        ...u,
-        rank: index + 1
-      }));
-
-      setLeaderboardUsers(rankedUsers);
-    } catch (error) {
-      console.error('[StatsModal] Error loading leaderboard:', error);
-      setLeaderboardUsers([]);
-    } finally {
-      setLeaderboardLoading(false);
-    }
-  }, [user, leaderboardFilter, leaderboardTimeRange]);
-
-  const checkUsername = useCallback(async () => {
-    if (!user) return;
-
-    try {
-      const { data: pomodoroData } = await supabase
-        .from('pomodoro_stats')
-        .select('username')
-        .eq('user_id', user.id)
-        .not('username', 'is', null)
-        .order('updated_at', { ascending: false })
-        .limit(1)
-        .single();
-
-      if (pomodoroData?.username) {
-        setUsername(pomodoroData.username);
-        return;
-      }
-
-      const { data: userData } = await supabase
-        .from('users')
-        .select('full_name, email')
-        .eq('id', user.id)
-        .single();
-
-      if (userData) {
-        const defaultUsername = userData.full_name || userData.email?.split('@')[0] || '';
-        setUsername(defaultUsername);
-        setShowUsernameModal(true);
-      }
-    } catch (error) {
-      console.error('[StatsModal] Error checking username:', error);
-    }
-  }, [user]);
+    const from = leaderboardTimeRange === 'all' ? undefined : daysAgo(leaderboardTimeRange - 1);
+    const entries = await db.getLeaderboard(from, leaderboardFilter);
+    // Ignore responses that arrive after the filters changed again.
+    if (request !== leaderboardRequest.current) return;
+    setLeaderboardUsers(entries);
+    setLeaderboardLoading(false);
+  }, [leaderboardFilter, leaderboardTimeRange]);
 
   const updateUsername = async () => {
-    if (!user || !username.trim()) return;
-
+    if (!user || username.trim().length < 2) {
+      setUsernameError('Please use at least 2 characters');
+      return;
+    }
     setIsUpdatingUsername(true);
     setUsernameError('');
-
-    try {
-      const { data: existingUser } = await supabase
-        .from('pomodoro_stats')
-        .select('user_id')
-        .eq('username', username.trim())
-        .neq('user_id', user.id)
-        .limit(1)
-        .single();
-
-      if (existingUser) {
-        setUsernameError('Username already taken');
-        return;
-      }
-
-      const { error: statsUpdateError } = await supabase
-        .from('pomodoro_stats')
-        .update({ username: username.trim() })
-        .eq('user_id', user.id);
-
-      if (statsUpdateError) throw statsUpdateError;
-
-      setShowUsernameModal(false);
-      fetchLeaderboard();
-    } catch (error) {
-      console.error('[StatsModal] Error updating username:', error);
-      setUsernameError('Failed to update username');
-    } finally {
-      setIsUpdatingUsername(false);
+    const { error } = await updateProfile({ full_name: username.trim() });
+    setIsUpdatingUsername(false);
+    if (error) {
+      setUsernameError(error);
+      return;
     }
+    setShowUsernameModal(false);
+    fetchLeaderboard();
   };
 
-  // --- Effects ---
-
-  // Trigger stats load
   useEffect(() => {
-    if (isOpen && user) {
-      fetchStats();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, user, days]); // Exclude fetchStats/loadPomodoroStats to prevent loops
+    if (isOpen) fetchStats();
+  }, [isOpen, user?.id, fetchStats]);
 
-  // Trigger leaderboard load
   useEffect(() => {
-    if (isOpen && user) {
-      fetchLeaderboard();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, user, leaderboardFilter, leaderboardTimeRange]); // Exclude fetchLeaderboard
+    if (isOpen) fetchLeaderboard();
+  }, [isOpen, user?.id, fetchLeaderboard]);
 
-  // Trigger username check
   useEffect(() => {
-    if (isOpen && user) {
-      checkUsername();
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOpen, user]); // Exclude checkUsername
+    if (!isOpen) return;
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isOpen, onClose]);
+
+  const stats = useMemo(() => {
+    if (!allStats) return null;
+    if (days === 0) return allStats;
+    const from = daysAgo(days - 1);
+    return allStats.filter((s) => s.date >= from);
+  }, [allStats, days]);
 
   // --- Calculations ---
 
@@ -371,11 +142,8 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
     let daysCount = days;
     if (days === 0) { // All Time
       if (stats.length > 0) {
-        const dates = stats.map(s => new Date(s.date).getTime());
-        const oldest = Math.min(...dates);
-        const newest = Date.now();
-        const diffTime = Math.abs(newest - oldest);
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
+        const oldest = stats.reduce((min, s) => (s.date < min ? s.date : min), localDate());
+        const diffDays = Math.round((Date.parse(localDate()) - Date.parse(oldest)) / 86_400_000) + 1;
         daysCount = Math.max(diffDays, 1);
       } else {
         daysCount = 1;
@@ -408,25 +176,26 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
           <div className={styles.usernameModalOverlay} onClick={(e) => e.stopPropagation()}>
             <div className={styles.usernameModal}>
               <div className={styles.usernameModalHeader}>
-                <h3>{username ? 'Edit Username' : 'Set Username'}</h3>
-                {username && (
+                <h3>Display name</h3>
+                {(
                   <button
                     onClick={() => setShowUsernameModal(false)}
                     className={styles.closeButton}
+                    aria-label="Close"
                   >
                     <X size={18} />
                   </button>
                 )}
               </div>
               <div className={styles.usernameModalContent}>
-                <p>{username ? 'Change your display name on the leaderboard.' : 'Please set a username to appear on the leaderboard.'}</p>
+                <p>This name is shown on the leaderboard and in chat.</p>
                 <input
                   type="text"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
-                  placeholder="Enter username"
+                  placeholder="Your display name"
                   className={styles.usernameInput}
-                  maxLength={20}
+                  maxLength={40}
                   autoFocus
                 />
                 {usernameError && <div className={styles.usernameError}>{usernameError}</div>}
@@ -435,9 +204,9 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
                 <button
                   onClick={updateUsername}
                   className={styles.saveButton}
-                  disabled={!username.trim() || isUpdatingUsername}
+                  disabled={username.trim().length < 2 || isUpdatingUsername}
                 >
-                  {isUpdatingUsername ? 'Saving...' : 'Save Username'}
+                  {isUpdatingUsername ? 'Saving...' : 'Save'}
                 </button>
               </div>
             </div>
@@ -458,10 +227,11 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
               }}
               className={styles.refreshButton}
               disabled={statsLoading || leaderboardLoading}
+              aria-label="Refresh"
             >
               <RefreshCw size={16} className={(statsLoading || leaderboardLoading) ? 'animate-spin' : ''} />
             </button>
-            <button onClick={onClose} className={styles.closeButton}>
+            <button onClick={onClose} className={styles.closeButton} aria-label="Close statistics">
               <X size={18} />
             </button>
           </div>
@@ -525,7 +295,7 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
                   </div>
 
                   <div className={styles.activityHeatmap}>
-                    <ActivityHeatmap stats={stats || []} />
+                    <ActivityHeatmap stats={allStats || []} />
                   </div>
                 </div>
 
@@ -580,10 +350,21 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
                     </div>
                   ) : (
                     <ul className={styles.leaderboard}>
+                      {leaderboardUsers.length === 0 && (
+                        <li className={styles.emptyState}>No sessions in this period yet — be the first!</li>
+                      )}
+                      {!user && (
+                        <li className={styles.emptyState}>
+                          <button type="button" className={styles.signInLink} onClick={onSignIn}>
+                            Sign in
+                          </button>{' '}
+                          to appear on the leaderboard.
+                        </li>
+                      )}
                       {leaderboardUsers.map((leaderboardUser) => (
                         <li
                           key={leaderboardUser.id}
-                          className={`${styles.leaderboardItem} ${user && leaderboardUser.id === user.id ? styles.currentUser : ''}`}
+                          className={`${styles.leaderboardItem} ${leaderboardUser.isMe ? styles.currentUser : ''}`}
                         >
                           {leaderboardUser.rank <= 3 ? (
                             <div className={styles[`rank${leaderboardUser.rank}`]}>
@@ -598,17 +379,17 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose }) => {
                           <div
                             className={styles.userInfo}
                             onClick={() => {
-                              if (user && leaderboardUser.id === user.id) {
-                                setUsername(leaderboardUser.username || leaderboardUser.email.split('@')[0]);
+                              if (leaderboardUser.isMe) {
+                                setUsername(leaderboardUser.name);
                                 setShowUsernameModal(true);
                               }
                             }}
-                            style={{ cursor: user && leaderboardUser.id === user.id ? 'pointer' : 'default' }}
+                            style={{ cursor: leaderboardUser.isMe ? 'pointer' : 'default' }}
                           >
                             <div className={styles.userName}>
-                              {leaderboardUser.username || leaderboardUser.email.split('@')[0]}
-                              {user && leaderboardUser.id === user.id && (
-                                <span className={styles.currentUserTag} title="Click to edit username">YOU</span>
+                              {leaderboardUser.name}
+                              {leaderboardUser.isMe && (
+                                <span className={styles.currentUserTag} title="Click to change your display name">YOU</span>
                               )}
                             </div>
                             <div className={styles.userStats}>
@@ -650,33 +431,31 @@ const StatCard = ({ icon, label, value }: { icon: React.ReactNode, label: string
 
 const ActivityHeatmap = ({ stats }: { stats: PomodoroStats[] }) => {
   const { days, maxCount } = useMemo(() => {
-    const endDate = new Date();
-    const startDate = new Date();
-    startDate.setDate(endDate.getDate() - 29);
+    const perDay = new Map<string, number>();
+    stats.forEach(stat => {
+      perDay.set(stat.date, (perDay.get(stat.date) || 0) + (stat.pomodoro_count || 0));
+    });
+
+    // 30 days ending today, laid out GitHub-style: rows = weekday, columns = week.
+    const start = new Date();
+    start.setHours(0, 0, 0, 0);
+    start.setDate(start.getDate() - 29);
+    const offset = start.getDay();
 
     const days = Array.from({ length: 30 }, (_, i) => {
-      const date = new Date(startDate);
-      date.setDate(startDate.getDate() + i);
+      const date = new Date(start);
+      date.setDate(start.getDate() + i);
+      const key = localDate(date);
       return {
-        date: date.toISOString().split('T')[0],
-        count: 0,
+        date: key,
+        count: perDay.get(key) || 0,
         dayOfWeek: date.getDay(),
-        column: Math.floor(i / 7)
+        column: Math.floor((i + offset) / 7)
       };
     });
 
-    let maxCount = 0;
-    stats.forEach(stat => {
-      const statDate = stat.date?.split('T')[0];
-      const day = days.find(d => d.date === statDate);
-      if (day) {
-        const sessionCount = stat.pomodoro_count || 0;
-        day.count = sessionCount;
-        if (sessionCount > maxCount) maxCount = sessionCount;
-      }
-    });
-
-    return { days, maxCount: maxCount || 4 };
+    const maxCount = Math.max(4, ...days.map(d => d.count));
+    return { days, maxCount };
   }, [stats]);
 
   const weekdays = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];

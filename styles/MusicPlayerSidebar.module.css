@@ -1407,3 +1407,10 @@
     width: 16px;
   }
 }
+
+/* Phones open the player from the top bar instead */
+@media (max-width: 640px) {
+  .floatingToggle {
+    display: none;
+  }
+}

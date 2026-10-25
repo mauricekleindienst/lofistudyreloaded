@@ -1009,3 +1009,65 @@
     animation: none;
   }
 }
+
+/* --- email/password form additions --- */
+.inputGroup > .inputIcon {
+  position: absolute;
+  left: 16px;
+  top: 50%;
+  transform: translateY(-50%);
+  color: var(--text-secondary);
+  pointer-events: none;
+}
+
+.passwordContainer .authInput {
+  padding-right: 48px;
+}
+
+.spin {
+  animation: authSpin 0.9s linear infinite;
+}
+
+@keyframes authSpin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+.legalNote {
+  margin-top: 12px;
+  font-size: 0.78rem;
+  opacity: 0.75;
+}
+
+.legalNote a {
+  color: inherit;
+  text-decoration: underline;
+}
+
+.oauthButtons {
+  flex-wrap: wrap;
+}
+
+.oauthButton {
+  min-width: 110px;
+}
+
+@media (max-width: 520px) {
+  .authOverlay {
+    align-items: flex-end;
+  }
+
+  .authModal {
+    max-width: none;
+    max-height: 92dvh;
+    overflow-y: auto;
+    border-radius: 20px 20px 0 0;
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+
+  /* 16px+ stops iOS Safari from zooming into focused inputs */
+  .authInput {
+    font-size: 16px;
+  }
+}

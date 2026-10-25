@@ -4,7 +4,6 @@ import YouTube, { YouTubeEvent } from 'react-youtube';
 import { Music, X, SkipBack, SkipForward, Play, Pause, Volume2, VolumeX, Shuffle, Repeat, List, Plus, Trash2 } from 'lucide-react';
 import { useAppState } from '../contexts/AppStateContext';
 import styles from '../../styles/MusicPlayerSidebar.module.css';
-import Image from 'next/image';
 
 // Type declaration for YouTube iframe API
 declare global {
@@ -298,7 +297,7 @@ const MusicPlayerSidebar: React.FC<MusicPlayerSidebarProps> = ({ isOpen, onToggl
     };
   }, []);
 
-  const getThumbnailUrl = (videoId: string) => `https://img.youtube.com/vi/${videoId}/mqdefault.jpg`;
+  const getThumbnailUrl = (videoId: string) => `https://i.ytimg.com/vi/${videoId}/mqdefault.jpg`;
   return (
     <>
       {/* Backdrop Overlay */}
@@ -308,6 +307,8 @@ const MusicPlayerSidebar: React.FC<MusicPlayerSidebarProps> = ({ isOpen, onToggl
       <button
         className={`${styles.floatingToggle} ${isOpen ? styles.hidden : ''}`}
         onClick={onToggle}
+        aria-label="Open music player"
+        aria-expanded={isOpen}
       >
         <Music size={20} />
         {isPlaying && !isOpen && (
@@ -362,9 +363,13 @@ const MusicPlayerSidebar: React.FC<MusicPlayerSidebarProps> = ({ isOpen, onToggl
             {currentTrack ? (
               <>
                 <div className={styles.trackThumbnail}>
-                  <Image
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img
+                    key={currentTrack.videoId}
                     src={getThumbnailUrl(currentTrack.videoId)}
-                    alt="Track thumbnail"
+                    alt=""
+                    loading="lazy"
+                    referrerPolicy="no-referrer"
                     width={60}
                     height={60}
                     className={styles.thumbnail}

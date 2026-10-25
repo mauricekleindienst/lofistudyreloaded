@@ -52,27 +52,3 @@ export function WebVitals() {
 
   return null;
 }
-
-// Performance monitoring hook
-export function usePerformanceMonitoring() {
-  useEffect(() => {
-    // Monitor navigation timing
-    if (typeof window !== 'undefined' && 'performance' in window) {
-      const observer = new PerformanceObserver((list) => {
-        list.getEntries().forEach((entry) => {
-          if (entry.entryType === 'navigation') {
-            const navEntry = entry as PerformanceNavigationTiming;
-          }
-        });
-      });
-      
-      try {
-        observer.observe({ entryTypes: ['navigation'] });
-      } catch (error) {
-        console.warn('Navigation timing observation not supported:', error);
-      }
-      
-      return () => observer.disconnect();
-    }
-  }, []);
-}
