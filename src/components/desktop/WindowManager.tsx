@@ -36,8 +36,10 @@ function FloatingWindow({
   onMove,
 }: { win: ModernWindow } & Omit<WindowManagerProps, 'openWindows' | 'compact'>) {
   const ref = useRef<HTMLDivElement>(null);
-  const drag = useRef<{ dx: number; dy: number; pointerId: number } | null>(null);
+  const drag = useRef<{ dx: number; dy: number; pointerId: number; w: number } | null>(null);
   const pos = useRef(win.position);
+  const frame = useRef<number | null>(null);
+  const pending = useRef<{ x: number; y: number } | null>(null);
 
   const apply = (p: { x: number; y: number }) => {
     pos.current = p;
@@ -57,20 +59,45 @@ function FloatingWindow({
       if ((e.target as HTMLElement).closest('button')) return;
       if (e.button !== 0) return;
       onBringToFront(win.id);
-      drag.current = { dx: e.clientX - pos.current.x, dy: e.clientY - pos.current.y, pointerId: e.pointerId };
+      drag.current = {
+        dx: e.clientX - pos.current.x,
+        dy: e.clientY - pos.current.y,
+        pointerId: e.pointerId,
+        w: ref.current?.offsetWidth ?? 0,
+      };
+      ref.current?.classList.add(desktopStyles.dragging);
       (e.currentTarget as HTMLElement).setPointerCapture(e.pointerId);
     },
     [onBringToFront, win.id]
   );
 
+  // At most one style write per frame; width is measured once at drag start, so
+  // moving never forces a layout read.
   const onPointerMove = (e: React.PointerEvent) => {
-    if (!drag.current || !ref.current) return;
-    apply(clamp({ x: e.clientX - drag.current.dx, y: e.clientY - drag.current.dy }, ref.current));
+    const d = drag.current;
+    if (!d) return;
+    const maxX = Math.max(EDGE, window.innerWidth - Math.min(d.w, window.innerWidth) - EDGE);
+    const maxY = Math.max(TOP_SAFE, window.innerHeight - BOTTOM_SAFE);
+    pending.current = {
+      x: Math.round(Math.min(Math.max(e.clientX - d.dx, EDGE), maxX)),
+      y: Math.round(Math.min(Math.max(e.clientY - d.dy, TOP_SAFE), maxY)),
+    };
+    if (frame.current === null) {
+      frame.current = requestAnimationFrame(() => {
+        frame.current = null;
+        if (pending.current) apply(pending.current);
+      });
+    }
   };
 
   const endDrag = () => {
     if (!drag.current) return;
     drag.current = null;
+    if (frame.current !== null) cancelAnimationFrame(frame.current);
+    frame.current = null;
+    if (pending.current) apply(pending.current);
+    pending.current = null;
+    ref.current?.classList.remove(desktopStyles.dragging);
     onMove(win.id, pos.current);
   };
 
