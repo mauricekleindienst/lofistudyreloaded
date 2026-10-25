@@ -1,1006 +1,266 @@
-/* Account Settings App - Modern Design System */
+/* Account window */
 
-/* Main Container */
 .accountSettings {
-  padding: 0.75rem;
-  width: 100%;
-  height: 100%;
   display: flex;
   flex-direction: column;
-  box-sizing: border-box;
-  overflow-y: auto;
-  background: transparent;
-  backdrop-filter: none;
+  gap: 14px;
+  padding: 16px;
+  min-height: 100%;
   color: var(--text-primary);
-  scrollbar-width: thin;
-  scrollbar-color: var(--accent-color) transparent;
 }
 
-.accountSettings::-webkit-scrollbar {
-  width: 4px;
-}
-
-.accountSettings::-webkit-scrollbar-track {
-  background: transparent;
-}
-
-.accountSettings::-webkit-scrollbar-thumb {
-  background: var(--accent-color);
-  border-radius: 2px;
-}
-
-.accountSettings::-webkit-scrollbar-thumb:hover {
-  background: var(--accent-hover);
-}
-
-/* Tab Navigation */
 .tabNavigation {
   display: flex;
-  gap: 0.375rem;
-  margin-bottom: 0.75rem;
-  padding: 0.1875rem;
-  background: rgba(0, 0, 0, 0.2);
-  border-radius: 14px;
-  backdrop-filter: blur(12px);
-  flex-shrink: 0;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: none;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.05);
 }
 
 .tabButton {
   flex: 1;
-  padding: 0.5rem 0.625rem;
-  background: transparent;
-  border: 1px solid transparent;
-  border-radius: 6px;
-  color: var(--text-secondary);
-  font-weight: 500;
-  font-size: 0.75rem;
-  cursor: pointer;
-  transition: var(--transition-fast);
-  display: flex;
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 0.25rem;
-  position: relative;
-  overflow: hidden;
-  text-transform: uppercase;
-  letter-spacing: 0.025em;
-}
-
-.tabButton::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(135deg, var(--accent-color), var(--accent-hover));
-  opacity: 0;
-  transition: opacity var(--transition-fast);
-  border-radius: 5px;
-  z-index: -1;
-}
-
-.tabButton:hover::before {
-  opacity: 0.1;
+  gap: 6px;
+  height: 36px;
+  border: none;
+  border-radius: 9px;
+  background: transparent;
+  color: var(--text-tertiary);
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: var(--transition-fast);
 }
 
 .tabButton:hover {
   color: var(--text-primary);
-  transform: scale(1.02);
-  border-color: rgba(255, 255, 255, 0.2);
 }
 
 .tabButton.active {
-  background: linear-gradient(135deg, var(--accent-color), var(--accent-hover));
+  background: rgba(255, 123, 0, 0.18);
   color: var(--text-primary);
-  border-color: var(--accent-color);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
 }
 
-.tabButton.active::before {
-  opacity: 0;
+.tabButton.active svg {
+  color: var(--accent-color);
 }
 
-.tabIcon {
-  width: 0.875rem;
-  height: 0.875rem;
-}
-
-/* Content Container */
-.contentContainer,
-.tabContent {
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 0.75rem;
-  min-height: 0;
-}
-
+.tabContent,
 .profileTab,
 .securityTab {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 14px;
 }
 
-/* Section */
 .section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 16px;
+  border-radius: 14px;
+  border: 1px solid var(--border-color);
   background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 12px;
-  padding: 1rem;
-  backdrop-filter: blur(4px);
-  box-shadow: none;
-  position: relative;
-  overflow: hidden;
 }
 
-.section::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, var(--accent-color), transparent);
-  opacity: 0.3;
+.section h3 {
+  font-size: 15px;
+  font-weight: 600;
 }
 
 .sectionHeader {
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.5rem;
-  margin-bottom: 0.75rem;
-  padding-bottom: 0.5rem;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  gap: 12px;
 }
 
-.sectionHeader h3 {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0;
-  text-transform: uppercase;
-  letter-spacing: 0.025em;
-}
-
-.editButton {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 6px;
-  padding: 0.375rem 0.625rem;
-  color: var(--text-secondary);
-  font-size: 0.75rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: var(--transition-fast);
-  display: flex;
-  align-items: center;
-  gap: 0.25rem;
-  backdrop-filter: blur(4px);
-  position: relative;
-  overflow: hidden;
-}
-
-.editButton::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(135deg, var(--accent-color), var(--accent-hover));
-  opacity: 0;
-  transition: opacity var(--transition-fast);
-  border-radius: 5px;
-  z-index: -1;
-}
-
-.editButton:hover::before {
-  opacity: 1;
-}
-
-.editButton:hover {
-  color: var(--text-primary);
-  transform: translateY(-1px);
-  border-color: var(--accent-color);
-}
-
-.sectionIcon {
-  width: 1.125rem;
-  height: 1.125rem;
-  color: var(--accent-color);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: linear-gradient(135deg, var(--accent-color), var(--accent-hover));
-  border-radius: 6px;
-  padding: 0.25rem;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-}
-
-.sectionTitle {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0;
-  text-transform: uppercase;
-  letter-spacing: 0.025em;
-}
-
-.sectionDescription {
-  font-size: 0.75rem;
-  color: var(--text-secondary);
-  margin: 0 0 0.75rem 0;
-  line-height: 1.4;
-  opacity: 0.8;
-}
-
-/* Form Elements */
 .formGroup {
-  margin-bottom: 0.75rem;
-}
-
-.formGroup:last-child {
-  margin-bottom: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
 }
 
 .formGroup label {
-  display: block;
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 0.375rem;
-  text-transform: uppercase;
-  letter-spacing: 0.025em;
-}
-
-.label {
-  display: block;
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin-bottom: 0.375rem;
-  text-transform: uppercase;
-  letter-spacing: 0.025em;
-}
-
-/* Email Field Styling */
-.emailField {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem 0.75rem;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  color: var(--text-secondary);
-  font-size: 0.75rem;
-  backdrop-filter: blur(4px);
-}
-
-.emailField span {
-  color: var(--text-primary);
+  font-size: 12px;
   font-weight: 500;
-}
-
-/* Help Text */
-.helpText {
-  display: block;
-  font-size: 0.625rem;
-  color: var(--text-secondary);
-  margin-top: 0.25rem;
-  opacity: 0.8;
-  font-style: italic;
-}
-
-/* Error Text */
-.errorText {
-  display: block;
-  font-size: 0.625rem;
-  color: var(--danger-color, #ef4444);
-  margin-top: 0.25rem;
-  font-weight: 500;
+  color: var(--text-tertiary);
 }
 
 .input,
-.select,
-.textarea {
+.confirmInput {
   width: 100%;
-  padding: 0.5rem 0.75rem;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
+  height: 42px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  background: rgba(0, 0, 0, 0.2);
   color: var(--text-primary);
-  font-size: 0.75rem;
-  transition: var(--transition-fast);
-  backdrop-filter: blur(4px);
-  box-sizing: border-box;
+  font: inherit;
+  font-size: 14px;
+  transition: border-color 0.15s ease;
 }
 
 .input:focus,
-.select:focus,
-.textarea:focus {
-  outline: none;
-  border-color: var(--accent-color);
-  background: rgba(0, 0, 0, 0.2);
-  box-shadow: 0 0 0 2px rgba(255, 123, 0, 0.1);
-  transform: translateY(-1px);
-}
-
-.input::placeholder,
-.textarea::placeholder {
-  color: var(--text-secondary);
-  opacity: 0.6;
-}
-
-.textarea {
-  min-height: 4rem;
-  resize: vertical;
-  font-family: inherit;
-}
-
-.select {
-  cursor: pointer;
-}
-
-/* Buttons */
-.button,
-.actionButton {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  padding: 0.5rem 0.875rem;
-  color: var(--text-secondary);
-  font-size: 0.75rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: var(--transition-fast);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.375rem;
-  backdrop-filter: blur(4px);
-  text-transform: uppercase;
-  letter-spacing: 0.025em;
-  position: relative;
-  overflow: hidden;
-}
-
-.button::before,
-.actionButton::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(135deg, var(--accent-color), var(--accent-hover));
-  opacity: 0;
-  transition: opacity var(--transition-fast);
-  border-radius: 7px;
-  z-index: -1;
-}
-
-.button:hover::before,
-.actionButton:hover::before {
-  opacity: 1;
-}
-
-.button:hover,
-.actionButton:hover {
-  color: var(--text-primary);
-  transform: translateY(-1px);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-  border-color: var(--accent-color);
-}
-
-.button:disabled,
-.actionButton:disabled {
-  opacity: 0.5;
-  cursor: not-allowed;
-  transform: none;
-}
-
-.button:disabled:hover::before,
-.actionButton:disabled:hover::before {
-  opacity: 0;
-}
-
-.primaryButton,
-.saveButton {
-  background: linear-gradient(135deg, var(--accent-color), var(--accent-hover));
-  border: 1px solid var(--accent-color);
-  color: var(--text-primary);
-  font-weight: 600;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.primaryButton::before,
-.saveButton::before {
-  background: linear-gradient(135deg, var(--accent-hover), #ffb366);
-}
-
-.dangerButton,
-.danger {
-  background: linear-gradient(135deg, var(--danger-color, #ef4444), #f87171);
-  border: 1px solid var(--danger-color, #ef4444);
-  color: var(--text-primary);
-  font-weight: 600;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.dangerButton::before,
-.danger::before {
-  background: linear-gradient(135deg, #f87171, #fca5a5);
-}
-
-.logoutButton {
-  background: linear-gradient(135deg, var(--warning-color, #f59e0b), #fbbf24);
-  border: 1px solid var(--warning-color, #f59e0b);
-  color: var(--text-primary);
-  font-weight: 600;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
-}
-
-.logoutButton::before {
-  background: linear-gradient(135deg, #fbbf24, #fcd34d);
-}
-
-.cancelButton {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  padding: 0.5rem 0.875rem;
-  color: var(--text-secondary);
-  font-size: 0.75rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: var(--transition-fast);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.375rem;
-  backdrop-filter: blur(4px);
-}
-
-.cancelButton:hover {
-  color: var(--text-primary);
-  background: rgba(255, 255, 255, 0.1);
-  border-color: rgba(255, 255, 255, 0.2);
-}
-
-.buttonGroup,
-.actionButtons,
-.securityActions,
-.confirmButtons {
-  display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-  margin-top: 0.75rem;
-}
-
-.buttonGroup .button,
-.actionButtons .button,
-.securityActions .button,
-.confirmButtons .button,
-.buttonGroup .actionButton,
-.actionButtons .actionButton,
-.securityActions .actionButton,
-.confirmButtons .actionButton {
-  flex: 1;
-  min-width: 0;
-}
-
-/* Status Indicators */
-.status {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.375rem;
-  padding: 0.25rem 0.5rem;
-  border-radius: 6px;
-  font-size: 0.625rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  letter-spacing: 0.025em;
-}
-
-.statusOnline {
-  background: linear-gradient(135deg, var(--success-color, #22c55e), #4ade80);
-  color: var(--text-primary);
-}
-
-.statusOffline {
-  background: linear-gradient(135deg, var(--danger-color, #ef4444), #f87171);
-  color: var(--text-primary);
-}
-
-.statusPending {
-  background: linear-gradient(135deg, var(--warning-color, #f59e0b), #fbbf24);
-  color: var(--text-primary);
-}
-
-.statusIndicator {
-  width: 0.375rem;
-  height: 0.375rem;
-  border-radius: 50%;
-  background: currentColor;
-  animation: pulse 2s ease-in-out infinite;
-}
-
-/* Avatar */
-.avatarSection {
-  display: flex;
-  align-items: center;
-  gap: 0.75rem;
-  margin-bottom: 0.75rem;
-}
-
-.avatar {
-  width: 3rem;
-  height: 3rem;
-  border-radius: 12px;
-  object-fit: cover;
-  border: 2px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-}
-
-.avatarFallback {
-  width: 3rem;
-  height: 3rem;
-  border-radius: 12px;
-  background: linear-gradient(135deg, var(--accent-color), var(--accent-hover));
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  color: var(--text-primary);
-  font-weight: 600;
-  font-size: 1rem;
-  border: 2px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
-}
-
-.avatarInfo {
-  flex: 1;
-  min-width: 0;
-}
-
-.avatarName {
-  font-size: 0.875rem;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0 0 0.125rem 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.avatarEmail {
-  font-size: 0.625rem;
-  color: var(--text-secondary);
-  margin: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  opacity: 0.8;
-}
-
-/* Progress Bar */
-.progressContainer {
-  margin: 0.5rem 0;
-}
-
-.progressLabel {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  margin-bottom: 0.25rem;
-}
-
-.progressText {
-  font-size: 0.625rem;
-  color: var(--text-secondary);
-  font-weight: 500;
-}
-
-.progressValue {
-  font-size: 0.625rem;
-  color: var(--accent-color);
-  font-weight: 600;
-}
-
-.progressBar {
-  width: 100%;
-  height: 0.375rem;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 3px;
-  overflow: hidden;
-  backdrop-filter: blur(4px);
-}
-
-.progressFill {
-  height: 100%;
-  background: linear-gradient(135deg, var(--accent-color), var(--accent-hover));
-  border-radius: 2px;
-  transition: width var(--transition-medium);
-  box-shadow: 0 0 4px rgba(255, 123, 0, 0.3);
-}
-
-/* Toggle Switch */
-.toggleContainer {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-}
-
-.toggleLabel {
-  flex: 1;
-  font-size: 0.75rem;
-  color: var(--text-primary);
-  font-weight: 500;
-}
-
-.toggle {
-  position: relative;
-  width: 2.5rem;
-  height: 1.25rem;
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 0.75rem;
-  cursor: pointer;
-  transition: var(--transition-fast);
-  backdrop-filter: blur(4px);
-}
-
-.toggle.active {
-  background: linear-gradient(135deg, var(--accent-color), var(--accent-hover));
-  border-color: var(--accent-color);
-  box-shadow: 0 0 0 2px rgba(255, 123, 0, 0.2);
-}
-
-.toggleSlider {
-  position: absolute;
-  top: 0.125rem;
-  left: 0.125rem;
-  width: 0.875rem;
-  height: 0.875rem;
-  background: var(--text-primary);
-  border-radius: 50%;
-  transition: var(--transition-fast);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.2);
-}
-
-.toggle.active .toggleSlider {
-  transform: translateX(1.25rem);
-}
-
-/* List Items */
-.listContainer {
-  display: flex;
-  flex-direction: column;
-  gap: 0.375rem;
-}
-
-.listItem {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.5rem;
-  background: rgba(255, 255, 255, 0.03);
-  border: 1px solid rgba(255, 255, 255, 0.05);
-  border-radius: 8px;
-  transition: var(--transition-fast);
-  backdrop-filter: blur(4px);
-}
-
-.listItem:hover {
-  background: rgba(255, 255, 255, 0.05);
-  transform: translateX(2px);
-  border-color: var(--accent-color);
-}
-
-.listIcon {
-  width: 1rem;
-  height: 1rem;
-  color: var(--accent-color);
-  flex-shrink: 0;
-}
-
-.listContent {
-  flex: 1;
-  min-width: 0;
-}
-
-.listTitle {
-  font-size: 0.75rem;
-  font-weight: 500;
-  color: var(--text-primary);
-  margin: 0 0 0.125rem 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.listSubtitle {
-  font-size: 0.625rem;
-  color: var(--text-secondary);
-  margin: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-  opacity: 0.8;
-}
-
-.listAction {
-  flex-shrink: 0;
-}
-
-/* Delete Confirmation */
-.deleteConfirmation {
-  background: rgba(239, 68, 68, 0.05);
-  border: 1px solid var(--danger-color, #ef4444);
-  border-radius: 8px;
-  padding: 1rem;
-  margin-top: 0.5rem;
-  backdrop-filter: blur(4px);
-}
-
-.deleteConfirmation p {
-  margin: 0 0 0.75rem 0;
-  font-size: 0.75rem;
-  color: var(--text-primary);
-  font-weight: 500;
-}
-
-.deleteConfirmation strong {
-  color: var(--danger-color, #ef4444);
-  font-weight: 600;
-}
-
-.confirmInput {
-  width: 100%;
-  padding: 0.5rem 0.75rem;
-  background: rgba(0, 0, 0, 0.2);
-  border: 1px solid var(--danger-color, #ef4444);
-  border-radius: 8px;
-  color: var(--text-primary);
-  font-size: 0.75rem;
-  transition: var(--transition-fast);
-  backdrop-filter: blur(4px);
-  box-sizing: border-box;
-  margin-bottom: 0.75rem;
-}
-
 .confirmInput:focus {
   outline: none;
-  border-color: var(--danger-color, #ef4444);
-  box-shadow: 0 0 0 2px rgba(239, 68, 68, 0.2);
-}
-
-.confirmInput::placeholder {
-  color: var(--text-secondary);
-  opacity: 0.6;
-}
-
-/* Card Grid */
-.cardGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
-  gap: 0.5rem;
-  margin: 0.5rem 0;
-}
-
-.card {
-  background: rgba(255, 255, 255, 0.05);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 8px;
-  padding: 0.75rem;
-  text-align: center;
-  transition: var(--transition-fast);
-  backdrop-filter: blur(4px);
-  position: relative;
-  overflow: hidden;
-}
-
-.card::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(135deg, var(--accent-color), var(--accent-hover));
-  opacity: 0;
-  transition: opacity var(--transition-fast);
-  border-radius: 7px;
-  z-index: -1;
-}
-
-.card:hover::before {
-  opacity: 0.1;
-}
-
-.card:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   border-color: var(--accent-color);
 }
 
-.cardIcon {
-  width: 1.5rem;
-  height: 1.5rem;
-  color: var(--accent-color);
-  margin: 0 auto 0.375rem;
+.input:disabled {
+  opacity: 0.75;
+  background: rgba(255, 255, 255, 0.03);
 }
 
-.cardTitle {
-  font-size: 0.75rem;
-  font-weight: 600;
-  color: var(--text-primary);
-  margin: 0 0 0.125rem 0;
-}
-
-.cardValue {
-  font-size: 0.625rem;
+.emailField {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-height: 42px;
+  padding: 0 12px;
+  border-radius: 10px;
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid var(--border-color);
   color: var(--text-secondary);
-  margin: 0;
-  opacity: 0.8;
+  font-size: 14px;
+  overflow-wrap: anywhere;
 }
 
-/* Error Messages */
-.errorMessage,
-.message.error {
-  background: linear-gradient(135deg, var(--danger-color, #ef4444), #f87171);
-  border: 1px solid var(--danger-color, #ef4444);
-  border-radius: 8px;
-  padding: 0.5rem 0.75rem;
-  color: var(--text-primary);
-  font-size: 0.75rem;
-  font-weight: 500;
-  margin: 0.375rem 0;
-  display: flex;
-  align-items: center;
-  gap: 0.375rem;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+.helpText {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  opacity: 0.85;
+  line-height: 1.45;
 }
 
-.successMessage,
-.message.success {
-  background: linear-gradient(135deg, var(--success-color, #22c55e), #4ade80);
-  border: 1px solid var(--success-color, #22c55e);
-  border-radius: 8px;
-  padding: 0.5rem 0.75rem;
-  color: var(--text-primary);
-  font-size: 0.75rem;
-  font-weight: 500;
-  margin: 0.375rem 0;
-  display: flex;
-  align-items: center;
-  gap: 0.375rem;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+.errorText {
+  font-size: 12px;
+  color: #fca5a5;
 }
 
 .message {
-  border-radius: 8px;
-  padding: 0.5rem 0.75rem;
-  color: var(--text-primary);
-  font-size: 0.75rem;
-  font-weight: 500;
-  margin: 0.375rem 0;
   display: flex;
   align-items: center;
-  gap: 0.375rem;
-  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+  gap: 8px;
+  padding: 10px 12px;
+  border-radius: 10px;
+  font-size: 13px;
 }
 
-.messageIcon {
-  width: 0.875rem;
-  height: 0.875rem;
-  flex-shrink: 0;
+.success {
+  background: rgba(34, 197, 94, 0.12);
+  color: #86efac;
 }
 
-/* Loading States */
-.loading {
-  display: flex;
+.error {
+  background: rgba(239, 68, 68, 0.12);
+  color: #fca5a5;
+}
+
+/* Buttons */
+.editButton,
+.actionButton,
+.cancelButton,
+.saveButton {
+  display: inline-flex;
   align-items: center;
   justify-content: center;
-  padding: 1rem;
+  gap: 8px;
+  height: 40px;
+  padding: 0 16px;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  background: var(--glass-button);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.editButton {
+  height: 32px;
+  padding: 0 12px;
+}
+
+.editButton:hover:not(:disabled),
+.actionButton:hover:not(:disabled),
+.cancelButton:hover:not(:disabled) {
+  background: var(--glass-button-hover);
+  border-color: var(--border-hover);
+}
+
+.saveButton {
+  align-self: flex-start;
+  border-color: transparent;
+  background: var(--accent-color);
+  color: #fff;
+}
+
+.saveButton:hover:not(:disabled) {
+  background: var(--accent-hover);
+}
+
+.editButton:disabled,
+.actionButton:disabled,
+.saveButton:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.actionButtons {
+  display: flex;
+  gap: 8px;
+}
+
+.securityActions {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  gap: 8px;
+}
+
+.logoutButton {
   color: var(--text-secondary);
-  font-size: 0.75rem;
 }
 
-.spinner {
-  border: 2px solid rgba(255, 255, 255, 0.1);
-  border-top: 2px solid var(--accent-color);
-  border-radius: 50%;
-  width: 1rem;
-  height: 1rem;
-  animation: spin 1s linear infinite;
-  margin-right: 0.5rem;
+.danger {
+  align-self: flex-start;
+  border-color: rgba(239, 68, 68, 0.4);
+  background: rgba(239, 68, 68, 0.1);
+  color: #fca5a5;
 }
 
-/* Responsive Design */
-@media (max-width: 320px) {
-  .accountSettings {
-    padding: 0.5rem;
-  }
-  
-  .section {
-    padding: 0.75rem;
-  }
-  
-  .tabButton {
-    padding: 0.375rem 0.5rem;
-    font-size: 0.625rem;
-  }
-  
-  .tabIcon {
-    width: 0.75rem;
-    height: 0.75rem;
-  }
-  
-  .buttonGroup {
-    flex-direction: column;
-  }
-  
-  .cardGrid {
-    grid-template-columns: 1fr 1fr;
-    gap: 0.375rem;
-  }
-  
-  .avatar,
-  .avatarFallback {
-    width: 2.5rem;
-    height: 2.5rem;
-  }
-  
-  .avatarName {
-    font-size: 0.75rem;
-  }
-  
-  .avatarEmail {
-    font-size: 0.5rem;
-  }
+.danger:hover:not(:disabled) {
+  background: rgba(239, 68, 68, 0.2) !important;
+  border-color: rgba(239, 68, 68, 0.6) !important;
 }
 
-/* Additional responsive breakpoints */
-@media (max-width: 280px) {
-  .accountSettings {
-    padding: 0.375rem;
-  }
-  
-  .tabNavigation {
-    margin-bottom: 0.5rem;
-  }
-  
-  .section {
-    padding: 0.5rem;
-  }
-  
-  .formGroup {
-    margin-bottom: 0.5rem;
-  }
-  
-  .cardGrid {
-    grid-template-columns: 1fr;
-    gap: 0.25rem;
-  }
-  
-  .buttonGroup,
-  .actionButtons,
-  .securityActions,
-  .confirmButtons {
-    gap: 0.375rem;
-  }
-  
-  .button,
-  .actionButton {
-    padding: 0.375rem 0.5rem;
-    font-size: 0.625rem;
+.deleteConfirmation {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  font-size: 13px;
+  line-height: 1.5;
+  color: var(--text-secondary);
+}
+
+.confirmButtons {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.confirmButtons .danger {
+  align-self: auto;
+}
+
+@media (max-width: 640px) {
+  .input,
+  .confirmInput {
+    font-size: 16px; /* prevents iOS zoom on focus */
   }
 }

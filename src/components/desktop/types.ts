@@ -1,15 +1,16 @@
 // Shared types for Desktop components
+import type React from 'react';
 
 export interface Background {
   id: number;
+  slug: string;
   src: string;
+  srcMobile: string;
+  poster: string;
   alt: string;
   note: string;
   createdby: string;
-  priority: boolean;
-  category: string;
-  isYoutube?: boolean;
-  filename?: string;
+  category: 'nature' | 'cozy' | 'urban' | 'gaming';
 }
 
 export interface ModernApp {
@@ -29,16 +30,12 @@ export interface ModernWindow {
   size: { width: number; height: number };
   isMinimized: boolean;
   zIndex: number;
-  minSize?: { width: number; height: number };
-  maxSize?: { width: number; height: number };
 }
 
 export interface ModernNotification {
   id: string;
   message: string;
   type: 'info' | 'success' | 'warning' | 'error';
-  duration?: number;
-  icon?: React.ComponentType<{ size?: number; className?: string }>;
 }
 
 export interface DesktopProps {

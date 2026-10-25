@@ -1,22 +1,15 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
-import {
-  AlertTriangle,
-  BarChart3,
-  Expand,
-  Share,
-  Info,
-  X
-} from 'lucide-react';
+import { LogIn, BarChart3, Expand, Shrink, Share2, Info, Music, UserRound } from 'lucide-react';
 import { FaDiscord } from "react-icons/fa";
 import InfoModal from '../InfoModal';
 import DiscordModal from '../DiscordModal';
-import AuthModal from '../AuthModal';
 import Clock from './Clock';
+import { toast } from '../../lib/api';
+import type { AppUser } from '../../contexts/AuthContext';
 import desktopStyles from '../../../styles/Desktop.module.css';
 
-// Motivational quotes array (moved outside component to avoid recreating)
 const motivationalQuotes = [
   "You're doing great! Keep up the focused work!",
   "Every minute of study brings you closer to your goals!",
@@ -24,194 +17,139 @@ const motivationalQuotes = [
   "Small steps lead to big achievements! Keep going!",
   "Your dedication today shapes your success tomorrow!",
   "Learning never stops - you're investing in yourself!",
-  "Break through barriers with your determination!",
-  "Knowledge is power, and you're building it right now!",
   "Stay consistent, stay focused, stay amazing!",
   "Your future self will thank you for this effort!",
   "Progress over perfection - you're doing wonderfully!",
-  "Each study session makes you stronger and smarter!"
 ];
 
+const QUOTE_INTERVAL = 20 * 60 * 1000;
+
 interface TopBarProps {
-  user: any; // eslint-disable-line @typescript-eslint/no-explicit-any
+  user: AppUser | null;
   onToggleStats: () => void;
   onAccountAction: () => void;
-  onShare?: () => void; // Make optional since we're not using the prop
+  onToggleMusic: () => void;
+  onOpenTimer: () => void;
 }
 
-export default function TopBar({ user, onToggleStats }: TopBarProps) {
+export default function TopBar({ user, onToggleStats, onAccountAction, onToggleMusic, onOpenTimer }: TopBarProps) {
   const [showInfoModal, setShowInfoModal] = useState(false);
   const [showDiscordModal, setShowDiscordModal] = useState(false);
-  const [showClock, setShowClock] = useState(false);
-  const [showNotification, setShowNotification] = useState(false);
-  const [notificationMessage, setNotificationMessage] = useState('');
-  const [showAuthModal, setShowAuthModal] = useState(false);
+  const [isFullscreen, setIsFullscreen] = useState(false);
+  const [canFullscreen, setCanFullscreen] = useState(false);
 
-  // Motivational quotes timer
+  // A gentle nudge every 20 minutes while the tab is visible.
   useEffect(() => {
-    const showMotivationalQuote = () => {
-      const randomQuote = motivationalQuotes[Math.floor(Math.random() * motivationalQuotes.length)];
-      setNotificationMessage(randomQuote);
-      setShowNotification(true);
-      setTimeout(() => {
-        setShowNotification(false);
-      }, 5000); // Show for 5 seconds for quotes
-    };
+    const id = window.setInterval(() => {
+      if (document.visibilityState !== 'visible') return;
+      toast(motivationalQuotes[Math.floor(Math.random() * motivationalQuotes.length)], 'info');
+    }, QUOTE_INTERVAL);
+    return () => window.clearInterval(id);
+  }, []);
 
-    // Show first quote after 15 minutes
-    const initialTimer = setTimeout(showMotivationalQuote, 15 * 60 * 1000);
-
-    // Then show every 15 minutes
-    const interval = setInterval(showMotivationalQuote, 15 * 60 * 1000);
-
-    return () => {
-      clearTimeout(initialTimer);
-      clearInterval(interval);
-    };
-  }, []); // Empty dependency array since motivationalQuotes is now outside component
+  // iPhone Safari has no Fullscreen API for pages; hide the button there.
+  useEffect(() => {
+    setCanFullscreen(Boolean(document.documentElement.requestFullscreen) && document.fullscreenEnabled);
+    const onChange = () => setIsFullscreen(Boolean(document.fullscreenElement));
+    document.addEventListener('fullscreenchange', onChange);
+    return () => document.removeEventListener('fullscreenchange', onChange);
+  }, []);
 
   const handleFullscreen = () => {
     if (document.fullscreenElement) {
-      document.exitFullscreen();
+      document.exitFullscreen().catch(() => undefined);
     } else {
-      document.documentElement.requestFullscreen();
+      document.documentElement.requestFullscreen().catch(() => toast('Fullscreen is not available here', 'warning'));
     }
   };
 
   const handleShare = async () => {
+    const url = window.location.origin;
+    const shareData = { title: 'Lo-Fi.Study', text: 'Focus with lo-fi music, a Pomodoro timer and ambient sounds.', url };
+    if (navigator.share && window.matchMedia('(pointer: coarse)').matches) {
+      try {
+        await navigator.share(shareData);
+        return;
+      } catch {
+        // user cancelled — fall through to copying
+      }
+    }
     try {
-      await navigator.clipboard.writeText(window.location.href);
-      setNotificationMessage('Share Lofi Study with your friends! 🎵');
-      setShowNotification(true);
-      setTimeout(() => {
-        setShowNotification(false);
-      }, 3000);
-    } catch (err) {
-      console.error('Failed to copy to clipboard:', err);
-      // Fallback for older browsers
-      const textArea = document.createElement('textarea');
-      textArea.value = window.location.href;
-      document.body.appendChild(textArea);
-      textArea.select();
-      document.execCommand('copy');
-      document.body.removeChild(textArea);
-      setNotificationMessage('Share Lofi Study with your friends! 🎵');
-      setShowNotification(true);
-      setTimeout(() => {
-        setShowNotification(false);
-      }, 3000);
+      await navigator.clipboard.writeText(url);
+      toast('Link copied — share Lo-Fi.Study with your friends! 🎵', 'success');
+    } catch {
+      toast(url, 'info');
     }
   };
 
-
   return (
     <>
-      {/* Notification */}
-      <div className={desktopStyles.notificationsContainer}>
-        {showNotification && (
-          <div className={desktopStyles.notification}>
-            <div className={desktopStyles.notificationIcon}>
-              <Info size={18} />
-            </div>
-            <div className={desktopStyles.notificationContent}>
-              <p className={desktopStyles.notificationType}>Notification</p>
-              <p className={desktopStyles.notificationMessage}>{notificationMessage}</p>
-            </div>
-            <button
-              className={desktopStyles.notificationClose}
-              onClick={() => setShowNotification(false)}
-            >
-              <X size={14} />
-            </button>
-          </div>
-        )}
-      </div>
-
-      <div className={desktopStyles.topRightIcons}>
+      <header className={desktopStyles.topRightIcons}>
         <div className={desktopStyles.topBarGroup}>
-          <Clock
-            isExpanded={showClock}
-            onToggle={() => setShowClock(!showClock)}
-            onClose={() => setShowClock(false)}
-          />
+          <button onClick={onToggleMusic} className={`${desktopStyles.topIcon} ${desktopStyles.showOnPhone}`} aria-label="Music player">
+            <Music size={20} />
+          </button>
+          <Clock onClick={onOpenTimer} />
         </div>
 
         <div className={desktopStyles.topBarDivider} />
 
         <div className={desktopStyles.topBarGroup}>
-          {!user && (
-            <>
-              <button
-                className={desktopStyles.topIcon}
-                style={{ color: '#f59e0b' }}
-                onClick={() => setShowAuthModal(true)}
-              >
-                <AlertTriangle size={20} />
-                <div className={desktopStyles.topIconTooltip}>
-                  Sign in to sync your data
-                </div>
-              </button>
-              <AuthModal isVisible={showAuthModal} onClose={() => setShowAuthModal(false)} />
-            </>
-          )}
-
-          {user && (
+          {!user ? (
+            <button className={`${desktopStyles.topIcon} ${desktopStyles.signInPill}`} onClick={onAccountAction}>
+              <LogIn size={18} />
+              <span>Sign in</span>
+            </button>
+          ) : (
             <button
-              onClick={onToggleStats}
-              className={desktopStyles.topIcon}
-              title="View Statistics"
+              className={`${desktopStyles.topIcon} ${desktopStyles.showOnPhone}`}
+              onClick={onAccountAction}
+              aria-label="Account"
             >
-              <BarChart3 size={20} />
+              <UserRound size={20} />
             </button>
           )}
 
-          <button
-            onClick={() => setShowInfoModal(true)}
-            className={desktopStyles.topIcon}
-            title="Information"
-          >
+          <button onClick={onToggleStats} className={desktopStyles.topIcon} title="Statistics" aria-label="Statistics">
+            <BarChart3 size={20} />
+          </button>
+
+          <button onClick={() => setShowInfoModal(true)} className={desktopStyles.topIcon} title="About" aria-label="About Lo-Fi.Study">
             <Info size={20} />
           </button>
 
           <button
             onClick={() => setShowDiscordModal(true)}
-            className={desktopStyles.topIcon}
+            className={`${desktopStyles.topIcon} ${desktopStyles.hideOnPhone}`}
             title="Join Discord"
+            aria-label="Join our Discord"
           >
             <FaDiscord size={20} />
           </button>
         </div>
 
-        <div className={desktopStyles.topBarDivider} />
+        <div className={`${desktopStyles.topBarDivider} ${desktopStyles.hideOnPhone}`} />
 
         <div className={desktopStyles.topBarGroup}>
-          <button
-            onClick={handleShare}
-            className={desktopStyles.topIcon}
-            title="Share"
-          >
-            <Share size={20} />
+          <button onClick={handleShare} className={desktopStyles.topIcon} title="Share" aria-label="Share">
+            <Share2 size={20} />
           </button>
 
-
-          <button
-            onClick={handleFullscreen}
-            className={desktopStyles.topIcon}
-            title="Fullscreen"
-          >
-            <Expand size={20} />
-          </button>
+          {canFullscreen && (
+            <button
+              onClick={handleFullscreen}
+              className={`${desktopStyles.topIcon} ${desktopStyles.hideOnPhone}`}
+              title={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+              aria-label={isFullscreen ? 'Exit fullscreen' : 'Fullscreen'}
+            >
+              {isFullscreen ? <Shrink size={20} /> : <Expand size={20} />}
+            </button>
+          )}
         </div>
-      </div>
+      </header>
 
-      <InfoModal
-        isOpen={showInfoModal}
-        onClose={() => setShowInfoModal(false)}
-      />
-      <DiscordModal
-        isOpen={showDiscordModal}
-        onClose={() => setShowDiscordModal(false)}
-      />
+      <InfoModal isOpen={showInfoModal} onClose={() => setShowInfoModal(false)} />
+      <DiscordModal isOpen={showDiscordModal} onClose={() => setShowDiscordModal(false)} />
     </>
   );
 }

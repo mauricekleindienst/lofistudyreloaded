@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from 'react';
-import { Send, RefreshCw, User, Users, LogIn, MessageSquare, X } from 'lucide-react';
+import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
+import { Send, RefreshCw, User, Users, LogIn, X } from 'lucide-react';
+import { openAuthModal } from '../../lib/ui';
 import { useAuth } from '../../contexts/AuthContext';
 import { useRealtimeChat } from '../../hooks/useRealtimeChat';
 import styles from '../../../styles/ChatbotApp.module.css';
@@ -13,7 +14,6 @@ const ChatApp: React.FC = () => {
     loading,
     onlineUsers,
     username,
-    hasUsername,
     sendMessage: sendChatMessage,
     updateUsername,
     refreshMessages
@@ -22,20 +22,21 @@ const ChatApp: React.FC = () => {
   const [newMessage, setNewMessage] = useState('');
   const [usernameInput, setUsernameInput] = useState('');
   const [usernameDialogOpen, setUsernameDialogOpen] = useState(false);
-  const messagesEndRef = useRef<HTMLDivElement>(null);
+  const scrollRef = useRef<HTMLDivElement>(null);
+  const stickToBottom = useRef(true);
   const inputRef = useRef<HTMLInputElement>(null);
 
-  // Show username dialog if user doesn't have a username
-  useEffect(() => {
-    if (user && !username && !loading) {
-      setUsernameDialogOpen(true);
-    }
-  }, [user, username, loading]);
-
-  // Auto scroll to bottom when new messages arrive
-  useEffect(() => {
-    messagesEndRef.current?.scrollIntoView({ behavior: 'smooth' });
+  // Follow new messages only while the reader is at the bottom; don't yank
+  // them away from history they scrolled up to read.
+  useLayoutEffect(() => {
+    const el = scrollRef.current;
+    if (el && stickToBottom.current) el.scrollTop = el.scrollHeight;
   }, [messages]);
+
+  const handleScroll = () => {
+    const el = scrollRef.current;
+    if (el) stickToBottom.current = el.scrollHeight - el.scrollTop - el.clientHeight < 80;
+  };
 
   // Set initial username input value when username changes
   useEffect(() => {
@@ -58,6 +59,7 @@ const ChatApp: React.FC = () => {
 
     if (!newMessage.trim() || !user) return;
 
+    stickToBottom.current = true;
     const success = await sendChatMessage(newMessage);
     if (success) {
       setNewMessage('');
@@ -117,50 +119,38 @@ const ChatApp: React.FC = () => {
     setUsernameInput(randomUsername);
   };
 
-  // If user is not authenticated, show sign-in message
-  if (!user) {
-    return (
-      <div className={styles.container}>
-        <div className={styles.signInContainer}>
-          <LogIn size={48} className={styles.signInIcon} />
-          <h2>Sign in to use Chat</h2>
-          <p>Please sign in to send and receive messages.</p>
-        </div>
-      </div>
-    );
-  }
-
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <MessageSquare size={20} />
-          <h2>Community Chat</h2>
+        <div className={styles.onlineUsers} title="People with the chat open in the last minute">
+          <span className={styles.onlineDot} aria-hidden />
+          <Users size={14} />
+          <span>{onlineUsers} online</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <div className={styles.onlineUsers}>
-            <Users size={14} />
-            <span>{onlineUsers} online</span>
-          </div>
-          <button
-            onClick={() => setUsernameDialogOpen(true)}
-            className={styles.refreshButton}
-            title="Change username"
-          >
-            <User size={16} />
-          </button>
+          {user && (
+            <button
+              onClick={() => setUsernameDialogOpen(true)}
+              className={styles.refreshButton}
+              title="Change display name"
+              aria-label="Change display name"
+            >
+              <User size={16} />
+            </button>
+          )}
           <button
             onClick={refreshMessages}
             className={styles.refreshButton}
             disabled={loading}
             title="Refresh messages"
+            aria-label="Refresh messages"
           >
             <RefreshCw size={16} className={loading ? styles.spinning : ''} />
           </button>
         </div>
       </div>
 
-      <div className={styles.messagesContainer}>
+      <div className={styles.messagesContainer} ref={scrollRef} onScroll={handleScroll} aria-live="polite">
         {loading && messages.length === 0 ? (
           <div className={styles.loadingContainer}>
             <RefreshCw size={24} className={`${styles.loadingIcon} animate-spin`} />
@@ -197,35 +187,45 @@ const ChatApp: React.FC = () => {
                 ))}
               </React.Fragment>
             ))}
-            <div ref={messagesEndRef} />
           </>
         )}
       </div>
 
-      <form onSubmit={handleSendMessage} className={styles.inputForm}>
-        <input
-          type="text"
-          value={newMessage}
-          onChange={(e) => setNewMessage(e.target.value)}
-          placeholder="Type a message..."
-          disabled={!user || loading}
-          ref={inputRef}
-          className={styles.messageInput}
-        />
-        <button
-          type="submit"
-          disabled={!newMessage.trim() || !user || loading}
-          className={styles.sendButton}
-        >
-          <Send size={18} />
-        </button>
-      </form>
+      {user ? (
+        <form onSubmit={handleSendMessage} className={styles.inputForm}>
+          <input
+            type="text"
+            value={newMessage}
+            onChange={(e) => setNewMessage(e.target.value)}
+            placeholder="Type a message..."
+            aria-label="Message"
+            maxLength={500}
+            enterKeyHint="send"
+            ref={inputRef}
+            className={styles.messageInput}
+          />
+          <button
+            type="submit"
+            disabled={!newMessage.trim()}
+            className={styles.sendButton}
+            aria-label="Send message"
+          >
+            <Send size={18} />
+          </button>
+        </form>
+      ) : (
+        <div className={styles.inputForm}>
+          <button type="button" className={styles.submitButton} onClick={openAuthModal}>
+            <LogIn size={16} /> Sign in to join the conversation
+          </button>
+        </div>
+      )}
 
       {usernameDialogOpen && (
         <div className={styles.modal}>
           <div className={styles.modalContent}>
             <div className={styles.modalHeader}>
-              <h3>{username ? 'Change Username' : 'Choose a Username'}</h3>
+              <h3>Your display name</h3>
               <div style={{ display: 'flex', gap: '8px' }}>
                 <button
                   onClick={generateRandomUsername}
@@ -252,16 +252,18 @@ const ChatApp: React.FC = () => {
                 type="text"
                 value={usernameInput}
                 onChange={(e) => setUsernameInput(e.target.value)}
-                placeholder="Enter a username"
+                placeholder="Display name"
+                maxLength={40}
+                aria-label="Display name"
                 className={styles.usernameInput}
                 autoFocus
               />
               <button
                 type="submit"
-                disabled={!usernameInput.trim()}
+                disabled={usernameInput.trim().length < 2}
                 className={styles.submitButton}
               >
-                Start Chatting
+                Save
               </button>
             </form>
           </div>

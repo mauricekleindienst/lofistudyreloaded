@@ -165,8 +165,9 @@ export default function PrivacyPolicyPage() {
                       Data Storage
                     </h3>
                     <p className={styles.prose}>
-                      Your data is stored securely using Supabase, a trusted database provider with enterprise-grade security. 
-                      We retain your data only as long as necessary to provide our services or as required by law.
+                      Account data is stored in our own MongoDB database on a server in Germany (Hetzner). Passwords are
+                      stored only as salted scrypt hashes. We keep your data until you delete your account, which you can
+                      do yourself at any time under Account → Security. You can also download all of your data there.
                     </p>
                   </div>
                 </div>
@@ -208,9 +209,9 @@ export default function PrivacyPolicyPage() {
                   <div className={styles.prose}>
                     <p>We use the following third-party services and only share data necessary for providing our services:</p>
                     <ul>
-                      <li><strong>Supabase:</strong> Database and authentication services</li>
-                      <li><strong>Vercel:</strong> Website hosting and deployment</li>
-                      <li><strong>OAuth Providers:</strong> Discord, GitHub, and Google for authentication</li>
+                      <li><strong>Hetzner Online (Germany):</strong> Server hosting for the website and database</li>
+                      <li><strong>YouTube:</strong> Only if you use the music player, which embeds YouTube videos</li>
+                      <li><strong>OAuth providers (optional):</strong> Google, GitHub or Discord, only if you choose to sign in with them</li>
                     </ul>
                     <p>
                       These services have their own privacy policies, and we encourage you to review them.
@@ -228,9 +229,9 @@ export default function PrivacyPolicyPage() {
                   </div>
                   <div className={styles.prose}>
                     <p>
-                      We use browser local storage to save your preferences and session data when you&apos;re not logged in. 
-                      For logged-in users, data is synchronized with our secure servers. We do not use tracking cookies 
-                      or share data with advertising networks.
+                      Without an account, your tasks, notes, appointments, stats and preferences stay in your browser&apos;s
+                      local storage on this device. When you sign in, we set one strictly necessary, HttpOnly session
+                      cookie. We do not use tracking cookies or share data with advertising networks.
                     </p>
                   </div>
                 </div>

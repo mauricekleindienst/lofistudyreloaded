@@ -4,7 +4,14 @@ import React, { useState, useEffect, useCallback } from 'react';
 import { ChevronLeft, ChevronRight, X, Plus, Clock, Edit2, Trash2 } from 'lucide-react';
 import styles from '../../styles/Calendar.module.css';
 import { useAuth } from '../contexts/AuthContext';
-import { DatabaseService, Appointment } from '../lib/database';
+import { db, type Appointment } from '../lib/database';
+import { localDate } from '../lib/api';
+
+// 'YYYY-MM-DD' parsed by new Date() is UTC midnight, i.e. the previous day west of Greenwich.
+const parseLocalDate = (value: string) => {
+  const [y, m, d] = value.split('-').map(Number);
+  return new Date(y, m - 1, d);
+};
 
 interface CalendarProps {
   isVisible: boolean;
@@ -12,7 +19,7 @@ interface CalendarProps {
 }
 
 const Calendar: React.FC<CalendarProps> = ({ isVisible, onClose }) => {
-  const { user } = useAuth();
+  const { user, loading: authLoading } = useAuth();
   const [currentDate, setCurrentDate] = useState(new Date());
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [appointments, setAppointments] = useState<Appointment[]>([]);
@@ -60,29 +67,17 @@ const Calendar: React.FC<CalendarProps> = ({ isVisible, onClose }) => {
   };
 
   const loadAppointments = useCallback(async () => {
-    if (!user) return;
-    
     setLoading(true);
-    try {
-      const dbService = new DatabaseService();
-      const data = await dbService.getAppointments();
-      setAppointments(data);
-    } catch (error) {
-      console.error('Failed to load appointments:', error);
-    } finally {
-      setLoading(false);
-    }
-  }, [user]);
+    setAppointments(await db.getAppointments());
+    setLoading(false);
+  }, []);
 
-  // Load appointments when component mounts or user changes
+  // Load appointments when opened and whenever the user signs in or out
   useEffect(() => {
-    if (isVisible && user) {
+    if (isVisible && !authLoading) {
       loadAppointments();
-    } else {
-      setAppointments([]);
-      setFilteredAppointments([]);
     }
-  }, [isVisible, user, loadAppointments]);
+  }, [isVisible, user?.id, authLoading, loadAppointments]);
 
   // Filter appointments when selectedDate changes
   useEffect(() => {
@@ -93,6 +88,13 @@ const Calendar: React.FC<CalendarProps> = ({ isVisible, onClose }) => {
       setFilteredAppointments(appointments);
     }
   }, [selectedDate, appointments]);
+
+  useEffect(() => {
+    if (!isVisible) return;
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [isVisible, onClose]);
 
   // Close dropdowns when clicking outside
   useEffect(() => {
@@ -161,11 +163,11 @@ const Calendar: React.FC<CalendarProps> = ({ isVisible, onClose }) => {
   };
 
   const handleAddAppointment = async () => {
-    if (!user || !selectedDate || !newAppointment.title.trim()) return;
+    if (!selectedDate || !newAppointment.title.trim()) return;
 
     setLoading(true);
     try {
-      const appointmentData: Appointment = {
+      const appointmentData = {
         title: newAppointment.title,
         description: newAppointment.description,
         date: selectedDate,
@@ -175,10 +177,9 @@ const Calendar: React.FC<CalendarProps> = ({ isVisible, onClose }) => {
         reminder: newAppointment.reminder
       };
 
-      const dbService = new DatabaseService();
-      const savedAppointment = await dbService.saveAppointment(appointmentData);
+      const savedAppointment = await db.saveAppointment(appointmentData);
       if (savedAppointment) {
-        setAppointments([...appointments, savedAppointment]);
+        setAppointments(prev => [...prev, savedAppointment]);
         resetForm();
         setShowAddForm(false);
       }
@@ -190,7 +191,7 @@ const Calendar: React.FC<CalendarProps> = ({ isVisible, onClose }) => {
   };
 
   const handleUpdateAppointment = async () => {
-    if (!user || !editingAppointment || !newAppointment.title.trim()) return;
+    if (!editingAppointment || !newAppointment.title.trim()) return;
 
     setLoading(true);
     try {
@@ -203,10 +204,9 @@ const Calendar: React.FC<CalendarProps> = ({ isVisible, onClose }) => {
         reminder: newAppointment.reminder
       };
 
-      const dbService = new DatabaseService();
-      const updatedAppointment = await dbService.updateAppointment(editingAppointment.id!, updates);
+      const updatedAppointment = await db.updateAppointment(editingAppointment.id, updates);
       if (updatedAppointment) {
-        setAppointments(appointments.map(apt => 
+        setAppointments(prev => prev.map(apt => 
           apt.id === editingAppointment.id ? updatedAppointment : apt
         ));
         resetForm();
@@ -219,15 +219,12 @@ const Calendar: React.FC<CalendarProps> = ({ isVisible, onClose }) => {
     }
   };
 
-  const handleDeleteAppointment = async (id: number) => {
-    if (!user) return;
-
+  const handleDeleteAppointment = async (id: string) => {
     setLoading(true);
     try {
-      const dbService = new DatabaseService();
-      const success = await dbService.deleteAppointment(id);
+      const success = await db.deleteAppointment(id);
       if (success) {
-        setAppointments(appointments.filter(apt => apt.id !== id));
+        setAppointments(prev => prev.filter(apt => apt.id !== id));
       }
     } catch (error) {
       console.error('Failed to delete appointment:', error);
@@ -259,6 +256,16 @@ const Calendar: React.FC<CalendarProps> = ({ isVisible, onClose }) => {
       reminder: false
     });
   };
+
+  // The form opens below the grid; bring it into view so it doesn't look like nothing happened.
+  const formRef = React.useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!showAddForm && !editingAppointment) return;
+    const el = formRef.current;
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    el.querySelector<HTMLInputElement>('input')?.focus({ preventScroll: true });
+  }, [showAddForm, editingAppointment]);
 
   if (!isVisible) return null;
 
@@ -310,10 +317,8 @@ const Calendar: React.FC<CalendarProps> = ({ isVisible, onClose }) => {
   };
 
   const renderAppointmentForm = () => {
-    if (!user) return null;
-
     return (
-      <div className={styles.appointmentForm}>
+      <div className={styles.appointmentForm} ref={formRef}>
         <h4>{editingAppointment ? 'Edit Appointment' : 'Add New Appointment'}</h4>
         
         <div className={styles.compactFormRow}>
@@ -431,6 +436,7 @@ const Calendar: React.FC<CalendarProps> = ({ isVisible, onClose }) => {
               <button 
                 onClick={() => navigateMonth('prev')}
                 className={styles.navButton}
+                aria-label="Previous month"
               >
                 <ChevronLeft size={20} />
               </button>
@@ -490,11 +496,13 @@ const Calendar: React.FC<CalendarProps> = ({ isVisible, onClose }) => {
               <button 
                 onClick={() => navigateMonth('next')}
                 className={styles.navButton}
+                aria-label="Next month"
               >
                 <ChevronRight size={20} />
               </button>
             </div>
-            <button onClick={onClose} className={styles.closeButton}>
+            <button onClick={onClose} className={styles.closeButton}
+              aria-label="Close calendar">
               <X size={18} />
             </button>
           </div>
@@ -514,10 +522,10 @@ const Calendar: React.FC<CalendarProps> = ({ isVisible, onClose }) => {
           </div>
 
           {/* Selected Date Actions */}
-          {selectedDate && user && (
+          {selectedDate && (
             <div className={styles.selectedDateActions}>
               <div className={styles.selectedDateInfo}>
-                <span>Selected: {new Date(selectedDate).toLocaleDateString()}</span>
+                <span>Selected: {parseLocalDate(selectedDate).toLocaleDateString()}</span>
               </div>
               {!showAddForm && !editingAppointment && (
                 <button
@@ -560,12 +568,11 @@ const Calendar: React.FC<CalendarProps> = ({ isVisible, onClose }) => {
 
         {/* Appointments Overview Panel */}
         <div className={styles.appointmentsPanel}>
-          {user ? (
-            <>
+          <>
               <div className={styles.appointmentsPanelHeader}>
                 <h4>
                   {selectedDate 
-                    ? `${new Date(selectedDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} Appointments` 
+                    ? `${parseLocalDate(selectedDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} Appointments` 
                     : 'All Appointments'
                   }
                 </h4>
@@ -597,7 +604,7 @@ const Calendar: React.FC<CalendarProps> = ({ isVisible, onClose }) => {
                 </div>
                 <div className={styles.statItem}>
                   <span className={styles.statNumber}>
-                    {appointments.filter(apt => new Date(apt.date) > today).length}
+                    {appointments.filter(apt => apt.date > localDate(today)).length}
                   </span>
                   <span className={styles.statLabel}>Upcoming</span>
                 </div>
@@ -653,13 +660,13 @@ const Calendar: React.FC<CalendarProps> = ({ isVisible, onClose }) => {
                             {appointment.category === 'personal' && '👤'}
                             {appointment.category === 'work' && '💼'}
                             {appointment.category === 'health' && '💪'}
-                            {appointment.category === 'study' && '�'}
-                            {appointment.category === 'other' && '�'}
+                            {appointment.category === 'study' && '📚'}
+                            {appointment.category === 'other' && '📌'}
                             {appointment.category || 'personal'}
                           </div>
                           {appointment.reminder && (
                             <div className={styles.reminderBadge} title="Reminder enabled">
-                              �
+                              🔔
                             </div>
                           )}
                         </div>
@@ -678,7 +685,7 @@ const Calendar: React.FC<CalendarProps> = ({ isVisible, onClose }) => {
                           <Edit2 size={14} />
                         </button>
                         <button
-                          onClick={() => handleDeleteAppointment(appointment.id!)}
+                          onClick={() => handleDeleteAppointment(appointment.id)}
                           className={styles.deleteButton}
                           title="Delete appointment"
                         >
@@ -688,22 +695,7 @@ const Calendar: React.FC<CalendarProps> = ({ isVisible, onClose }) => {
                     </div>                  ))
                 )}
               </div>
-            </>
-          ) : (
-            <div className={styles.loginPrompt}>
-              <div className={styles.loginPromptIcon}>🔐</div>
-              <div className={styles.loginPromptTitle}>Sign in to manage appointments</div>
-              <div className={styles.loginPromptDescription}>
-                Create an account or sign in to add, edit, and manage your appointments. Your data will be securely stored and synced across devices.
-              </div>
-              <div className={styles.loginPromptFeatures}>
-                <div className={styles.featureItem}>✓ Secure cloud storage</div>
-                <div className={styles.featureItem}>✓ Multi-device sync</div>
-                <div className={styles.featureItem}>✓ Reminder notifications</div>
-                <div className={styles.featureItem}>✓ Color-coded categories</div>
-              </div>
-            </div>
-          )}
+          </>
         </div>
       </div>
     </div>

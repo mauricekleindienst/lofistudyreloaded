@@ -1035,3 +1035,220 @@
   max-width: 300px;
   line-height: 1.5;
 }
+
+.emptyStateButton svg {
+  margin: 0;
+  width: 16px;
+  height: 16px;
+  opacity: 1;
+  flex-shrink: 0;
+}
+
+/* --- narrow windows / phones: list and editor take turns --- */
+.container {
+  container-type: inline-size;
+}
+
+.backButton {
+  display: none;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  background: var(--glass-button);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+@container (max-width: 620px) {
+  .mainContent {
+    flex-direction: column;
+  }
+
+  .notesList {
+    flex: 1;
+    max-height: none;
+    max-width: none;
+    min-width: 0;
+    border-right: none;
+    border-bottom: none;
+  }
+
+  .hasSelection .notesList {
+    display: none;
+  }
+
+  .noteEditor {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .backButton {
+    display: inline-flex;
+  }
+
+  .editorHeader {
+    gap: 8px;
+  }
+
+  .titleInput {
+    min-width: 0;
+    font-size: 16px;
+  }
+}
+
+.gridView {
+  align-content: start;
+}
+
+@container (max-width: 620px) {
+  .editorHeader {
+    flex-wrap: nowrap;
+    align-items: center;
+  }
+
+  .editorHeader > h2,
+  .editorHeader > h3,
+  .editorHeader .noteTitle {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 16px;
+  }
+
+  .editorActions {
+    flex-shrink: 0;
+    gap: 6px;
+  }
+
+  .editorActions button {
+    flex: 0 0 auto;
+    width: auto;
+  }
+}
+
+@container (max-width: 620px) {
+  .editorHeader {
+    flex-direction: row;
+    padding: 12px;
+  }
+
+  .editorTitle {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 16px;
+  }
+
+  .editorActions {
+    width: auto;
+  }
+}
+
+/* --- note preview typography (output of lib/markdown.ts) --- */
+.contentFormatted {
+  font-size: 15px;
+  line-height: 1.65;
+  color: var(--text-secondary);
+}
+
+.contentFormatted > * + * {
+  margin-top: 0.7em;
+}
+
+.contentFormatted h1,
+.contentFormatted h2,
+.contentFormatted h3 {
+  color: var(--text-primary);
+  line-height: 1.25;
+  margin: 1.1em 0 0.4em;
+  padding: 0;
+  border: none;
+}
+
+.contentFormatted > :first-child {
+  margin-top: 0;
+}
+
+.contentFormatted h1 { font-size: 1.45em; }
+.contentFormatted h2 { font-size: 1.25em; }
+.contentFormatted h3 { font-size: 1.1em; }
+
+.contentFormatted ul,
+.contentFormatted ol {
+  margin: 0.5em 0;
+  padding-left: 1.4em;
+}
+
+.contentFormatted li {
+  margin: 0.2em 0;
+  padding: 0;
+}
+
+.contentFormatted li::marker {
+  color: var(--accent-color);
+}
+
+.contentFormatted blockquote {
+  margin: 0.8em 0;
+  padding: 0.5em 0.9em;
+  border-left: 3px solid var(--accent-color);
+  border-radius: 0 8px 8px 0;
+  background: rgba(255, 255, 255, 0.04);
+  font-style: normal;
+}
+
+.contentFormatted code {
+  padding: 0.1em 0.35em;
+  border-radius: 5px;
+  background: rgba(255, 255, 255, 0.08);
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: 0.9em;
+}
+
+.contentFormatted hr {
+  border: none;
+  border-top: 1px solid var(--border-color);
+  margin: 1em 0;
+}
+
+.contentFormatted strong {
+  color: var(--text-primary);
+}
+
+/* Card delete: a quiet icon, not a red slab */
+.noteActions .deleteButton {
+  width: 30px;
+  height: 30px;
+  padding: 0;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  border: none;
+  color: var(--text-tertiary);
+  box-shadow: none;
+}
+
+.noteActions .deleteButton:hover {
+  background: rgba(239, 68, 68, 0.15);
+  color: #f87171;
+}
+
+@media (hover: none) {
+  .noteActions {
+    opacity: 1;
+  }
+}
+
+.contentFormatted br {
+  display: inline;
+  content: normal;
+  margin: 0;
+}

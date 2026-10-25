@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import { 
   Plus, 
   Search, 
@@ -25,38 +25,31 @@ import {
   Code,
   ListOrdered,
   List as ListIcon,
-  LogIn
+  ChevronLeft,
 } from 'lucide-react';
 import { useDataPersistence } from '../../hooks/useDataPersistence';
 import { useAppState } from '../../contexts/AppStateContext';
-import { Note } from '../../lib/database';
+import { toast } from '../../lib/api';
+import { renderMarkdown, stripMarkdown } from '../../lib/markdown';
+import type { Note } from '../../lib/database';
 import styles from '../../../styles/NotesApp.module.css';
 
-interface LocalNote extends Omit<Note, 'id'> {
-  id: string;
-  isLocal?: boolean;
-}
 
 export default function NotesApp() {
   const { updateNotesState } = useAppState();
-  const { 
-    loadNotes, 
-    saveNote, 
-    updateNote, 
-    deleteNote, 
-    isAuthenticated 
-  } = useDataPersistence();
+  const { db, isAuthenticated, authLoading } = useDataPersistence();
 
   // State management
-  const [notes, setNotes] = useState<(Note | LocalNote)[]>([]);
-  const [filteredNotes, setFilteredNotes] = useState<(Note | LocalNote)[]>([]);
-  const [selectedNote, setSelectedNote] = useState<Note | LocalNote | null>(null);
+  const [notes, setNotes] = useState<Note[]>([]);
+  const [filteredNotes, setFilteredNotes] = useState<Note[]>([]);
+  const [selectedNote, setSelectedNote] = useState<Note | null>(null);
   const [isEditing, setIsEditing] = useState(false);
   const [isCreating, setIsCreating] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [sortBy, setSortBy] = useState<'updated' | 'created' | 'title'>('updated');
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [isSaving, setIsSaving] = useState(false);
 
   // Form state
   const [editTitle, setEditTitle] = useState('');
@@ -65,46 +58,29 @@ export default function NotesApp() {
 
   // Delete confirmation modal state
   const [showDeleteModal, setShowDeleteModal] = useState(false);
-  const [noteToDelete, setNoteToDelete] = useState<Note | LocalNote | null>(null);
+  const [noteToDelete, setNoteToDelete] = useState<Note | null>(null);
 
-  // Update app state context with notes count
   useEffect(() => {
     updateNotesState({ totalCount: notes.length });
   }, [notes.length, updateNotesState]);
 
-  // Load notes on mount and when authentication changes
-  const loadNotesData = useCallback(async () => {
-    if (!isAuthenticated) {
-      // Load from localStorage for unauthenticated users
-      const localNotes = localStorage.getItem('lofi-notes');
-      if (localNotes) {
-        const parsed = JSON.parse(localNotes);
-        setNotes(parsed);
-      }
-      return;
-    }
-
-    setIsLoading(true);
-    try {
-      const fetchedNotes = await loadNotes();
-      setNotes(fetchedNotes || []);
-    } catch (error) {
-      console.error('Failed to load notes:', error);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [isAuthenticated, loadNotes]);
-
+  // Load notes on mount and whenever the user signs in or out
   useEffect(() => {
-    loadNotesData();
-  }, [loadNotesData]);
-
-  // Save to localStorage for unauthenticated users
-  const saveToLocal = useCallback((updatedNotes: (Note | LocalNote)[]) => {
-    if (!isAuthenticated) {
-      localStorage.setItem('lofi-notes', JSON.stringify(updatedNotes));
-    }
-  }, [isAuthenticated]);
+    if (authLoading) return;
+    let cancelled = false;
+    setIsLoading(true);
+    setSelectedNote(null);
+    setIsEditing(false);
+    setIsCreating(false);
+    db.getNotes().then((items) => {
+      if (cancelled) return;
+      setNotes(items);
+      setIsLoading(false);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [db, isAuthenticated, authLoading]);
 
   // Filter and sort notes
   useEffect(() => {
@@ -141,113 +117,47 @@ export default function NotesApp() {
   // Handle saving a note
   const handleSaveNote = async () => {
     if (!editTitle.trim()) {
-      alert('Please enter a title for your note.');
+      toast('Please enter a title for your note.', 'warning');
       return;
     }
+    if (isSaving) return;
 
-    const noteData = {
-      title: editTitle.trim(),
-      content: editContent.trim(),
-      updated_at: new Date().toISOString()
-    };
-
-    if (isCreating) {
-      // Creating new note
-      if (isAuthenticated) {
-        try {
-          const newNote = await saveNote({
-            ...noteData,
-            created_at: new Date().toISOString()
-          });
-          if (newNote) {
-            setNotes(prev => [newNote, ...prev]);
-            setSelectedNote(newNote);
-          }
-        } catch (error) {
-          console.error('Failed to save note:', error);
-          alert('Failed to save note. Please try again.');
-          return;
-        }
-      } else {
-        // Local storage for unauthenticated users
-        const newLocalNote: LocalNote = {
-          id: Date.now().toString(),
-          ...noteData,
-          created_at: new Date().toISOString(),
-          isLocal: true
-        };
-        const updatedNotes = [newLocalNote, ...notes];
-        setNotes(updatedNotes);
-        saveToLocal(updatedNotes);
-        setSelectedNote(newLocalNote);
+    const noteData = { title: editTitle.trim(), content: editContent };
+    setIsSaving(true);
+    try {
+      if (isCreating) {
+        const created = await db.saveNote(noteData);
+        if (!created) return;
+        setNotes(prev => [created, ...prev]);
+        setSelectedNote(created);
+      } else if (selectedNote) {
+        const updated = await db.updateNote(selectedNote.id, noteData);
+        if (!updated) return;
+        setNotes(prev => prev.map(note => (note.id === updated.id ? updated : note)));
+        setSelectedNote(updated);
       }
-    } else if (selectedNote) {
-      // Updating existing note
-      if (isAuthenticated && typeof selectedNote.id === 'number') {
-        try {
-          const updatedNote = await updateNote(selectedNote.id, noteData);
-          if (updatedNote) {
-            setNotes(prev => prev.map(note => 
-              note.id === selectedNote.id ? updatedNote : note
-            ));
-            setSelectedNote(updatedNote);
-          }
-        } catch (error) {
-          console.error('Failed to update note:', error);
-          alert('Failed to update note. Please try again.');
-          return;
-        }
-      } else {
-        // Update local note
-        const updatedNote = { ...selectedNote, ...noteData };
-        const updatedNotes = notes.map(note => 
-          note.id === selectedNote.id ? updatedNote : note
-        );
-        setNotes(updatedNotes);
-        saveToLocal(updatedNotes);
-        setSelectedNote(updatedNote);
-      }
+      setIsCreating(false);
+      setIsEditing(false);
+    } finally {
+      setIsSaving(false);
     }
-
-    setIsCreating(false);
-    setIsEditing(false);
   };
 
-  // Handle deleting a note
-  const handleDeleteNote = async (noteToDelete: Note | LocalNote) => {
-    setNoteToDelete(noteToDelete);
+  const handleDeleteNote = (note: Note) => {
+    setNoteToDelete(note);
     setShowDeleteModal(true);
   };
 
-  // Confirm delete action
   const confirmDelete = async () => {
     if (!noteToDelete) return;
-
-    if (isAuthenticated && typeof noteToDelete.id === 'number') {
-      try {
-        const success = await deleteNote(noteToDelete.id);
-        if (success) {
-          setNotes(prev => prev.filter(note => note.id !== noteToDelete.id));
-          if (selectedNote?.id === noteToDelete.id) {
-            setSelectedNote(null);
-            setIsEditing(false);
-          }
-        }
-      } catch (error) {
-        console.error('Failed to delete note:', error);
-        alert('Failed to delete note. Please try again.');
-      }
-    } else {
-      // Delete local note
-      const updatedNotes = notes.filter(note => note.id !== noteToDelete.id);
-      setNotes(updatedNotes);
-      saveToLocal(updatedNotes);
+    const ok = await db.deleteNote(noteToDelete.id);
+    if (ok) {
+      setNotes(prev => prev.filter(note => note.id !== noteToDelete.id));
       if (selectedNote?.id === noteToDelete.id) {
         setSelectedNote(null);
         setIsEditing(false);
       }
     }
-
     setShowDeleteModal(false);
     setNoteToDelete(null);
   };
@@ -259,7 +169,7 @@ export default function NotesApp() {
   };
 
   // Handle selecting a note
-  const handleSelectNote = (note: Note | LocalNote) => {
+  const handleSelectNote = (note: Note) => {
     if (isEditing && (editTitle !== selectedNote?.title || editContent !== selectedNote?.content)) {
       if (!confirm('You have unsaved changes. Do you want to discard them?')) {
         return;
@@ -294,25 +204,19 @@ export default function NotesApp() {
     setIsEditing(false);
   };
 
-  // Format date
+  // Format date relative to today's calendar day
   const formatDate = (dateString?: string) => {
     if (!dateString) return '';
     const date = new Date(dateString);
-    const now = new Date();
-    const diffTime = Math.abs(now.getTime() - date.getTime());
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-
-    if (diffDays === 1) return 'Today';
-    if (diffDays === 2) return 'Yesterday';
-    if (diffDays <= 7) return `${diffDays - 1} days ago`;
-    
+    const startOf = (d: Date) => new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+    const diffDays = Math.round((startOf(new Date()) - startOf(date)) / 86_400_000);
+    if (diffDays <= 0) return 'Today';
+    if (diffDays === 1) return 'Yesterday';
+    if (diffDays < 7) return `${diffDays} days ago`;
     return date.toLocaleDateString();
   };
 
-  // Get note preview
-  const getPreview = (content: string): string => {
-    return content.length > 150 ? content.substring(0, 150) + '...' : content;
-  };
+  const getPreview = (content: string): string => stripMarkdown(content);
 
   // Text formatting functions
   const insertTextAtCursor = (text: string, wrapText?: string) => {
@@ -346,7 +250,7 @@ export default function NotesApp() {
 
   const formatBold = () => insertTextAtCursor('**', 'bold text');
   const formatItalic = () => insertTextAtCursor('*', 'italic text');
-  const formatUnderline = () => insertTextAtCursor('<u>', '</u>');
+  const formatUnderline = () => insertTextAtCursor('__', 'underlined text');
   const formatStrikethrough = () => insertTextAtCursor('~~', 'strikethrough text');
   const formatCode = () => insertTextAtCursor('`', 'code');
   const formatQuote = () => insertTextAtCursor('> ');
@@ -371,56 +275,9 @@ export default function NotesApp() {
     }, 0);
   };
 
-  // Render markdown-like content for display
-  const renderFormattedContent = (content: string) => {
-    if (!content) return '';
-    
-    // Simple markdown-like rendering
-    let rendered = content
-      // Headers
-      .replace(/^### (.*$)/gm, '<h3>$1</h3>')
-      .replace(/^## (.*$)/gm, '<h2>$1</h2>')
-      .replace(/^# (.*$)/gm, '<h1>$1</h1>')
-      // Bold
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      // Italic
-      .replace(/\*(.*?)\*/g, '<em>$1</em>')
-      // Strikethrough
-      .replace(/~~(.*?)~~/g, '<del>$1</del>')
-      // Code
-      .replace(/`(.*?)`/g, '<code>$1</code>')
-      // Quote
-      .replace(/^> (.*$)/gm, '<blockquote>$1</blockquote>')
-      // Horizontal line
-      .replace(/^---$/gm, '<hr>')
-      // Lists
-      .replace(/^- (.*$)/gm, '<li>$1</li>')
-      .replace(/^\d+\. (.*$)/gm, '<li>$1</li>')
-      // Line breaks
-      .replace(/\n/g, '<br>');
-
-    // Wrap consecutive li elements in ul/ol
-    rendered = rendered.replace(/(<li>.*<\/li>)/g, (match) => {
-      return `<ul>${match}</ul>`;
-    });
-
-    return rendered;
-  };
+  const renderFormattedContent = renderMarkdown;
 
   const isEmpty = filteredNotes.length === 0 && !isLoading;
-
-  // If user is not authenticated, show sign-in message
-  if (!isAuthenticated) {
-    return (
-      <div className={styles.container}>
-        <div className={styles.signInContainer}>
-          <LogIn size={48} className={styles.signInIcon} />
-          <h2>Sign in to use Notes</h2>
-          <p>Please sign in to create and manage your notes.</p>
-        </div>
-      </div>
-    );
-  }
 
   return (
     <div className={styles.container}>
@@ -493,7 +350,7 @@ export default function NotesApp() {
       </div>
 
       {/* Main Content */}
-      <div className={styles.mainContent}>
+      <div className={`${styles.mainContent} ${selectedNote || isCreating ? styles.hasSelection : ''}`}>
         {/* Notes List */}
         <div className={`${styles.notesList} ${viewMode === 'grid' ? styles.gridView : styles.listView}`}>
           {isLoading ? (
@@ -558,6 +415,21 @@ export default function NotesApp() {
         {(selectedNote || isCreating) && (
           <div className={styles.noteEditor}>
             <div className={styles.editorHeader}>
+              <button
+                type="button"
+                className={styles.backButton}
+                onClick={() => {
+                  if (isEditing && (editTitle !== (selectedNote?.title ?? '') || editContent !== (selectedNote?.content ?? ''))) {
+                    if (!confirm('Discard unsaved changes?')) return;
+                  }
+                  setIsEditing(false);
+                  setIsCreating(false);
+                  setSelectedNote(null);
+                }}
+                aria-label="Back to all notes"
+              >
+                <ChevronLeft size={18} />
+              </button>
               {isEditing ? (
                 <>
                   <input

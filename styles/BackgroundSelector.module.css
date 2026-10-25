@@ -256,6 +256,12 @@
 }
 
 .wallpaperBox {
+  display: block;
+  width: 100%;
+  padding: 0;
+  color: inherit;
+  font: inherit;
+  text-align: left;
   position: relative;
   aspect-ratio: 16/9;
   border-radius: 16px;
@@ -458,4 +464,56 @@
   .actionLabel {
     display: none;
   }
+}
+
+@media (max-width: 640px) {
+  .wallpaperGrid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 10px;
+  }
+
+  .wallpaperBox {
+    border-radius: 12px;
+  }
+}
+
+.motionToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 36px;
+  padding: 0 12px;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  background: var(--glass-button);
+  color: var(--text-secondary);
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: var(--transition-fast);
+}
+
+.motionToggle[aria-pressed="true"] {
+  border-color: rgba(255, 123, 0, 0.45);
+  color: var(--text-primary);
+}
+
+.headerActions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.previewVideo {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  z-index: 1;
+  pointer-events: none;
+}
+
+.wallpaperOverlay {
+  z-index: 2;
 }

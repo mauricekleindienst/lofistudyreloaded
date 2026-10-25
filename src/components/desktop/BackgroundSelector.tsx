@@ -1,22 +1,11 @@
 "use client";
 
 import React, { useState, useMemo, useEffect } from 'react';
-import { X, CheckSquare, Play, Images, Pause, Search, Film } from 'lucide-react';
+import { X, CheckSquare, Play, Images, Search, Film, ImageIcon } from 'lucide-react';
 import { backgrounds } from '@/data/backgrounds';
 import styles from '../../../styles/BackgroundSelector.module.css';
 import Image from 'next/image';
-
-interface Background {
-  id: number;
-  src: string;
-  alt: string;
-  note: string;
-  createdby: string;
-  priority: boolean;
-  category: string;
-  isYoutube?: boolean;
-  videoId?: string;
-}
+import type { Background } from './types';
 
 interface BackgroundSelectorProps {
   showBackgrounds: boolean;
@@ -25,6 +14,8 @@ interface BackgroundSelectorProps {
   onClose: () => void;
   onBackgroundChange: (background: Background) => void;
   onCategoryChange: (category: string) => void;
+  motion: boolean;
+  onMotionChange: (motion: boolean) => void;
 }
 
 const categories = [
@@ -33,8 +24,6 @@ const categories = [
   { id: 'urban', name: 'Urban', icon: '🏙️' },
   { id: 'cozy', name: 'Cozy', icon: '🏠' },
   { id: 'gaming', name: 'Gaming', icon: '🎮' },
-  { id: 'scenery', name: 'Scenery', icon: '🏔️' },
-  { id: 'cafe', name: 'Cafe', icon: '☕' },
 ];
 
 export default function BackgroundSelector({
@@ -43,7 +32,9 @@ export default function BackgroundSelector({
   selectedCategory,
   onClose,
   onBackgroundChange,
-  onCategoryChange
+  onCategoryChange,
+  motion,
+  onMotionChange
 }: BackgroundSelectorProps) {
   const [searchQuery, setSearchQuery] = useState('');
   const [visibleCount, setVisibleCount] = useState(20);
@@ -90,6 +81,13 @@ export default function BackgroundSelector({
     setErrorVideos(new Set());
   }, [selectedCategory, searchQuery]);
 
+  useEffect(() => {
+    if (!showBackgrounds) return;
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    window.addEventListener('keydown', onKey);
+    return () => window.removeEventListener('keydown', onKey);
+  }, [showBackgrounds, onClose]);
+
   if (!showBackgrounds) return null;
 
   const loadMoreBackgrounds = () => {
@@ -115,8 +113,19 @@ export default function BackgroundSelector({
           </div>
           <div className={styles.headerActions}>
             <button
+              type="button"
+              onClick={() => onMotionChange(!motion)}
+              className={styles.motionToggle}
+              aria-pressed={motion}
+              title={motion ? 'Show still images (saves battery)' : 'Play animated backgrounds'}
+            >
+              {motion ? <Film size={16} /> : <ImageIcon size={16} />}
+              <span>{motion ? 'Animated' : 'Still'}</span>
+            </button>
+            <button
               onClick={onClose}
               className={styles.closeButton}
+              aria-label="Close gallery"
             >
               <X size={20} />
             </button>
@@ -133,7 +142,7 @@ export default function BackgroundSelector({
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
               className={styles.searchInput}
-              autoFocus
+              aria-label="Search backgrounds"
             />
             {searchQuery && (
               <button 
@@ -170,30 +179,47 @@ export default function BackgroundSelector({
               const isSelected = currentBackground.id === bg.id;
               
               return (
-                <div
+                <button
+                  type="button"
                   key={bg.id}
                   className={`${styles.wallpaperBox} ${isSelected ? styles.selected : ''}`}
+                  aria-label={`Use background: ${bg.alt}`}
+                  aria-pressed={isSelected}
                   onClick={() => {
                     onBackgroundChange(bg);
                     onClose();
                   }}
-                  onMouseEnter={() => setPreviewId(bg.id)}
-                  onMouseLeave={() => setPreviewId(null)}
+                  onPointerEnter={(e) => e.pointerType === 'mouse' && setPreviewId(bg.id)}
+                  onPointerLeave={() => setPreviewId(null)}
+                  onFocus={() => setPreviewId(bg.id)}
+                  onBlur={() => setPreviewId(null)}
                 >
                   <div className={styles.imageWrapper}>
                     <Image
-                      src={`/thumbnails/${bg.id}.jpg`}
+                      src={bg.poster}
                       alt={bg.alt}
                       fill
                       sizes="(max-width: 480px) 50vw, (max-width: 768px) 33vw, 25vw"
                       className={styles.wallpaperImage}
                       loading="lazy"
-                      onError={(e) => {
-                        e.currentTarget.src = '/thumbnails/placeholder.jpg';
+                      onError={() => {
                         setErrorVideos(prev => new Set(prev).add(bg.id));
                       }}
                     />
                     
+                    {motion && previewId === bg.id && (
+                      <video
+                        className={styles.previewVideo}
+                        src={bg.srcMobile}
+                        muted
+                        autoPlay
+                        loop
+                        playsInline
+                        preload="none"
+                        aria-hidden
+                      />
+                    )}
+
                     {hasError && (
                       <div className={styles.errorPlaceholder}>
                         <span>Failed to load</span>
@@ -220,7 +246,7 @@ export default function BackgroundSelector({
                       </div>
                     </div>
                   </div>
-                </div>
+                </button>
               );
             })}
           </div>

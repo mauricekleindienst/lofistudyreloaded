@@ -1,129 +1,179 @@
 "use client";
-import { useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { Delete } from 'lucide-react';
 import calculatorStyles from '../../../styles/Calculator.module.css';
 
-const Calculator: React.FC = () => {  const [display, setDisplay] = useState('0');
+type Op = '+' | '-' | '×' | '÷';
+
+const calculate = (a: number, b: number, op: Op): number => {
+  switch (op) {
+    case '+': return a + b;
+    case '-': return a - b;
+    case '×': return a * b;
+    case '÷': return b === 0 ? NaN : a / b;
+  }
+};
+
+// Trim float noise (0.1 + 0.2) and keep long results readable.
+const format = (n: number): string => {
+  if (!Number.isFinite(n)) return 'Error';
+  const rounded = parseFloat(n.toPrecision(12));
+  const text = String(rounded);
+  return text.length > 14 ? rounded.toExponential(6) : text;
+};
+
+const CalcButton: React.FC<{ onClick: () => void; className?: string; label?: string; children: React.ReactNode }> = ({
+  onClick,
+  className = '',
+  label,
+  children,
+}) => (
+  <button type="button" onClick={onClick} className={`${calculatorStyles.key} ${className}`} aria-label={label}>
+    {children}
+  </button>
+);
+
+const Calculator: React.FC = () => {
+  const [display, setDisplay] = useState('0');
   const [previousValue, setPreviousValue] = useState<number | null>(null);
-  const [operation, setOperation] = useState<string | null>(null);
+  const [operation, setOperation] = useState<Op | null>(null);
   const [waitingForNewValue, setWaitingForNewValue] = useState(false);
+  const rootRef = useRef<HTMLDivElement>(null);
 
-  const inputNumber = (num: string) => {
-    if (waitingForNewValue) {
-      setDisplay(num);
+  const inputNumber = useCallback((digit: string) => {
+    if (waitingForNewValue || display === 'Error') {
+      setDisplay(digit === '.' ? '0.' : digit);
       setWaitingForNewValue(false);
-    } else {
-      setDisplay(display === '0' ? num : display + num);
+      return;
     }
-  };
+    if (digit === '.' && display.includes('.')) return;
+    if (display.replace(/[-.]/g, '').length >= 15) return;
+    setDisplay(display === '0' && digit !== '.' ? digit : display + digit);
+  }, [display, waitingForNewValue]);
 
-  const inputOperation = (nextOperation: string) => {
+  const inputOperation = useCallback((next: Op) => {
+    if (display === 'Error') return;
     const inputValue = parseFloat(display);
-
-    if (previousValue === null) {
+    // Pressing a different operator right after another one just swaps it.
+    if (operation && waitingForNewValue) {
+      setOperation(next);
+      return;
+    }
+    if (previousValue === null || !operation) {
       setPreviousValue(inputValue);
-    } else if (operation) {
-      const currentValue = previousValue || 0;
-      const newValue = calculate(currentValue, inputValue, operation);
-
-      setDisplay(String(newValue));
-      setPreviousValue(newValue);
+    } else {
+      const result = calculate(previousValue, inputValue, operation);
+      setDisplay(format(result));
+      setPreviousValue(Number.isFinite(result) ? result : null);
     }
-
     setWaitingForNewValue(true);
-    setOperation(nextOperation);
-  };
+    setOperation(next);
+  }, [display, operation, previousValue, waitingForNewValue]);
 
-  const calculate = (firstValue: number, secondValue: number, operation: string): number => {
-    switch (operation) {
-      case '+': return firstValue + secondValue;
-      case '-': return firstValue - secondValue;
-      case '×': return firstValue * secondValue;
-      case '÷': return firstValue / secondValue;
-      default: return secondValue;
-    }
-  };
-  const performCalculation = () => {
-    const inputValue = parseFloat(display);
+  const performCalculation = useCallback(() => {
+    if (previousValue === null || !operation) return;
+    setDisplay(format(calculate(previousValue, parseFloat(display), operation)));
+    setPreviousValue(null);
+    setOperation(null);
+    setWaitingForNewValue(true);
+  }, [display, operation, previousValue]);
 
-    if (previousValue !== null && operation) {
-      const newValue = calculate(previousValue, inputValue, operation);
-      setDisplay(String(newValue));
-      setPreviousValue(null);
-      setOperation(null);
-      setWaitingForNewValue(true);
-    }
-  };
-  const clear = () => {
+  const clear = useCallback(() => {
     setDisplay('0');
     setPreviousValue(null);
     setOperation(null);
     setWaitingForNewValue(false);
+  }, []);
+
+  const deleteDigit = useCallback(() => {
+    if (waitingForNewValue || display === 'Error') return;
+    const next = display.slice(0, -1);
+    setDisplay(next === '' || next === '-' ? '0' : next);
+  }, [display, waitingForNewValue]);
+
+  // Keyboard support while the calculator window has focus or the pointer is over it.
+  useEffect(() => {
+    const onKey = (e: KeyboardEvent) => {
+      const root = rootRef.current;
+      if (!root || !(root.contains(document.activeElement) || root.matches(':hover'))) return;
+      if ((e.target as HTMLElement)?.tagName === 'INPUT' || (e.target as HTMLElement)?.tagName === 'TEXTAREA') return;
+      const k = e.key;
+      if (/^[0-9.]$/.test(k)) inputNumber(k);
+      else if (k === ',') inputNumber('.');
+      else if (k === '+' || k === '-') inputOperation(k);
+      else if (k === '*' || k === 'x') inputOperation('×');
+      else if (k === '/') inputOperation('÷');
+      else if (k === 'Enter' || k === '=') performCalculation();
+      else if (k === 'Backspace') deleteDigit();
+      else if (k === 'Escape' || k === 'Delete' || k.toLowerCase() === 'c') clear();
+      else return;
+      e.preventDefault();
+      e.stopPropagation();
+    };
+    window.addEventListener('keydown', onKey, true);
+    return () => window.removeEventListener('keydown', onKey, true);
+  }, [inputNumber, inputOperation, performCalculation, deleteDigit, clear]);
+
+
+  const toggleSign = () => {
+    if (display === '0' || display === 'Error') return;
+    setDisplay(display.startsWith('-') ? display.slice(1) : `-${display}`);
   };
 
-  const deleteDigit = () => {
-    if (display.length > 1) {
-      setDisplay(display.slice(0, -1));
-    } else {
-      setDisplay('0');
-    }
-  };
-
-  const Button: React.FC<{ 
-    onClick: () => void; 
-    className?: string; 
-    children: React.ReactNode;
-  }> = ({ onClick, className = '', children }) => (
-    <button
-      onClick={onClick}
-      className={`${calculatorStyles.button} ${className}`}
+  const op = (o: Op, label: string = o) => (
+    <CalcButton
+      onClick={() => inputOperation(o)}
+      className={`${calculatorStyles.op} ${operation === o && waitingForNewValue ? calculatorStyles.opActive : ''}`}
+      label={label === '-' ? 'Minus' : label}
     >
-      {children}
-    </button>
-  );  return (
-    <div className={calculatorStyles.calculatorContainer}>
-      {/* Display */}
-      <div className={calculatorStyles.display}>
-        <div className={calculatorStyles.displayText} style={{ textAlign: 'right' }}>
-          {display}
+      {o === '-' ? '−' : o}
+    </CalcButton>
+  );
+  const num = (d: string) => (
+    <CalcButton onClick={() => inputNumber(d)} className={d === '0' ? calculatorStyles.wide : ''}>
+      {d}
+    </CalcButton>
+  );
+
+  return (
+    <div className={calculatorStyles.calc} ref={rootRef} tabIndex={-1}>
+      <div className={calculatorStyles.screen}>
+        <div className={calculatorStyles.expression} aria-hidden>
+          {previousValue !== null && operation ? `${format(previousValue)} ${operation === '-' ? '−' : operation}` : '\u00a0'}
         </div>
-        {operation && (
-          <div className={calculatorStyles.operationIndicator}>
-            {operation}
-          </div>
-        )}
+        <output className={calculatorStyles.result} aria-live="polite">
+          {display}
+        </output>
       </div>
 
-      {/* Buttons */}
-      <div className={calculatorStyles.buttonGrid}>
-        <Button onClick={clear} className={calculatorStyles.clearButton}>
-          Clear
-        </Button>
-        <Button onClick={deleteDigit} className={calculatorStyles.deleteButton}>
-          <Delete size={16} />
-        </Button>
-        <Button onClick={() => inputOperation('÷')} className={`${calculatorStyles.operatorButton} ${operation === '÷' ? calculatorStyles.activeOperator : ''}`}>÷</Button>
-        <Button onClick={() => inputOperation('×')} className={`${calculatorStyles.operatorButton} ${operation === '×' ? calculatorStyles.activeOperator : ''}`}>×</Button>
-        
-        <Button onClick={() => inputNumber('7')}>7</Button>
-        <Button onClick={() => inputNumber('8')}>8</Button>
-        <Button onClick={() => inputNumber('9')}>9</Button>
-        <Button onClick={() => inputOperation('-')} className={`${calculatorStyles.operatorButton} ${operation === '-' ? calculatorStyles.activeOperator : ''}`}>-</Button>
-        
-        <Button onClick={() => inputNumber('4')}>4</Button>
-        <Button onClick={() => inputNumber('5')}>5</Button>
-        <Button onClick={() => inputNumber('6')}>6</Button>
-        <Button onClick={() => inputOperation('+')} className={`${calculatorStyles.operatorButton} ${operation === '+' ? calculatorStyles.activeOperator : ''}`}>+</Button>
-        
-        <Button onClick={() => inputNumber('1')}>1</Button>
-        <Button onClick={() => inputNumber('2')}>2</Button>
-        <Button onClick={() => inputNumber('3')}>3</Button>
-        <Button onClick={performCalculation} className={calculatorStyles.equalsButton}>
+      <div className={calculatorStyles.keys}>
+        <CalcButton onClick={clear} className={calculatorStyles.fn} label="Clear">
+          C
+        </CalcButton>
+        <CalcButton onClick={toggleSign} className={calculatorStyles.fn} label="Toggle sign">
+          ±
+        </CalcButton>
+        <CalcButton onClick={deleteDigit} className={calculatorStyles.fn} label="Delete last digit">
+          <Delete size={18} />
+        </CalcButton>
+        {op('÷', 'Divide')}
+        {num('7')}
+        {num('8')}
+        {num('9')}
+        {op('×', 'Multiply')}
+        {num('4')}
+        {num('5')}
+        {num('6')}
+        {op('-')}
+        {num('1')}
+        {num('2')}
+        {num('3')}
+        {op('+', 'Plus')}
+        {num('0')}
+        {num('.')}
+        <CalcButton onClick={performCalculation} className={calculatorStyles.equals} label="Equals">
           =
-        </Button>
-        
-        <Button onClick={() => inputNumber('0')} className={calculatorStyles.zeroButton}>0</Button>
-        <Button onClick={() => inputNumber('.')}>.</Button>
+        </CalcButton>
       </div>
     </div>
   );

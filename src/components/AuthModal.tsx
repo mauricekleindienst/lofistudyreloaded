@@ -1,10 +1,9 @@
 "use client";
 
-import React, { useState } from 'react';
-import { X, Github } from 'lucide-react';
+import React, { useEffect, useRef, useState } from 'react';
+import { X, Github, Mail, Lock, User, Eye, EyeOff, Loader2 } from 'lucide-react';
 import { FaDiscord, FaGoogle } from 'react-icons/fa';
-import { useAuth } from '../contexts/AuthContext';
-import { createClient } from '../utils/supabase/client';
+import { useAuth, type OAuthProvider } from '../contexts/AuthContext';
 import styles from '../../styles/Auth.module.css';
 
 interface AuthModalProps {
@@ -12,119 +11,198 @@ interface AuthModalProps {
   onClose: () => void;
 }
 
-// Add this at the top of the component to debug
+const PROVIDERS: Record<OAuthProvider, { label: string; icon: React.ReactNode }> = {
+  google: { label: 'Google', icon: <FaGoogle size={16} /> },
+  github: { label: 'GitHub', icon: <Github size={16} /> },
+  discord: { label: 'Discord', icon: <FaDiscord size={18} /> },
+};
+
 const AuthModal: React.FC<AuthModalProps> = ({ isVisible, onClose }) => {
+  const { signIn, signUp, signInWithProvider, providers } = useAuth();
+  const [mode, setMode] = useState<'signin' | 'signup'>('signin');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [name, setName] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
+  const emailRef = useRef<HTMLInputElement>(null);
 
-  const { signInWithProvider, isConfigured } = useAuth();
-  const supabase = createClient();
-  
-
-
-
-  const handleOAuthSignIn = async (provider: 'discord' | 'github' | 'google') => {
-    setLoading(true);
+  useEffect(() => {
+    if (!isVisible) return;
     setError('');
-    
-    try {
-      const { error } = await signInWithProvider(provider);
-      
-      if (error) {
-        console.error(`${provider} OAuth error:`, error);
-        
-        // Provide user-friendly error messages
-        const errorMessage = typeof error === 'object' && error && 'message' in error ? (error as { message: string }).message : '';
-        if (errorMessage?.includes('not configured')) {
-          setError(`${provider} authentication is not configured. Please check the configuration.`);
-        } else if (errorMessage?.includes('unavailable')) {
-          setError(`Authentication service is temporarily unavailable. Please try again later.`);
-        } else {
-          setError(`${provider} sign-in failed: ${errorMessage || 'Unknown error'}`);
-        }
-      } else {
-        // OAuth initiated successfully, user will be redirected
-        setError('Redirecting to ' + provider + '...');
-      }
-    } catch (err) {
-      console.error(`${provider} OAuth exception:`, err);
-      setError(`An unexpected error occurred during ${provider} sign-in.`);
-    } finally {
-      setLoading(false);
-    }
-  };
+    const t = window.setTimeout(() => emailRef.current?.focus(), 50);
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && onClose();
+    window.addEventListener('keydown', onKey);
+    return () => {
+      window.clearTimeout(t);
+      window.removeEventListener('keydown', onKey);
+    };
+  }, [isVisible, onClose]);
 
   if (!isVisible) return null;
 
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (loading) return;
+    setError('');
+    if (mode === 'signup' && password.length < 8) {
+      setError('Password must be at least 8 characters');
+      return;
+    }
+    setLoading(true);
+    const { error: err } = mode === 'signin' ? await signIn(email, password) : await signUp(email, password, name);
+    setLoading(false);
+    if (err) {
+      setError(err);
+      return;
+    }
+    setPassword('');
+    onClose();
+  };
+
+  const switchMode = () => {
+    setMode(mode === 'signin' ? 'signup' : 'signin');
+    setError('');
+  };
+
   return (
     <div className={styles.authOverlay} onClick={onClose}>
-      <div className={styles.authModal} onClick={(e) => e.stopPropagation()}>
+      <div
+        className={styles.authModal}
+        onClick={(e) => e.stopPropagation()}
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby="auth-title"
+      >
         <div className={styles.authHeader}>
-          <h2 className={styles.authTitle}>
-            Sign In / Sign Up
+          <h2 className={styles.authTitle} id="auth-title">
+            {mode === 'signin' ? 'Welcome back' : 'Create your account'}
           </h2>
-          <button onClick={onClose} className={styles.closeButton}>
+          <button onClick={onClose} className={styles.closeButton} aria-label="Close">
             <X size={20} />
           </button>
         </div>
-        
+
         <div className={styles.authContent}>
-          {!isConfigured ? (
-            <div className={styles.configWarning}>
-              <h3>⚙️ Authentication Setup Required</h3>
-              <p>To enable authentication features, please configure your Supabase credentials:</p>
-              <ol>
-                <li>Create a Supabase project at <a href="https://supabase.com" target="_blank" rel="noopener noreferrer">supabase.com</a></li>
-                <li>Copy your project URL and anonymous key</li>
-                <li>Update the <code>.env.local</code> file with your credentials</li>
-              </ol>
-              <p>The app will work without authentication, but you won&apos;t be able to save your progress.</p>
+          <p className={styles.authSubtitle}>
+            {mode === 'signin'
+              ? 'Sign in to sync your tasks, notes and focus stats across devices.'
+              : 'Free forever. Anything you made as a guest moves into your account.'}
+          </p>
+
+          {error && (
+            <div className={styles.errorMessage} role="alert">
+              {error}
             </div>
-          ) : (
-            <>
-              <p className={styles.authSubtitle}>
-                Select a provider to continue
-              </p>
+          )}
 
-              {error && (
-                <div className={styles.errorMessage}>
-                  {error}
-                </div>
-              )}
-
-              
-              <div className={styles.oauthButtons}>
-                <button
-                  onClick={() => handleOAuthSignIn('discord')}
-                  className={styles.oauthButton}
-                  disabled={loading}
-                >
-                  <FaDiscord size={18} />
-                  Discord
-                </button>
-                <button
-                  onClick={() => handleOAuthSignIn('github')}
-                  className={styles.oauthButton}
-                  disabled={loading}
-                >
-                  <Github size={18} />
-                  GitHub
-                </button>
-                <button
-                  onClick={() => handleOAuthSignIn('google')}
-                  className={styles.oauthButton}
-                  disabled={loading}
-                >
-                  <FaGoogle size={18} />
-                  Google
-                </button>
+          <form className={styles.authForm} onSubmit={handleSubmit} noValidate={false}>
+            {mode === 'signup' && (
+              <div className={styles.inputGroup}>
+                <User size={16} className={styles.inputIcon} aria-hidden />
+                <input
+                  className={styles.authInput}
+                  type="text"
+                  placeholder="Display name (optional)"
+                  aria-label="Display name"
+                  autoComplete="nickname"
+                  maxLength={40}
+                  value={name}
+                  onChange={(e) => setName(e.target.value)}
+                />
               </div>
+            )}
+            <div className={styles.inputGroup}>
+              <Mail size={16} className={styles.inputIcon} aria-hidden />
+              <input
+                ref={emailRef}
+                className={styles.authInput}
+                type="email"
+                placeholder="Email"
+                aria-label="Email"
+                autoComplete="email"
+                inputMode="email"
+                required
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+              />
+            </div>
+            <div className={`${styles.inputGroup} ${styles.passwordContainer}`}>
+              <Lock size={16} className={styles.inputIcon} aria-hidden />
+              <input
+                className={styles.authInput}
+                type={showPassword ? 'text' : 'password'}
+                placeholder={mode === 'signup' ? 'Password (min. 8 characters)' : 'Password'}
+                aria-label="Password"
+                autoComplete={mode === 'signin' ? 'current-password' : 'new-password'}
+                minLength={mode === 'signup' ? 8 : undefined}
+                required
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+              />
+              <button
+                type="button"
+                className={styles.passwordToggle}
+                onClick={() => setShowPassword((v) => !v)}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+              >
+                {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+              </button>
+            </div>
 
-              <div className={styles.authSwitch}>
-                <p>By signing up, you agree to our <a href="/legal" target="_blank" rel="noopener noreferrer">Terms of Service</a> and <a href="/privacy" target="_blank" rel="noopener noreferrer">Privacy Policy</a>.</p>
+            <button type="submit" className={styles.submitButton} disabled={loading}>
+              {loading ? (
+                <Loader2 size={18} className={styles.spin} aria-label="Loading" />
+              ) : mode === 'signin' ? (
+                'Sign in'
+              ) : (
+                'Create account'
+              )}
+            </button>
+          </form>
+
+          {providers.length > 0 && (
+            <>
+              <div className={styles.divider}>
+                <span>or continue with</span>
+              </div>
+              <div className={styles.oauthButtons}>
+                {providers.map((p) => (
+                  <button
+                    key={p}
+                    onClick={() => signInWithProvider(p)}
+                    className={styles.oauthButton}
+                    disabled={loading}
+                    type="button"
+                  >
+                    {PROVIDERS[p].icon}
+                    {PROVIDERS[p].label}
+                  </button>
+                ))}
               </div>
             </>
           )}
+
+          <div className={styles.authSwitch}>
+            <p>
+              {mode === 'signin' ? "Don't have an account? " : 'Already have an account? '}
+              <button type="button" className={styles.switchButton} onClick={switchMode}>
+                {mode === 'signin' ? 'Create one' : 'Sign in'}
+              </button>
+            </p>
+            <p className={styles.legalNote}>
+              By continuing you agree to our{' '}
+              <a href="/legal" target="_blank" rel="noopener">
+                Terms
+              </a>{' '}
+              and{' '}
+              <a href="/privacy" target="_blank" rel="noopener">
+                Privacy Policy
+              </a>
+              .
+            </p>
+          </div>
         </div>
       </div>
     </div>

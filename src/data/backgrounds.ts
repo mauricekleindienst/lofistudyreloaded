@@ -1,58 +1,35 @@
-// Simplified backgrounds data
-import { Background } from '../components/desktop/types';
-import { buildVideoUrl } from '../utils/cdnConfig';
+import type { Background } from '../components/desktop/types';
 
-// Helper function to create background object
-const createBackground = (
-  id: number, 
-  filename: string, 
-  alt: string, 
-  note: string, 
-  createdby: string, 
-  priority: boolean, 
-  category: string
-): Background => {
-  return {
-    id,
-    src: buildVideoUrl(filename),
-    filename,
-    alt,
-    note,
-    createdby,
-    priority,
-    category
-  };
-};
+// Videos are self-hosted under /public/backgrounds (the old DigitalOcean
+// Space is gone). Each has a 1080p and a 720p H.264 loop plus a WebP poster.
+const bg = (id: number, slug: string, name: string, category: Background['category'], createdby = 'Lo-Fi.Study'): Background => ({
+  id,
+  slug,
+  alt: name,
+  note: name,
+  createdby,
+  category,
+  src: `/backgrounds/${slug}-1080.mp4`,
+  srcMobile: `/backgrounds/${slug}-720.mp4`,
+  poster: `/backgrounds/${slug}.webp`,
+});
 
 export const backgrounds: Background[] = [
-  createBackground(1, "Rain.mp4", "Rain", "Rain", "Lo-Fi.study", true, "nature"),
-  createBackground(2, "Train.mp4", "Train", "Train", "Lo-Fi.study", false, "urban"),
-  createBackground(3, "Classroom.mp4", "Classroom", "Classroom", "Lo-Fi.study", false, "cozy"),
-  createBackground(4, "Autumn.mp4", "Autumn", "Autumn", "Lo-Fi.study", false, "nature"),
-  createBackground(5, "Night.mp4", "Night", "Night", "Lo-Fi.study", false, "urban"),
-  createBackground(6, "Skyrim.mp4", "Skyrim", "Skyrim", "Bethesda", false, "gaming"),
-  createBackground(7, "Train2.mp4", "Train2", "Train2", "Lo-Fi.study", false, "urban"),
-  createBackground(8, "Chillroom.mp4", "Chillroom", "Chillroom", "Lo-Fi.study", false, "cozy"),
-  createBackground(9, "cables.mp4", "Cables", "Cables", "Lo-Fi.study", false, "urban"),
-  createBackground(11, "study_girl.mp4", "StudyGirl", "StudyGirl", "Lo-Fi.study", false, "cozy"),
-  createBackground(12, "coffee.mp4", "Coffee", "Coffee", "Lo-Fi.study", false, "cozy"),
-  createBackground(13, "Minecraft.mp4", "Minecraft", "Minecraft", "Mojang", false, "gaming"),
-  createBackground(14, "Darkroom.mp4", "Darkroom", "Darkroom", "Lo-Fi.study", false, "cozy"),
-  createBackground(16, "Snowtrain.mp4", "Snowtrain", "Snowtrain", "Lo-Fi.study", false, "urban"),
-  createBackground(17, "Garden.mp4", "Garden", "Garden", "Lo-Fi.study", false, "nature"),
-  createBackground(18, "japannight.mp4", "Nighttime in Japan", "Nighttime in Japan", "Lo-Fi.study", false, "urban"),
-  createBackground(19, "Nightcity.mp4", "Night City", "Night City", "Lo-Fi.study", false, "urban"),
-  createBackground(20, "Beachisland.mp4", "Beach Island", "Beach Island", "Lo-Fi.study", false, "nature"),
-  createBackground(21, "NightRoom.mp4", "Night Room", "Night Room", "Lo-Fi.study", false, "cozy"),
-  createBackground(22, "Bedroom.mp4", "Bedroom", "Bedroom", "Lo-Fi.study", false, "cozy"),
-  createBackground(23, "NeonLoFi.mp4", "Neon Lo-Fi", "Neon Lo-Fi", "Lo-Fi.study", false, "urban"),
-  createBackground(24, "RainyTrees.mp4", "Rainy Trees", "Rainy Trees", "Lo-Fi.study", false, "nature"),
-  createBackground(25, "RainyRoofRoom.mp4", "Rainy Roof Room", "Rainy Roof Room", "Lo-Fi.study", false, "cozy"),
-  createBackground(26, "NightCat.mp4", "Night Cat", "Night Cat", "Lo-Fi.study", false, "cozy"),
-  createBackground(27, "MinecraftCabin.mp4", "Minecraft Cabin", "Minecraft Cabin", "Mojang", false, "gaming"),
-  createBackground(28, "JapanSunset.mp4", "Japan Sunset", "Japan Sunset", "Lo-Fi.study", false, "nature"),
-  createBackground(29, "EveningRain.mp4", "Evening Rain", "Evening Rain", "Lo-Fi.study", false, "nature"),
-  createBackground(30, "WaterStation.mp4", "Water Station", "Water Station", "Lo-Fi.study", false, "urban")
+  bg(1, 'rain', 'Rain', 'nature'),
+  bg(8, 'chillroom', 'Chill Room', 'cozy'),
+  bg(11, 'study_girl', 'Study Girl', 'cozy'),
+  bg(3, 'classroom', 'Classroom', 'cozy'),
+  bg(31, 'couch', 'Couch', 'cozy'),
+  bg(4, 'autumn', 'Autumn', 'nature'),
+  bg(32, 'winter', 'Winter', 'nature'),
+  bg(2, 'train', 'Train', 'urban'),
+  bg(7, 'train2', 'Night Train', 'urban'),
+  bg(5, 'night', 'Night', 'urban'),
+  bg(9, 'cables', 'Cables', 'urban'),
+  bg(6, 'skyrim', 'Skyrim', 'gaming', 'Bethesda'),
 ];
 
-export const DEFAULT_BACKGROUND: Background = backgrounds[0]; // Rain background with high priority
+export const DEFAULT_BACKGROUND: Background = backgrounds[0];
+
+export const findBackground = (id: unknown): Background | undefined =>
+  backgrounds.find((b) => String(b.id) === String(id));
