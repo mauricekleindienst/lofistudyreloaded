@@ -10,6 +10,8 @@ export interface UserDoc {
   avatarUrl?: string;
   providers?: { provider: OAuthProvider; providerId: string }[];
   settings: Record<string, unknown>;
+  /** last recorded focus session; sessions can't be logged faster than real time */
+  lastPomodoroAt?: Date;
   createdAt: Date;
   updatedAt: Date;
 }

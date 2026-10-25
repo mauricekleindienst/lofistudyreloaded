@@ -109,7 +109,7 @@ function parseCards(value: unknown): FlashCard[] {
   if (!Array.isArray(value)) throw new HttpError(400, 'cards must be an array');
   if (value.length > MAX_CARDS) throw new HttpError(400, `A deck can hold at most ${MAX_CARDS} cards`);
   const seen = new Set<string>();
-  return value.map((raw, i) => {
+  const cards = value.map((raw, i) => {
     if (!raw || typeof raw !== 'object') throw new HttpError(400, `Card ${i + 1} is invalid`);
     const c = raw as Record<string, unknown>;
     let id = typeof c.id === 'string' && /^[\w-]{1,40}$/.test(c.id) ? c.id : new ObjectId().toHexString();
@@ -123,6 +123,9 @@ function parseCards(value: unknown): FlashCard[] {
       due: dateStr(c.due, 'due', true) ?? new Date().toISOString().slice(0, 10),
     };
   });
+  const bytes = cards.reduce((n, c) => n + Buffer.byteLength(c.front) + Buffer.byteLength(c.back) + 80, 0);
+  if (bytes > 12_000_000) throw new HttpError(400, 'This deck is too large — split it into smaller decks');
+  return cards;
 }
 
 export function parseDeck(body: Body, partial: boolean) {

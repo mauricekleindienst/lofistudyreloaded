@@ -1,7 +1,7 @@
 import type { ObjectId } from 'mongodb';
 import { collections } from '@/lib/server/mongo';
 import { getCurrentUser } from '@/lib/server/auth';
-import { route, json, dateStr } from '@/lib/server/http';
+import { route, json, dateStr, rateLimit, clientIp } from '@/lib/server/http';
 
 export const runtime = 'nodejs';
 
@@ -9,27 +9,33 @@ interface Row {
   _id: ObjectId;
   sessions: number;
   minutes: number;
+  rank: number;
 }
 
 /** GET ?from=YYYY-MM-DD&sort=sessions|time — top 50, plus the caller's own row. */
 export const GET = route(async (request) => {
+  await rateLimit(`leaderboard:${clientIp(request)}`, 60, 60);
   const params = new URL(request.url).searchParams;
   const from = dateStr(params.get('from') ?? undefined, 'from', true);
   const sortBy = params.get('sort') === 'time' ? 'minutes' : 'sessions';
   const me = await getCurrentUser();
+  // $documentNumber needs a single sort key, so the tie-breaker is folded into one score.
+  const score = sortBy === 'minutes' ? { $add: [{ $multiply: ['$minutes', 1e7] }, '$sessions'] } : { $add: [{ $multiply: ['$sessions', 1e7] }, '$minutes'] };
 
+  // Ranking happens inside MongoDB; only the top 50 and the caller's own row come back.
   const col = await collections.pomodoroStats();
-  const grouped = await col
-    .aggregate<Row>([
+  const [result] = await col
+    .aggregate<{ top: Row[]; mine: Row[] }>([
       ...(from ? [{ $match: { date: { $gte: from } } }] : []),
       { $group: { _id: '$userId', sessions: { $sum: '$pomodoroCount' }, minutes: { $sum: '$focusMinutes' } } },
-      { $sort: sortBy === 'minutes' ? { minutes: -1, sessions: -1 } : { sessions: -1, minutes: -1 } },
+      { $set: { score } },
+      { $setWindowFields: { sortBy: { score: -1 }, output: { rank: { $documentNumber: {} } } } },
+      { $facet: { top: [{ $limit: 50 }], mine: me ? [{ $match: { _id: me._id } }] : [{ $limit: 0 }] } },
     ])
     .toArray();
 
-  const ranked = grouped.map((row, i) => ({ ...row, rank: i + 1 }));
-  const top = ranked.slice(0, 50);
-  const mine = me ? ranked.find((r) => r._id.equals(me._id)) : undefined;
+  const top = result?.top ?? [];
+  const mine = result?.mine[0];
   if (mine && mine.rank > 50) top.push(mine);
 
   const users = await collections.users();

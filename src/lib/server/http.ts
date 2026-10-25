@@ -60,9 +60,19 @@ export async function requireUser(): Promise<UserDoc> {
   return user;
 }
 
-export async function readJson(request: Request): Promise<Record<string, unknown>> {
+/** Bodies are capped (default 1 MB) so a huge upload can't exhaust memory. */
+export async function readJson(request: Request, maxBytes = 1_000_000): Promise<Record<string, unknown>> {
+  const declared = Number(request.headers.get('content-length') ?? 0);
+  if (declared > maxBytes) throw new HttpError(413, 'Request is too large');
+  let text: string;
   try {
-    const body = await request.json();
+    text = await request.text();
+  } catch {
+    throw new HttpError(400, 'Expected a JSON object body');
+  }
+  if (Buffer.byteLength(text) > maxBytes) throw new HttpError(413, 'Request is too large');
+  try {
+    const body = JSON.parse(text);
     if (body && typeof body === 'object' && !Array.isArray(body)) return body as Record<string, unknown>;
   } catch {
     // fall through

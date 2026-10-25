@@ -20,7 +20,7 @@ function list(value: unknown, field: string): Record<string, unknown>[] {
 export const POST = route(async (request) => {
   const user = await requireUser();
   await rateLimit(`import:${user._id.toHexString()}`, 5, 3600);
-  const body = await readJson(request);
+  const body = await readJson(request, 12_000_000);
   const now = new Date();
   const userId = user._id;
 
@@ -63,11 +63,21 @@ export const POST = route(async (request) => {
     .filter(Boolean)
     .map((h) => ({ ...h!, _id: new ObjectId(), userId, position: ++habitPosition, createdAt: now, updatedAt: now }));
 
+  // Respect the same per-user caps as the normal create routes.
+  const room = async (col: { countDocuments: (f: object) => Promise<number> }, max: number) =>
+    Math.max(0, max - (await col.countDocuments({ userId })));
+  const [notesCol, apptCol, decksCol] = await Promise.all([collections.notes(), collections.appointments(), collections.decks()]);
+  todos.splice(await room(todosCol, 2000));
+  notes.splice(await room(notesCol, 1000));
+  appointments.splice(await room(apptCol, 5000));
+  decks.splice(await room(decksCol, 200));
+  habits.splice(await room(habitsCol, 50));
+
   if (todos.length) await todosCol.insertMany(todos as never[]);
-  if (decks.length) await (await collections.decks()).insertMany(decks as never[]);
+  if (decks.length) await decksCol.insertMany(decks as never[]);
   if (habits.length) await habitsCol.insertMany(habits as never[]);
-  if (notes.length) await (await collections.notes()).insertMany(notes as never[]);
-  if (appointments.length) await (await collections.appointments()).insertMany(appointments as never[]);
+  if (notes.length) await notesCol.insertMany(notes as never[]);
+  if (appointments.length) await apptCol.insertMany(appointments as never[]);
 
   return json({
     imported: { todos: todos.length, notes: notes.length, appointments: appointments.length, decks: decks.length, habits: habits.length },

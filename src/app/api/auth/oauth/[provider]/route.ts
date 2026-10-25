@@ -1,7 +1,7 @@
 import { randomBytes, createHash } from 'node:crypto';
 import { NextResponse } from 'next/server';
 import { collections } from '@/lib/server/mongo';
-import { getProvider, isProvider, redirectUri, appUrl } from '@/lib/server/oauth';
+import { getProvider, isProvider, redirectUri, appUrl, OAUTH_STATE_COOKIE } from '@/lib/server/oauth';
 import { route, rateLimit, clientIp } from '@/lib/server/http';
 
 export const runtime = 'nodejs';
@@ -30,5 +30,15 @@ export const GET = route<{ params: Promise<{ provider: string }> }>(async (reque
   url.searchParams.set('code_challenge', challenge);
   url.searchParams.set('code_challenge_method', 'S256');
   if (provider === 'google') url.searchParams.set('prompt', 'select_account');
-  return NextResponse.redirect(url.toString());
+  const res = NextResponse.redirect(url.toString());
+  // Ties the flow to this browser: the callback only accepts a state that matches this cookie,
+  // so a callback link from someone else's flow can't sign in or link an account here.
+  res.cookies.set(OAUTH_STATE_COOKIE, state, {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: process.env.NODE_ENV === 'production',
+    path: '/api/auth/oauth',
+    maxAge: 600,
+  });
+  return res;
 });

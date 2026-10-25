@@ -40,7 +40,26 @@ export const POST = route(async (request) => {
   const diffDays = Math.abs(Date.parse(`${date}T12:00:00Z`) - Date.now()) / 86_400_000;
   if (diffDays > 2) throw new HttpError(400, 'date is out of range');
 
+  // Real time must have passed since the previous session (80 % leeway for clock skew and
+  // shortened sessions), and a day can hold at most 24 h — otherwise the leaderboard is a
+  // matter of how fast someone can call this endpoint.
+  const now = new Date();
+  const users = await collections.users();
+  const gate = await users.updateOne(
+    {
+      _id: user._id,
+      $or: [{ lastPomodoroAt: { $exists: false } }, { lastPomodoroAt: { $lte: new Date(now.getTime() - minutes * 48_000) } }],
+    },
+    { $set: { lastPomodoroAt: now } }
+  );
+  if (gate.matchedCount === 0) throw new HttpError(429, 'That focus session ended too soon after the previous one');
+
   const col = await collections.pomodoroStats();
+  const [day] = await col
+    .aggregate<{ minutes: number }>([{ $match: { userId: user._id, date } }, { $group: { _id: null, minutes: { $sum: '$focusMinutes' } } }])
+    .toArray();
+  if ((day?.minutes ?? 0) + minutes > 1440) throw new HttpError(400, 'A day only has 24 hours of focus time');
+
   const doc = await col.findOneAndUpdate(
     { userId: user._id, date, category },
     {

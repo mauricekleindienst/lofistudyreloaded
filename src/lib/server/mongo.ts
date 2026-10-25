@@ -71,7 +71,7 @@ async function ensureIndexes(db: Db) {
     db.collection('habits').createIndex({ userId: 1, position: 1 }),
     db.collection('pomodoro_stats').createIndex({ userId: 1, date: 1, category: 1 }, { unique: true }),
     db.collection('pomodoro_stats').createIndex({ date: 1 }),
-    db.collection('chat_messages').createIndex({ createdAt: -1 }),
+    db.collection('chat_messages').createIndex({ userId: 1, _id: 1 }),
     db.collection('presence').createIndex({ lastSeen: 1 }, { expireAfterSeconds: 60 }),
     db.collection('oauth_states').createIndex({ createdAt: 1 }, { expireAfterSeconds: 600 }),
     db.collection('rate_limits').createIndex({ expiresAt: 1 }, { expireAfterSeconds: 0 }),

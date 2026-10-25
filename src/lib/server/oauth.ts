@@ -93,6 +93,8 @@ const providers: Record<OAuthProvider, ProviderConfig> = {
   },
 };
 
+export const OAUTH_STATE_COOKIE = 'lofi_oauth_state';
+
 export function isProvider(value: string): value is OAuthProvider {
   return value in providers;
 }

@@ -34,6 +34,7 @@ export const noteRoutes = crud({
   sort: { updatedAt: -1 },
   maxPerUser: 1000,
   label: 'notes',
+  maxBodyBytes: 500_000,
 });
 
 export const appointmentRoutes = crud({
@@ -52,6 +53,8 @@ export const deckRoutes = crud({
   sort: { updatedAt: -1 },
   maxPerUser: 200,
   label: 'decks',
+  // A big deck is a few MB of JSON; MongoDB documents top out at 16 MB.
+  maxBodyBytes: 8_000_000,
 });
 
 export const habitRoutes = crud({
