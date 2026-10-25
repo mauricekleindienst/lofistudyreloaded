@@ -93,6 +93,7 @@ const MusicPlayerSidebar: React.FC<MusicPlayerSidebarProps> = ({ isOpen, onToggl
   const [playerReady, setPlayerReady] = useState(false);
   const playerRef = useRef<YouTubePlayer | null>(null);
   const failStreak = useRef(0);
+  const lastFailedId = useRef<string | null>(null);
   const hydrated = useRef(false);
 
   const tracks = [...BUILT_IN.filter((t) => !hidden.includes(t.videoId)), ...custom];
@@ -164,7 +165,9 @@ const MusicPlayerSidebar: React.FC<MusicPlayerSidebarProps> = ({ isOpen, onToggl
   );
 
   const playPause = () => {
-    if (!activated) {
+    if (!activated || !playerReady) {
+      lastFailedId.current = null;
+      failStreak.current = 0;
       setActivated(true);
       setIsLoading(true);
       return;
@@ -194,6 +197,7 @@ const MusicPlayerSidebar: React.FC<MusicPlayerSidebarProps> = ({ isOpen, onToggl
     switch (event.data) {
       case 1:
         failStreak.current = 0;
+        lastFailedId.current = null;
         setIsPlaying(true);
         setIsLoading(false);
         break;
@@ -218,6 +222,9 @@ const MusicPlayerSidebar: React.FC<MusicPlayerSidebarProps> = ({ isOpen, onToggl
     setIsLoading(false);
     setIsPlaying(false);
     console.warn('[music] YouTube error', event.data, currentTrack?.videoId);
+    // The player often reports the same failure twice; count each video once.
+    if (lastFailedId.current === currentTrack?.videoId) return;
+    lastFailedId.current = currentTrack?.videoId ?? null;
     failStreak.current += 1;
     // If several in a row fail it's the network/blocker, not the videos — stop instead of looping forever.
     if (failStreak.current >= 3) {
@@ -316,7 +323,6 @@ const MusicPlayerSidebar: React.FC<MusicPlayerSidebarProps> = ({ isOpen, onToggl
             onStateChange={onStateChange}
             onError={onError}
             opts={{
-              host: 'https://www.youtube-nocookie.com',
               height: '1',
               width: '1',
               playerVars: { autoplay: 1, playsinline: 1, controls: 0, rel: 0 },

@@ -49,7 +49,7 @@ const modernApps: ModernApp[] = [
 
 // Preferred floating-window sizes (desktop/tablet); phones use full-screen sheets.
 const WINDOW_SIZES: Record<string, { width: number; height: number }> = {
-  pomodoro: { width: 340, height: 470 },
+  pomodoro: { width: 360, height: 540 },
   todo: { width: 380, height: 600 },
   notes: { width: 820, height: 600 },
   calculator: { width: 300, height: 440 },

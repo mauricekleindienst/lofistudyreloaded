@@ -3,6 +3,8 @@ import { useState, useEffect, useMemo } from 'react';
 import {
   X,
   Plus,
+  Pencil,
+  CalendarDays,
   CheckSquare,
   Target,
   Heart,
@@ -14,6 +16,20 @@ import todoStyles from '../../../styles/Todo.module.css';
 import { useAppState } from '../../contexts/AppStateContext';
 import { useDataPersistence } from '../../hooks/useDataPersistence';
 import type { Todo } from '../../lib/database';
+import { localDate } from '../../lib/api';
+
+const PRIORITY_RANK: Record<Todo['priority'], number> = { high: 0, medium: 1, low: 2 };
+
+const formatDue = (date: string) => {
+  const today = localDate();
+  if (date === today) return 'Today';
+  const [y, m, d] = date.split('-').map(Number);
+  const due = new Date(y, m - 1, d);
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  if (localDate(tomorrow) === date) return 'Tomorrow';
+  return due.toLocaleDateString([], { month: 'short', day: 'numeric' });
+};
 
 type Priority = Todo['priority'];
 type Category = Todo['category'];
@@ -28,6 +44,9 @@ const TodoList: React.FC = () => {
   const [newCategory, setNewCategory] = useState<Category>('work');
   const [filter, setFilter] = useState<'all' | 'active' | 'completed'>('all');
   const [isSaving, setIsSaving] = useState(false);
+  const [newDue, setNewDue] = useState('');
+  const [editingId, setEditingId] = useState<string | null>(null);
+  const [editText, setEditText] = useState('');
 
   // (Re)load whenever the user signs in or out
   useEffect(() => {
@@ -54,11 +73,18 @@ const TodoList: React.FC = () => {
     if (!text || isSaving) return;
 
     setIsSaving(true);
-    const saved = await db.saveTodo({ text, completed: false, priority: newPriority, category: newCategory });
+    const saved = await db.saveTodo({
+      text,
+      completed: false,
+      priority: newPriority,
+      category: newCategory,
+      ...(newDue ? { due_date: newDue } : {}),
+    });
     setIsSaving(false);
     if (saved) {
       setTodos(prev => [...prev, saved]);
       setNewTodo('');
+      setNewDue('');
     }
   };
 
@@ -97,11 +123,47 @@ const TodoList: React.FC = () => {
     }
   };
 
-  const filteredTodos = useMemo(() => todos.filter(todo => {
-    if (filter === 'active') return !todo.completed;
-    if (filter === 'completed') return todo.completed;
-    return true;
-  }), [todos, filter]);
+  const startEdit = (todo: Todo) => {
+    setEditingId(todo.id);
+    setEditText(todo.text);
+  };
+
+  const commitEdit = async () => {
+    const id = editingId;
+    const text = editText.trim();
+    setEditingId(null);
+    const original = todos.find(t => t.id === id);
+    if (!id || !original || !text || text === original.text) return;
+    setTodos(prev => prev.map(t => (t.id === id ? { ...t, text } : t)));
+    if (!(await db.updateTodo(id, { text }))) {
+      setTodos(prev => prev.map(t => (t.id === id ? original : t)));
+    }
+  };
+
+  const clearCompleted = async () => {
+    const done = todos.filter(t => t.completed);
+    setTodos(prev => prev.filter(t => !t.completed));
+    const results = await Promise.all(done.map(t => db.deleteTodo(t.id)));
+    const failed = done.filter((_, i) => !results[i]);
+    if (failed.length) setTodos(prev => [...prev, ...failed]);
+  };
+
+  // Open tasks first; then by due date, priority, and creation order.
+  const filteredTodos = useMemo(() => todos
+    .filter(todo => {
+      if (filter === 'active') return !todo.completed;
+      if (filter === 'completed') return todo.completed;
+      return true;
+    })
+    .map((todo, index) => ({ todo, index }))
+    .sort((a, b) =>
+      Number(a.todo.completed) - Number(b.todo.completed) ||
+      (a.todo.due_date || '9999').localeCompare(b.todo.due_date || '9999') ||
+      PRIORITY_RANK[a.todo.priority] - PRIORITY_RANK[b.todo.priority] ||
+      a.index - b.index
+    )
+    .map(({ todo }) => todo), [todos, filter]);
+  const today = localDate();
   const completedCount = todos.filter(t => t.completed).length;
 
   return (
@@ -168,6 +230,17 @@ const TodoList: React.FC = () => {
             <option value="medium">🟡 Medium</option>
             <option value="high">🔴 High</option>
           </select>
+          <label className={todoStyles.dueInput} title="Due date (optional)">
+            <CalendarDays size={14} aria-hidden />
+            <input
+              type="date"
+              value={newDue}
+              min={today}
+              onChange={(e) => setNewDue(e.target.value)}
+              aria-label="Due date"
+              disabled={isSaving}
+            />
+          </label>
         </div>
       </form>
 
@@ -193,6 +266,12 @@ const TodoList: React.FC = () => {
         </button>
       </div>
 
+      {completedCount > 0 && (
+        <button type="button" className={todoStyles.clearDone} onClick={clearCompleted}>
+          Clear {completedCount} completed
+        </button>
+      )}
+
       {/* Todo List */}
       <div className={todoStyles.taskList}>
         {filteredTodos.map(todo => (
@@ -209,8 +288,38 @@ const TodoList: React.FC = () => {
             </button>
             
             <div className={todoStyles.taskContent}>
-              <span className={todoStyles.taskText}>{todo.text}</span>
+              {editingId === todo.id ? (
+                <input
+                  className={todoStyles.editInput}
+                  value={editText}
+                  maxLength={500}
+                  autoFocus
+                  aria-label="Edit task"
+                  onChange={(e) => setEditText(e.target.value)}
+                  onBlur={commitEdit}
+                  onKeyDown={(e) => {
+                    if (e.key === 'Enter') commitEdit();
+                    if (e.key === 'Escape') {
+                      e.stopPropagation();
+                      setEditingId(null);
+                    }
+                  }}
+                />
+              ) : (
+                <span className={todoStyles.taskText} onDoubleClick={() => startEdit(todo)}>
+                  {todo.text}
+                </span>
+              )}
               <div className={todoStyles.taskMeta}>
+                {todo.due_date && (
+                  <span
+                    className={`${todoStyles.dueBadge} ${!todo.completed && todo.due_date < today ? todoStyles.overdue : ''}`}
+                  >
+                    <CalendarDays size={11} aria-hidden />
+                    {!todo.completed && todo.due_date < today ? 'Overdue · ' : ''}
+                    {formatDue(todo.due_date)}
+                  </span>
+                )}
                 <span className={`${todoStyles.categoryBadge} ${todoStyles[`category${todo.category.charAt(0).toUpperCase() + todo.category.slice(1)}`]}`}>
                   {getCategoryIcon(todo.category)}
                   {todo.category}
@@ -221,6 +330,13 @@ const TodoList: React.FC = () => {
               </div>
             </div>
             
+            <button
+              onClick={() => startEdit(todo)}
+              className={`${todoStyles.deleteButton} ${todoStyles.editButton}`}
+              aria-label="Edit task"
+            >
+              <Pencil size={14} />
+            </button>
             <button
               onClick={() => deleteTodo(todo.id)}
               className={todoStyles.deleteButton}

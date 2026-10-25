@@ -920,3 +920,93 @@
 .emptyState .emptyMessage {
   font-size: 13px;
 }
+
+/* --- rework additions --- */
+.optionsRow {
+  flex-wrap: wrap;
+}
+
+.dueInput {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1 1 140px;
+  min-width: 0;
+  padding: 0 10px;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-tertiary);
+}
+
+.dueInput input {
+  flex: 1;
+  min-width: 0;
+  height: 34px;
+  border: none;
+  background: transparent;
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 13px;
+  color-scheme: dark;
+}
+
+.dueBadge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 999px;
+  font-size: 11px;
+  font-weight: 500;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-tertiary);
+}
+
+.overdue {
+  background: rgba(239, 68, 68, 0.15);
+  color: #fca5a5;
+}
+
+.editInput {
+  width: 100%;
+  padding: 6px 8px;
+  border-radius: 8px;
+  border: 1px solid var(--accent-color);
+  background: rgba(0, 0, 0, 0.25);
+  color: var(--text-primary);
+  font: inherit;
+  font-size: 14px;
+}
+
+.clearDone {
+  align-self: flex-end;
+  margin: -4px 0 4px;
+  padding: 4px 10px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--text-tertiary);
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.clearDone:hover {
+  color: #fca5a5;
+  background: rgba(239, 68, 68, 0.1);
+}
+
+.taskText {
+  overflow-wrap: anywhere;
+}
+
+@media (pointer: coarse) {
+  .taskItem .deleteButton {
+    opacity: 0.7;
+  }
+}
+
+.deleteButton.editButton:hover {
+  color: var(--text-primary);
+  background: rgba(255, 255, 255, 0.08);
+}

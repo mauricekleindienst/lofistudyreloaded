@@ -1,22 +1,18 @@
 "use client";
 
-import React, { useMemo, useState } from "react";
-import { useResponsive } from '../../hooks/useResponsive';
-import {
-  Play,
-  Pause,
-  RotateCcw,
-  Settings,
-  Volume2,
-  VolumeX,
-  Timer,
-  Coffee,
-  Armchair,
-  SkipForward,
-  X
-} from "lucide-react";
+import React, { useState } from "react";
+import { Play, Pause, RotateCcw, Settings, Volume2, VolumeX, SkipForward, X, Brain, Coffee, Armchair } from "lucide-react";
 import styles from "../../../styles/PomodoroTimer.module.css";
 import { usePomodoro, POMODORO_CATEGORIES, type PomodoroMode } from "../../contexts/PomodoroContext";
+
+const MODES: { id: PomodoroMode; label: string; icon: React.ElementType; color: string }[] = [
+  { id: 'pomodoro', label: 'Focus', icon: Brain, color: '#ff7b00' },
+  { id: 'shortBreak', label: 'Short break', icon: Coffee, color: '#10b981' },
+  { id: 'longBreak', label: 'Long break', icon: Armchair, color: '#3b82f6' },
+];
+
+const RING_R = 88;
+const RING_C = 2 * Math.PI * RING_R;
 
 const clampMinutes = (value: string, fallback: number, max: number) => {
   const n = parseInt(value, 10);
@@ -25,9 +21,15 @@ const clampMinutes = (value: string, fallback: number, max: number) => {
 
 export default function PomodoroTimer() {
   const pomo = usePomodoro();
-  const { isMobile, isTablet } = useResponsive();
   const [showSettings, setShowSettings] = useState(false);
   const [draft, setDraft] = useState({ pomodoro: '25', shortBreak: '5', longBreak: '15' });
+
+  const mode = MODES.find((m) => m.id === pomo.mode)!;
+  const total = pomo.durations[pomo.mode];
+  const progress = total > 0 ? (total - pomo.timeLeft) / total : 0;
+  const mm = String(Math.floor(pomo.timeLeft / 60)).padStart(2, '0');
+  const ss = String(pomo.timeLeft % 60).padStart(2, '0');
+  const untilLong = 4 - (pomo.cycles % 4);
 
   const openSettings = () => {
     setDraft({
@@ -38,7 +40,8 @@ export default function PomodoroTimer() {
     setShowSettings(true);
   };
 
-  const saveSettings = () => {
+  const saveSettings = (e: React.FormEvent) => {
+    e.preventDefault();
     pomo.setDurations({
       pomodoro: clampMinutes(draft.pomodoro, 25, 180) * 60,
       shortBreak: clampMinutes(draft.shortBreak, 5, 60) * 60,
@@ -47,277 +50,140 @@ export default function PomodoroTimer() {
     setShowSettings(false);
   };
 
-  const formatTime = useMemo(() => {
-    const minutes = Math.floor(pomo.timeLeft / 60);
-    const seconds = pomo.timeLeft % 60;
-    return `${minutes.toString().padStart(2, "0")}:${seconds.toString().padStart(2, "0")}`;
-  }, [pomo.timeLeft]);
-
-  const progress = useMemo(() => {
-    const total = pomo.durations[pomo.mode];
-    return total > 0 ? ((total - pomo.timeLeft) / total) * 100 : 0;
-  }, [pomo.timeLeft, pomo.mode, pomo.durations]);
-
-  const getModeInfo = (mode: PomodoroMode) => {
-    // Slightly larger icon size for better visibility
-    const iconSize = isMobile ? 10 : isTablet ? 12 : 14;
-    
-    switch (mode) {
-      case "pomodoro":
-        return { 
-          label: isMobile ? "Focus" : "Focus Time", 
-          icon: <Timer size={iconSize} />, 
-          color: "var(--accent-color)" 
-        };
-      case "shortBreak":
-        return { 
-          label: isMobile ? "Break" : "Short Break", 
-          icon: <Coffee size={iconSize} />, 
-          color: "#10b981" 
-        };
-      case "longBreak":
-        return { 
-          label: isMobile ? "Long" : "Long Break", 
-          icon: <Armchair size={iconSize} />, 
-          color: "#3b82f6" 
-        };
-    }
-  };
   return (
-    <div className={styles.container}>
-      {/* Timer Display */}
-      <div className={styles.timerSection}>
-        <div className={styles.progressRing}>
-          {/* Mode Selector inside progress ring */}
-          <div className={styles.modeSelector}>
-            {(['pomodoro', 'shortBreak', 'longBreak'] as const).map((mode) => {
-              const modeInfo = getModeInfo(mode);
-              return (
-                <button
-                  key={mode}
-                  className={`${styles.modeButton} ${
-                    pomo.mode === mode ? styles.active : ''
-                  }`}
-                  onClick={() => pomo.setMode(mode)}
-                  aria-pressed={pomo.mode === mode}
-                  aria-label={getModeInfo(mode).label}
-                  style={{
-                    '--mode-color': modeInfo.color
-                  } as React.CSSProperties}
-                  title={modeInfo.label}
-                >
-                  {modeInfo.icon}
-                </button>
-              );
-            })}
-          </div>
-          
-          {/* Horizontal progress bar */}
-          <div 
-            className={styles.progressBar}
-            style={{
-              width: `${progress}%`,
-              backgroundColor: getModeInfo(pomo.mode).color
-            }}
+    <div className={styles.timer} style={{ '--mode': mode.color } as React.CSSProperties}>
+      <div className={styles.modes} role="tablist" aria-label="Timer mode">
+        {MODES.map((m) => (
+          <button
+            key={m.id}
+            role="tab"
+            aria-selected={pomo.mode === m.id}
+            className={`${styles.mode} ${pomo.mode === m.id ? styles.modeActive : ''}`}
+            style={{ '--mode': m.color } as React.CSSProperties}
+            onClick={() => pomo.setMode(m.id)}
+          >
+            <m.icon size={14} />
+            <span>{m.label}</span>
+          </button>
+        ))}
+      </div>
+
+      <div className={styles.dial}>
+        <svg viewBox="0 0 200 200" className={styles.ring} aria-hidden>
+          <circle cx="100" cy="100" r={RING_R} className={styles.ringTrack} />
+          <circle
+            cx="100"
+            cy="100"
+            r={RING_R}
+            className={styles.ringFill}
+            strokeDasharray={RING_C}
+            strokeDashoffset={RING_C * (1 - progress)}
           />
-          <div className={styles.timerDisplay}>
-            <div className={styles.timeText} role="timer" aria-live="off">{formatTime}</div>
-            <div className={styles.modeLabel}>
-              {getModeInfo(pomo.mode).label}
-            </div>
+        </svg>
+        <div className={styles.readout}>
+          <div className={styles.time} role="timer" aria-label={`${mm} minutes ${ss} seconds left`}>
+            {mm}:{ss}
           </div>
-        </div>
-
-        {/* Controls */}
-        <div className={styles.controls}>
-          <button
-            className={styles.resetButton}
-            onClick={pomo.reset}
-            disabled={!pomo.isRunning && pomo.timeLeft === pomo.durations[pomo.mode]}
-            title="Reset timer"
-            aria-label="Reset timer"
-          >
-            <RotateCcw size={isMobile ? 16 : 20} />
-          </button>
-
-          <button
-            className={`${styles.playButton} ${pomo.isRunning ? styles.running : ''}`}
-            onClick={pomo.toggle}
-            title={pomo.isRunning ? 'Pause' : 'Start'}
-            aria-label={pomo.isRunning ? 'Pause timer' : 'Start timer'}
-          >
-            {pomo.isRunning ? 
-              <Pause size={isMobile ? 20 : 24} /> : 
-              <Play size={isMobile ? 20 : 24} />
-            }
-          </button>
-
-          <button
-            className={styles.resetButton}
-            onClick={pomo.skip}
-            title={pomo.mode === 'pomodoro' ? 'Skip to break' : 'Skip to focus'}
-            aria-label={pomo.mode === 'pomodoro' ? 'Skip to break' : 'Skip to focus'}
-          >
-            <SkipForward size={isMobile ? 16 : 20} />
-          </button>
-
-          <button
-            className={styles.settingsButton}
-            onClick={openSettings}
-            title="Timer settings"
-            aria-label="Timer settings"
-          >
-            <Settings size={isMobile ? 16 : 20} />
-          </button>
+          <div className={styles.modeLabel}>{pomo.isRunning ? mode.label : 'Paused'}</div>
+          <div className={styles.dots} aria-label={`${untilLong} until long break`}>
+            {[0, 1, 2, 3].map((i) => (
+              <span key={i} className={i < pomo.cycles % 4 ? styles.dotDone : styles.dot} />
+            ))}
+          </div>
         </div>
       </div>
 
-      {/* Category Selection */}
-      <div className={styles.categorySection}>
-        <label className={styles.categoryLabel}>
-          {isMobile ? "Type" : "Category"}
-        </label>
-        <div className={styles.categorySelector}>
-          <select
-            value={pomo.category}
-            onChange={(e) => pomo.setCategory(e.target.value)}
-            className={styles.categorySelect}
-            aria-label="Session category"
-          >
-            {POMODORO_CATEGORIES.map((cat) => (
-              <option key={cat} value={cat}>
-                {cat}
+      <div className={styles.controls}>
+        <button
+          className={styles.secondary}
+          onClick={pomo.reset}
+          disabled={!pomo.isRunning && pomo.timeLeft === total}
+          aria-label="Reset timer"
+          title="Reset"
+        >
+          <RotateCcw size={18} />
+        </button>
+        <button className={styles.primary} onClick={pomo.toggle} aria-label={pomo.isRunning ? 'Pause timer' : 'Start timer'}>
+          {pomo.isRunning ? <Pause size={26} /> : <Play size={26} className={styles.playIcon} />}
+        </button>
+        <button
+          className={styles.secondary}
+          onClick={pomo.skip}
+          aria-label={pomo.mode === 'pomodoro' ? 'Skip to break' : 'Skip to focus'}
+          title="Skip"
+        >
+          <SkipForward size={18} />
+        </button>
+      </div>
+
+      <div className={styles.footer}>
+        <label className={styles.category}>
+          <span className={styles.srOnly}>Session category</span>
+          <select value={pomo.category} onChange={(e) => pomo.setCategory(e.target.value)}>
+            {POMODORO_CATEGORIES.map((c) => (
+              <option key={c} value={c}>
+                {c}
               </option>
             ))}
           </select>
+        </label>
+        <div className={styles.today} title="Completed focus sessions today">
+          <strong>{pomo.todaySessions}</strong> today · {Math.round(pomo.todayMinutes / 6) / 10}h
         </div>
+        <button className={styles.secondary} onClick={openSettings} aria-label="Timer settings" title="Settings">
+          <Settings size={16} />
+        </button>
       </div>
 
-      {/* Responsive Stats Display */}
-      {!isMobile && (
-        <div className={styles.statsSection}>
-          <div className={styles.statsGrid}>
-            <div className={styles.statItem}>
-              <div className={styles.statValue}>{pomo.todaySessions}</div>
-              <div className={styles.statLabel}>Today</div>
-            </div>
-            <div className={styles.statItem}>
-              <div className={styles.statValue}>
-                {Math.round(pomo.todayMinutes / 6) / 10}h
-              </div>
-              <div className={styles.statLabel}>Focused</div>
-            </div>
-          </div>
-        </div>
-      )}
-
-      {/* Mobile-only compact stats */}
-      {isMobile && (
-        <div className={styles.mobileStats}>
-          <span>{pomo.todaySessions} today</span>
-          <span>•</span>
-          <span>{Math.round(pomo.todayMinutes / 6) / 10}h focused</span>
-        </div>
-      )}
-
-
-      {/* Settings Modal */}
       {showSettings && (
-        <div className={styles.settingsOverlay}>
-          <div className={styles.settingsModal}>            <div className={styles.settingsHeader}>
-              <h3>Settings</h3>
-              <button
-                className={styles.closeButton}
-                onClick={() => setShowSettings(false)}
-                aria-label="Close settings"
-              >
+        <div className={styles.settingsOverlay} onClick={() => setShowSettings(false)}>
+          <form className={styles.settings} onSubmit={saveSettings} onClick={(e) => e.stopPropagation()}>
+            <div className={styles.settingsHeader}>
+              <h3>Timer settings</h3>
+              <button type="button" className={styles.secondary} onClick={() => setShowSettings(false)} aria-label="Close settings">
                 <X size={16} />
               </button>
             </div>
-
-            <div className={styles.settingsContent}>              {/* Duration Settings */}
-              <div className={styles.settingGroup}>
-                <h4>Durations</h4>
-                  <div className={styles.settingRow}>
-                  <label htmlFor="pomo-pomodoro">Focus (min)</label>
-                  <input
-                    id="pomo-pomodoro"
-                    type="number"
-                    inputMode="numeric"
-                    min="1"
-                    max="180"
-                    value={draft.pomodoro}
-                    onChange={(e) => setDraft(d => ({ ...d, pomodoro: e.target.value }))}
-                    className={styles.settingInput}
-                  />
-                </div>
-
-                <div className={styles.settingRow}>
-                  <label htmlFor="pomo-shortBreak">Short (min)</label>
-                  <input
-                    id="pomo-shortBreak"
-                    type="number"
-                    inputMode="numeric"
-                    min="1"
-                    max="60"
-                    value={draft.shortBreak}
-                    onChange={(e) => setDraft(d => ({ ...d, shortBreak: e.target.value }))}
-                    className={styles.settingInput}
-                  />
-                </div>
-
-                <div className={styles.settingRow}>
-                  <label htmlFor="pomo-longBreak">Long (min)</label>
-                  <input
-                    id="pomo-longBreak"
-                    type="number"
-                    inputMode="numeric"
-                    min="1"
-                    max="120"
-                    value={draft.longBreak}
-                    onChange={(e) => setDraft(d => ({ ...d, longBreak: e.target.value }))}
-                    className={styles.settingInput}
-                  />
-                </div>
-              </div>
-
-              {/* Audio Settings */}
-              <div className={styles.settingGroup}>
-                <h4>Volume</h4>
-                
-                <div className={styles.settingRow}>
-                  <div className={styles.volumeControl}>
-                    <button
-                      className={styles.volumeButton}
-                      onClick={pomo.toggleMute}
-                      aria-label={pomo.muted ? 'Unmute alerts' : 'Mute alerts'}
-                    >
-                      {pomo.muted ? <VolumeX size={12} /> : <Volume2 size={12} />}
-                    </button>
+            <div className={styles.fields}>
+              {([
+                ['pomodoro', 'Focus', 180],
+                ['shortBreak', 'Short break', 60],
+                ['longBreak', 'Long break', 120],
+              ] as const).map(([key, label, max]) => (
+                <label key={key} className={styles.field}>
+                  <span>{label}</span>
+                  <span className={styles.inputWrap}>
                     <input
-                      type="range"
-                      min="0"
-                      max="100"
-                      value={pomo.muted ? 0 : pomo.volume}
-                      onChange={(e) => pomo.setVolume(parseInt(e.target.value, 10))}
-                      aria-label="Alert volume"
-                      className={styles.volumeSlider}
+                      type="number"
+                      inputMode="numeric"
+                      min={1}
+                      max={max}
+                      value={draft[key]}
+                      onChange={(e) => setDraft((d) => ({ ...d, [key]: e.target.value }))}
                     />
-                    <span className={styles.volumeValue}>
-                      {pomo.muted ? 0 : pomo.volume}%
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>            <div className={styles.settingsFooter}>
-              <button
-                className={styles.saveSettingsButton}
-                onClick={saveSettings}
-              >
-                Save
-              </button>
+                    <em>min</em>
+                  </span>
+                </label>
+              ))}
             </div>
-          </div>
+            <div className={styles.volume}>
+              <button type="button" className={styles.secondary} onClick={pomo.toggleMute} aria-label={pomo.muted ? 'Unmute alerts' : 'Mute alerts'}>
+                {pomo.muted ? <VolumeX size={16} /> : <Volume2 size={16} />}
+              </button>
+              <input
+                type="range"
+                min={0}
+                max={100}
+                value={pomo.muted ? 0 : pomo.volume}
+                onChange={(e) => pomo.setVolume(parseInt(e.target.value, 10))}
+                aria-label="Alert volume"
+              />
+              <span>{pomo.muted ? 0 : pomo.volume}%</span>
+            </div>
+            <button type="submit" className={styles.save}>
+              Save
+            </button>
+          </form>
         </div>
       )}
     </div>
