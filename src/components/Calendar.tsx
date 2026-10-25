@@ -284,10 +284,14 @@ const Calendar: React.FC<CalendarProps> = ({ isVisible, onClose }) => {
       const isSelected = selectedDate === dateStr;
 
       days.push(
-        <div
+        <button
+          type="button"
           key={day}
           className={`${styles.calendarDay} ${isToday(day) ? styles.today : ''} ${isSelected ? styles.selected : ''} ${dayAppointments.length > 0 ? styles.hasAppointments : ''}`}
           onClick={() => handleDayClick(day)}
+          aria-pressed={isSelected}
+          aria-current={isToday(day) ? 'date' : undefined}
+          aria-label={`${new Date(`${dateStr}T12:00`).toLocaleDateString([], { weekday: 'long', day: 'numeric', month: 'long' })}${dayAppointments.length ? `, ${dayAppointments.length} appointment${dayAppointments.length === 1 ? '' : 's'}` : ''}`}
         >
           <div className={styles.dayContent}>
             <span className={styles.dayNumber}>{day}</span>
@@ -309,7 +313,7 @@ const Calendar: React.FC<CalendarProps> = ({ isVisible, onClose }) => {
               </div>
             )}
           </div>
-        </div>
+        </button>
       );
     }
     
@@ -598,7 +602,7 @@ const Calendar: React.FC<CalendarProps> = ({ isVisible, onClose }) => {
                 </div>
                 <div className={styles.statItem}>
                   <span className={styles.statNumber}>
-                    {appointments.filter(apt => apt.date === formatDateString(today.getDate())).length}
+                    {appointments.filter(apt => apt.date === localDate(today)).length}
                   </span>
                   <span className={styles.statLabel}>Today</span>
                 </div>

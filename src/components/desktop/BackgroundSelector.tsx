@@ -167,6 +167,7 @@ export default function BackgroundSelector({
               <button 
                 className={styles.clearSearch}
                 onClick={() => setSearchQuery('')}
+                aria-label="Clear search"
               >
                 <X size={14} />
               </button>

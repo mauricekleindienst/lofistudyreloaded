@@ -90,6 +90,9 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
   const [readySrc, setReadySrc] = useState<string | null>(null);
   const [failedSrc, setFailedSrc] = useState<string | null>(null);
   const [useMobileVideo, setUseMobileVideo] = useState(false);
+  // The <video> is only created once we know which file (1080p/720p) and whether the user
+  // chose still images — otherwise phones start downloading the big file first.
+  const [videoDecided, setVideoDecided] = useState(false);
   // Animated unless the user switches to "Still" in the gallery. The OS reduce-motion
   // setting is not used here: many people have it on unknowingly, and a slow ambient
   // loop is the point of the app (the gallery toggle is the explicit opt-out).
@@ -153,6 +156,7 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
     if (local) setCurrentBackground(local);
     if (typeof settings.backgroundMotion === 'boolean') setMotionPref(settings.backgroundMotion);
     if (typeof settings.backgroundDim === 'number') setDim(Math.min(80, Math.max(0, settings.backgroundDim)));
+    setVideoDecided(true);
   }, []);
 
   useEffect(() => {
@@ -192,7 +196,7 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
       removeRetry();
       document.removeEventListener('visibilitychange', onVisibility);
     };
-  }, [videoSrc, stillOnly]);
+  }, [videoSrc, stillOnly, videoDecided]);
 
   const handleMotionChange = useCallback((value: boolean) => {
     setMotionPref(value);
@@ -309,7 +313,10 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
   // Keyboard: Escape minimizes the top-most window when no modal is open.
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key !== 'Escape' || showBackgrounds || showCalendar || showStats || showLauncher) return;
+      if (e.key !== 'Escape' || e.defaultPrevented || showBackgrounds || showCalendar || showStats || showLauncher || isMusicSidebarOpen) return;
+      // Escape in a text field belongs to that field; an open dialog (sign-in, about, …) closes first.
+      if ((e.target as HTMLElement)?.closest?.('input, textarea, select, [contenteditable="true"]')) return;
+      if (document.querySelector('[aria-modal="true"]')) return;
       const visible = openWindowsRef.current.filter((w) => !w.isMinimized);
       if (!visible.length) return;
       const top = visible.reduce((a, b) => (a.zIndex > b.zIndex ? a : b));
@@ -317,7 +324,7 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
     };
     window.addEventListener('keydown', onKey);
     return () => window.removeEventListener('keydown', onKey);
-  }, [showBackgrounds, showCalendar, showStats, showLauncher, minimizeWindow]);
+  }, [showBackgrounds, showCalendar, showStats, showLauncher, isMusicSidebarOpen, minimizeWindow]);
 
   const currentTime = now ? now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
   const currentDate = now ? now.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' }) : '';
@@ -332,7 +339,7 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
         style={{ backgroundImage: `url(${currentBackground.poster})` }}
         aria-hidden
       />
-      {!stillOnly && failedSrc !== videoSrc && (
+      {videoDecided && !stillOnly && failedSrc !== videoSrc && (
         <video
           key={videoSrc}
           ref={videoRef}

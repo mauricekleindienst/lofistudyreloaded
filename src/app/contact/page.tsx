@@ -8,10 +8,13 @@ export const metadata: Metadata = {
   title: 'Contact Us',
   description: 'Get in touch with the Lo-Fi.Study team. We\'d love to hear your feedback, questions, or suggestions about our focus and productivity app.',
   keywords: ['contact', 'support', 'feedback', 'lo-fi study', 'customer service'],
+  // Each page is its own canonical URL (the layout's '/' would mark it as a duplicate of home).
+  alternates: { canonical: '/contact' },
   openGraph: {
     title: 'Contact Us | Lo-Fi.Study',
     description: 'Get in touch with the Lo-Fi.Study team. We\'d love to hear your feedback, questions, or suggestions.',
     url: '/contact',
+    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'Lo-Fi.Study' }],
   },
   twitter: {
     title: 'Contact Us | Lo-Fi.Study',

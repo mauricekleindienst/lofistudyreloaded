@@ -8,10 +8,13 @@ export const metadata: Metadata = {
   title: 'Legal Notice',
   description: 'Legal information, terms of service, and regulatory compliance details for Lo-Fi.Study productivity app.',
   keywords: ['legal notice', 'terms of service', 'compliance', 'lo-fi study', 'legal information'],
+  // Each page is its own canonical URL (the layout's '/' would mark it as a duplicate of home).
+  alternates: { canonical: '/legal' },
   openGraph: {
     title: 'Legal Notice | Lo-Fi.Study',
     description: 'Legal information, terms of service, and regulatory compliance details for Lo-Fi.Study productivity app.',
     url: '/legal',
+    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'Lo-Fi.Study' }],
   },
   twitter: {
     title: 'Legal Notice | Lo-Fi.Study',

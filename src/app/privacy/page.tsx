@@ -8,10 +8,13 @@ export const metadata: Metadata = {
   title: 'Privacy Policy',
   description: 'Learn how Lo-Fi.Study collects, uses, and protects your personal information. Our commitment to your privacy and data security.',
   keywords: ['privacy policy', 'data protection', 'security', 'lo-fi study', 'user privacy'],
+  // Each page is its own canonical URL (the layout's '/' would mark it as a duplicate of home).
+  alternates: { canonical: '/privacy' },
   openGraph: {
     title: 'Privacy Policy | Lo-Fi.Study',
     description: 'Learn how Lo-Fi.Study collects, uses, and protects your personal information. Our commitment to your privacy and data security.',
     url: '/privacy',
+    images: [{ url: '/og-image.png', width: 1200, height: 630, alt: 'Lo-Fi.Study' }],
   },
   twitter: {
     title: 'Privacy Policy | Lo-Fi.Study',
