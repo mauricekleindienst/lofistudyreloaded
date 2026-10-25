@@ -11,7 +11,7 @@ const csp = [
   "media-src 'self' blob:",
   "font-src 'self' data:",
   "connect-src 'self' https://www.google-analytics.com https://*.google-analytics.com https://www.googletagmanager.com",
-  "frame-src https://www.youtube.com https://www.youtube-nocookie.com",
+  "frame-src https://www.youtube.com https://www.youtube-nocookie.com https://discord.com",
   "frame-ancestors 'self'",
   "object-src 'none'",
   "base-uri 'self'",

@@ -25,6 +25,7 @@ import {
   Code,
   ListOrdered,
   List as ListIcon,
+  ChevronLeft,
 } from 'lucide-react';
 import { useDataPersistence } from '../../hooks/useDataPersistence';
 import { useAppState } from '../../contexts/AppStateContext';
@@ -388,7 +389,7 @@ export default function NotesApp() {
       </div>
 
       {/* Main Content */}
-      <div className={styles.mainContent}>
+      <div className={`${styles.mainContent} ${selectedNote || isCreating ? styles.hasSelection : ''}`}>
         {/* Notes List */}
         <div className={`${styles.notesList} ${viewMode === 'grid' ? styles.gridView : styles.listView}`}>
           {isLoading ? (
@@ -453,6 +454,21 @@ export default function NotesApp() {
         {(selectedNote || isCreating) && (
           <div className={styles.noteEditor}>
             <div className={styles.editorHeader}>
+              <button
+                type="button"
+                className={styles.backButton}
+                onClick={() => {
+                  if (isEditing && (editTitle !== (selectedNote?.title ?? '') || editContent !== (selectedNote?.content ?? ''))) {
+                    if (!confirm('Discard unsaved changes?')) return;
+                  }
+                  setIsEditing(false);
+                  setIsCreating(false);
+                  setSelectedNote(null);
+                }}
+                aria-label="Back to all notes"
+              >
+                <ChevronLeft size={18} />
+              </button>
               {isEditing ? (
                 <>
                   <input

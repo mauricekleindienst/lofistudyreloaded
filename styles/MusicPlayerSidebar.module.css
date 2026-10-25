@@ -1498,3 +1498,116 @@
     padding-bottom: env(safe-area-inset-bottom);
   }
 }
+
+/* --- visible YouTube player --- */
+.videoFrame {
+  position: relative;
+  margin: 0 16px 4px;
+  aspect-ratio: 16 / 9;
+  min-height: 200px;
+  border-radius: 14px;
+  overflow: hidden;
+  background: #000;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  flex-shrink: 0;
+}
+
+.videoPlayer,
+.videoIframe {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  border: 0;
+}
+
+.videoPoster {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  padding: 0;
+  border: none;
+  background: linear-gradient(135deg, #2a2f3a, #14171d);
+  cursor: pointer;
+}
+
+.videoPoster img {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  opacity: 0.75;
+}
+
+.videoPosterPlay {
+  position: relative;
+  width: 64px;
+  height: 64px;
+  display: grid;
+  place-items: center;
+  border-radius: 50%;
+  background: var(--accent-color);
+  color: #fff;
+  box-shadow: 0 8px 24px rgba(255, 123, 0, 0.45);
+  transition: transform 0.15s ease;
+}
+
+.videoPosterPlay svg {
+  margin-left: 3px;
+}
+
+.videoPoster:hover .videoPosterPlay {
+  transform: scale(1.06);
+}
+
+.videoError {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  padding: 16px;
+  text-align: center;
+  background: rgba(10, 12, 16, 0.92);
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.videoErrorActions {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.videoErrorActions a,
+.videoErrorActions button {
+  padding: 8px 14px;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  background: var(--glass-button);
+  color: var(--text-primary);
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.videoErrorActions a {
+  background: var(--accent-color);
+  border-color: transparent;
+}
+
+.sidebarContent {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
+/* The video above already shows the artwork */
+.nowPlaying .trackThumbnail {
+  display: none;
+}

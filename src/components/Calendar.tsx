@@ -257,6 +257,16 @@ const Calendar: React.FC<CalendarProps> = ({ isVisible, onClose }) => {
     });
   };
 
+  // The form opens below the grid; bring it into view so it doesn't look like nothing happened.
+  const formRef = React.useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    if (!showAddForm && !editingAppointment) return;
+    const el = formRef.current;
+    if (!el) return;
+    el.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    el.querySelector<HTMLInputElement>('input')?.focus({ preventScroll: true });
+  }, [showAddForm, editingAppointment]);
+
   if (!isVisible) return null;
 
   const renderCalendarDays = () => {
@@ -308,7 +318,7 @@ const Calendar: React.FC<CalendarProps> = ({ isVisible, onClose }) => {
 
   const renderAppointmentForm = () => {
     return (
-      <div className={styles.appointmentForm}>
+      <div className={styles.appointmentForm} ref={formRef}>
         <h4>{editingAppointment ? 'Edit Appointment' : 'Add New Appointment'}</h4>
         
         <div className={styles.compactFormRow}>

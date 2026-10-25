@@ -3,7 +3,6 @@ import React, { useCallback, useEffect, useRef, useState } from 'react';
 import YouTube, { type YouTubeEvent, type YouTubePlayer } from 'react-youtube';
 import { Music, X, SkipBack, SkipForward, Play, Pause, Volume2, VolumeX, Shuffle, Repeat, List, Plus, Trash2, RotateCcw } from 'lucide-react';
 import { useAppState } from '../contexts/AppStateContext';
-import { toast } from '../lib/api';
 import styles from '../../styles/MusicPlayerSidebar.module.css';
 
 interface Track {
@@ -92,8 +91,7 @@ const MusicPlayerSidebar: React.FC<MusicPlayerSidebarProps> = ({ isOpen, onToggl
   const [thumbFailed, setThumbFailed] = useState<Record<string, true>>({});
   const [playerReady, setPlayerReady] = useState(false);
   const playerRef = useRef<YouTubePlayer | null>(null);
-  const failStreak = useRef(0);
-  const lastFailedId = useRef<string | null>(null);
+  const [playError, setPlayError] = useState<number | null>(null);
   const hydrated = useRef(false);
 
   const tracks = [...BUILT_IN.filter((t) => !hidden.includes(t.videoId)), ...custom];
@@ -145,6 +143,7 @@ const MusicPlayerSidebar: React.FC<MusicPlayerSidebarProps> = ({ isOpen, onToggl
 
   // --- navigation ---
   const goTo = useCallback((videoId: string) => {
+    setPlayError(null);
     setCurrentId(videoId);
     setActivated(true);
     setIsLoading(true);
@@ -166,8 +165,7 @@ const MusicPlayerSidebar: React.FC<MusicPlayerSidebarProps> = ({ isOpen, onToggl
 
   const playPause = () => {
     if (!activated || !playerReady) {
-      lastFailedId.current = null;
-      failStreak.current = 0;
+      setPlayError(null);
       setActivated(true);
       setIsLoading(true);
       return;
@@ -196,8 +194,7 @@ const MusicPlayerSidebar: React.FC<MusicPlayerSidebarProps> = ({ isOpen, onToggl
   const onStateChange = (event: YouTubeEvent<number>) => {
     switch (event.data) {
       case 1:
-        failStreak.current = 0;
-        lastFailedId.current = null;
+        setPlayError(null);
         setIsPlaying(true);
         setIsLoading(false);
         break;
@@ -217,24 +214,15 @@ const MusicPlayerSidebar: React.FC<MusicPlayerSidebarProps> = ({ isOpen, onToggl
     }
   };
 
-  // YouTube error codes: 2 bad id, 5 HTML5 error, 100 removed, 101/150 embedding disabled, 153 missing referrer.
+  // YouTube error codes: 2 bad id, 5 HTML5 error, 100 removed, 101/150 embedding not allowed,
+  // 153 missing referrer. Show the reason in the player instead of skipping through the playlist.
   const onError = (event: YouTubeEvent<number>) => {
     setIsLoading(false);
     setIsPlaying(false);
+    setPlayError(event.data);
     console.warn('[music] YouTube error', event.data, currentTrack?.videoId);
-    // The player often reports the same failure twice; count each video once.
-    if (lastFailedId.current === currentTrack?.videoId) return;
-    lastFailedId.current = currentTrack?.videoId ?? null;
-    failStreak.current += 1;
-    // If several in a row fail it's the network/blocker, not the videos — stop instead of looping forever.
-    if (failStreak.current >= 3) {
-      failStreak.current = 0;
-      toast('YouTube isn’t playing right now (blocked or offline). Try again in a moment.', 'error');
-      return;
-    }
-    toast(`"${currentTrack?.title ?? 'This video'}" can't be played — skipping.`, 'warning');
-    if (live.current.tracks.length > 1) step(1);
   };
+
 
   // Lock-screen / hardware media keys
   useEffect(() => {
@@ -314,23 +302,6 @@ const MusicPlayerSidebar: React.FC<MusicPlayerSidebarProps> = ({ isOpen, onToggl
         )}
       </button>
 
-      {/* The player stays mounted while the sidebar is closed, so music keeps playing. */}
-      {activated && currentTrack && (
-        <div className={styles.hiddenPlayer} aria-hidden>
-          <YouTube
-            videoId={currentTrack.videoId}
-            onReady={onReady}
-            onStateChange={onStateChange}
-            onError={onError}
-            opts={{
-              height: '1',
-              width: '1',
-              playerVars: { autoplay: 1, playsinline: 1, controls: 0, rel: 0 },
-            }}
-          />
-        </div>
-      )}
-
       <aside className={`${styles.sidebar} ${isOpen ? styles.sidebarOpen : ''}`} aria-label="Music player" aria-hidden={!isOpen} inert={!isOpen}>
         <div className={styles.sidebarContent}>
           <div className={styles.header}>
@@ -341,6 +312,61 @@ const MusicPlayerSidebar: React.FC<MusicPlayerSidebarProps> = ({ isOpen, onToggl
             <button className={styles.closeButton} onClick={onToggle} aria-label="Close music player">
               <X size={18} />
             </button>
+          </div>
+
+          {/* A real, visible player: YouTube requires >=200px, and iOS often only starts
+              playback from a tap inside the video. The sidebar slides off-screen when
+              closed but stays mounted, so music keeps playing. */}
+          <div className={styles.videoFrame}>
+            {activated && currentTrack ? (
+              <YouTube
+                videoId={currentTrack.videoId}
+                className={styles.videoPlayer}
+                iframeClassName={styles.videoIframe}
+                title={`YouTube player: ${currentTrack.title}`}
+                onReady={onReady}
+                onStateChange={onStateChange}
+                onError={onError}
+                opts={{
+                  width: '100%',
+                  height: '100%',
+                  playerVars: { autoplay: 1, playsinline: 1, rel: 0, modestbranding: 1 },
+                }}
+              />
+            ) : (
+              currentTrack && (
+                <button type="button" className={styles.videoPoster} onClick={playPause} aria-label={`Play ${currentTrack.title}`}>
+                  {!thumbFailed[currentTrack.videoId] && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={thumb(currentTrack.videoId)} alt="" referrerPolicy="no-referrer" onError={() => setThumbFailed((f) => ({ ...f, [currentTrack.videoId]: true }))} />
+                  )}
+                  <span className={styles.videoPosterPlay}>
+                    <Play size={28} />
+                  </span>
+                </button>
+              )
+            )}
+            {playError !== null && currentTrack && (
+              <div className={styles.videoError} role="alert">
+                <p>
+                  {playError === 101 || playError === 150
+                    ? 'YouTube won’t play this one inside other sites right now.'
+                    : playError === 100
+                      ? 'This video was removed from YouTube.'
+                      : 'YouTube couldn’t play this video here.'}
+                </p>
+                <div className={styles.videoErrorActions}>
+                  <a href={`https://www.youtube.com/watch?v=${currentTrack.videoId}`} target="_blank" rel="noopener noreferrer">
+                    Open on YouTube
+                  </a>
+                  {tracks.length > 1 && (
+                    <button type="button" onClick={() => step(1)}>
+                      Next station
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
           </div>
 
           <div className={styles.nowPlaying}>

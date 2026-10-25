@@ -1043,3 +1043,111 @@
   opacity: 1;
   flex-shrink: 0;
 }
+
+/* --- narrow windows / phones: list and editor take turns --- */
+.container {
+  container-type: inline-size;
+}
+
+.backButton {
+  display: none;
+  flex-shrink: 0;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 10px;
+  border: 1px solid var(--border-color);
+  background: var(--glass-button);
+  color: var(--text-primary);
+  cursor: pointer;
+}
+
+@container (max-width: 620px) {
+  .mainContent {
+    flex-direction: column;
+  }
+
+  .notesList {
+    flex: 1;
+    max-height: none;
+    max-width: none;
+    min-width: 0;
+    border-right: none;
+    border-bottom: none;
+  }
+
+  .hasSelection .notesList {
+    display: none;
+  }
+
+  .noteEditor {
+    flex: 1;
+    min-width: 0;
+  }
+
+  .backButton {
+    display: inline-flex;
+  }
+
+  .editorHeader {
+    gap: 8px;
+  }
+
+  .titleInput {
+    min-width: 0;
+    font-size: 16px;
+  }
+}
+
+.gridView {
+  align-content: start;
+}
+
+@container (max-width: 620px) {
+  .editorHeader {
+    flex-wrap: nowrap;
+    align-items: center;
+  }
+
+  .editorHeader > h2,
+  .editorHeader > h3,
+  .editorHeader .noteTitle {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 16px;
+  }
+
+  .editorActions {
+    flex-shrink: 0;
+    gap: 6px;
+  }
+
+  .editorActions button {
+    flex: 0 0 auto;
+    width: auto;
+  }
+}
+
+@container (max-width: 620px) {
+  .editorHeader {
+    flex-direction: row;
+    padding: 12px;
+  }
+
+  .editorTitle {
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 16px;
+  }
+
+  .editorActions {
+    width: auto;
+  }
+}
