@@ -110,6 +110,9 @@ export interface PomodoroStatDoc {
   category: string;
   pomodoroCount: number;
   focusMinutes: number;
+  /** sessions brought over from guest mode: shown in your own stats, never on the leaderboard */
+  importedCount?: number;
+  importedMinutes?: number;
   updatedAt: Date;
 }
 

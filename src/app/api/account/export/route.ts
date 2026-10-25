@@ -31,8 +31,8 @@ export const GET = route(async () => {
       pomodoro_stats: stats.map((s) => ({
         date: s.date,
         category: s.category,
-        pomodoro_count: s.pomodoroCount,
-        total_focus_time_minutes: s.focusMinutes,
+        pomodoro_count: (s.pomodoroCount ?? 0) + (s.importedCount ?? 0),
+        total_focus_time_minutes: (s.focusMinutes ?? 0) + (s.importedMinutes ?? 0),
       })),
       chat_messages: messages.map((m) => ({ message: m.message, created_at: m.createdAt.toISOString() })),
     },

@@ -110,8 +110,12 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
   const preloadRef = useRef<HTMLAudioElement | null>(null);
   const fadeRef = useRef<number | null>(null);
   const resumeAt = useRef(0);
+  /** the track the saved position belongs to */
+  const resumeFor = useRef<string | null>(null);
+  const skipTimer = useRef<number | null>(null);
   const errorStreak = useRef(0);
-  const hydrated = useRef(false);
+  // Saving starts only after the stored state was read, so defaults never overwrite it.
+  const [ready, setReady] = useState(false);
   /** set when the user (not the pomodoro sync) paused, so sync won't fight them */
   const userPaused = useRef(false);
 
@@ -152,14 +156,19 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
 
   const targetVolume = useCallback(() => (muted ? 0 : volume / 100), [muted, volume]);
 
-  const fadeTo = useCallback((to: number, done?: () => void) => {
+  const cancelFade = useCallback(() => {
+    if (fadeRef.current) cancelAnimationFrame(fadeRef.current);
+    fadeRef.current = null;
+  }, []);
+
+  const fadeTo = useCallback((to: number, done?: () => void, ms = FADE_MS) => {
     const a = audioRef.current;
     if (fadeRef.current) cancelAnimationFrame(fadeRef.current);
     if (!a) return done?.();
     const from = a.volume;
     const start = performance.now();
     const stepFade = (t: number) => {
-      const k = Math.min(1, (t - start) / FADE_MS);
+      const k = Math.min(1, (t - start) / ms);
       try {
         a.volume = from + (to - from) * k;
       } catch {
@@ -186,6 +195,7 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
         if (findTrack(saved.trackId)) {
           setTrackId(saved.trackId);
           resumeAt.current = Math.max(0, Number(saved.position) || 0);
+          resumeFor.current = saved.trackId;
         }
         if (typeof saved.volume === 'number') setVolumeState(Math.min(100, Math.max(0, saved.volume)));
         setShuffle(Boolean(saved.shuffle));
@@ -199,17 +209,18 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
     } catch {
       // ignore corrupt state
     }
-    hydrated.current = true;
+    setReady(true);
   }, []);
 
   const persist = useCallback(
     (position?: number) => {
-      if (!hydrated.current) return;
+      if (!ready) return;
       const data: Persisted = {
         v: 2,
         stationId,
         trackId: track?.id ?? null,
-        position: position ?? audioRef.current?.currentTime ?? 0,
+        // Until the saved track actually plays, keep its saved position.
+        position: position ?? (resumeAt.current || audioRef.current?.currentTime || 0),
         volume,
         shuffle,
         repeat,
@@ -222,7 +233,7 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
         // ignore
       }
     },
-    [stationId, track?.id, volume, shuffle, repeat, favorites, focusSync]
+    [ready, stationId, track?.id, volume, shuffle, repeat, favorites, focusSync]
   );
   useEffect(() => persist(), [persist]);
 
@@ -231,10 +242,19 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
     (next: MusicTrack, autoplay: boolean) => {
       const a = getAudio();
       const src = trackSrc(next);
+      // A pause fade or a pending error skip must not act on the new track.
+      cancelFade();
+      if (skipTimer.current) window.clearTimeout(skipTimer.current);
+      skipTimer.current = null;
+      if (resumeFor.current !== next.id) {
+        resumeAt.current = 0;
+        resumeFor.current = null;
+      }
       setError(null);
       setTrackId(next.id);
       setProgress({ position: 0, duration: next.duration });
-      if (!a.src.endsWith(src)) {
+      // A failed element is reloaded even for the same file, so "play" can retry.
+      if (!a.src.endsWith(src) || a.error) {
         a.src = src;
         a.load();
       }
@@ -253,7 +273,7 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
           });
       }
     },
-    [getAudio, fadeTo, targetVolume]
+    [getAudio, fadeTo, targetVolume, cancelFade]
   );
 
   const step = useCallback(
@@ -287,8 +307,11 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
     const onWaiting = () => setIsLoading(true);
     const onCanPlay = () => setIsLoading(false);
     const onMeta = () => {
-      if (resumeAt.current > 0 && resumeAt.current < a.duration - 5) a.currentTime = resumeAt.current;
+      if (resumeAt.current > 0 && resumeFor.current === live.current.track?.id && resumeAt.current < a.duration - 5) {
+        a.currentTime = resumeAt.current;
+      }
       resumeAt.current = 0;
+      resumeFor.current = null;
       setProgress({ position: a.currentTime, duration: a.duration || 0 });
     };
     const onTime = () => {
@@ -340,7 +363,7 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
         return;
       }
       setError('This track couldn’t be loaded — skipping.');
-      window.setTimeout(() => step(1, true), 1200);
+      skipTimer.current = window.setTimeout(() => step(1, true), 1200);
     };
     a.addEventListener('playing', onPlaying);
     a.addEventListener('pause', onPause);
@@ -380,7 +403,8 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
     if (!track) return;
     userPaused.current = false;
     const a = getAudio();
-    if (!a.src) return load(track, true);
+    if (!a.src || a.error) return load(track, true);
+    cancelFade();
     setIsLoading(a.readyState < 3);
     try {
       a.volume = 0;
@@ -390,7 +414,7 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
     a.play()
       .then(() => fadeTo(targetVolume()))
       .catch(() => setIsLoading(false));
-  }, [track, getAudio, load, fadeTo, targetVolume]);
+  }, [track, getAudio, load, fadeTo, targetVolume, cancelFade]);
 
   const pause = useCallback(() => {
     const a = audioRef.current;
@@ -465,10 +489,10 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
 
   // Leaving the favorites station once it's empty.
   useEffect(() => {
-    if (stationId === FAVORITES_ID && favorites.length === 0 && hydrated.current) {
+    if (stationId === FAVORITES_ID && favorites.length === 0 && ready) {
       setStationId(track ? stationOf(track).id : STATIONS[0].id);
     }
-  }, [stationId, favorites.length, track]);
+  }, [stationId, favorites.length, track, ready]);
 
   // --- sleep timer ---------------------------------------------------------------------
   const setSleepTimer = useCallback((value: number | 'track' | null) => {
@@ -483,27 +507,13 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
       setSleepEndsAt(null);
       const a = audioRef.current;
       if (a && !a.paused) {
-        // A long, gentle fade for falling asleep.
-        const from = a.volume;
-        const start = performance.now();
-        const tick = (t: number) => {
-          const k = Math.min(1, (t - start) / 8000);
-          try {
-            a.volume = from * (1 - k);
-          } catch {
-            // read-only
-          }
-          if (k < 1) requestAnimationFrame(tick);
-          else {
-            a.pause();
-            userPaused.current = true;
-          }
-        };
-        requestAnimationFrame(tick);
+        // A long, gentle fade for falling asleep (cancelled if the user picks a track meanwhile).
+        userPaused.current = true;
+        fadeTo(0, () => a.pause(), 8000);
       }
     }, 1000);
     return () => window.clearInterval(id);
-  }, [sleepEndsAt]);
+  }, [sleepEndsAt, fadeTo]);
 
   // --- follow the pomodoro timer -------------------------------------------------------------
   const setFocusSync = useCallback((value: boolean) => setFocusSyncState(value), []);
@@ -517,7 +527,8 @@ export function MusicProvider({ children }: { children: React.ReactNode }) {
       const s = syncRef.current;
       if (!s.focusSync) return;
       if (phase === 'focus' && running) {
-        if (!userPaused.current || audioRef.current?.paused) s.play();
+        // Don't override a pause the user made themselves.
+        if (!userPaused.current) s.play();
       } else s.pause();
     };
     window.addEventListener('lofi:pomodoro-phase', onPhase);

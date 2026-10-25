@@ -2,7 +2,7 @@
 
 import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { db, type UserSettings } from '../lib/database';
-import { toast } from '../lib/api';
+import { toast, localDate } from '../lib/api';
 import { useAuth } from './AuthContext';
 import { useAppState } from './AppStateContext';
 import { trackPomodoroSession } from '../components/Analytics';
@@ -92,6 +92,47 @@ function readOptions(s: UserSettings): TimerOptions {
   };
 }
 
+const MODES: PomodoroMode[] = ['pomodoro', 'shortBreak', 'longBreak'];
+
+/** Reads the saved run, rejecting anything malformed (a bad mode would turn the timer into NaN). */
+function readRun(raw?: string | null): PersistedRun | null {
+  try {
+    const run = JSON.parse(raw ?? localStorage.getItem(RUN_KEY) ?? 'null') as Partial<PersistedRun> | null;
+    if (!run || typeof run !== 'object' || !MODES.includes(run.mode as PomodoroMode)) return null;
+    const num = (v: unknown, fallback: number) => (typeof v === 'number' && Number.isFinite(v) && v >= 0 ? v : fallback);
+    return {
+      mode: run.mode as PomodoroMode,
+      endsAt: typeof run.endsAt === 'number' && Number.isFinite(run.endsAt) ? run.endsAt : null,
+      remaining: num(run.remaining, DEFAULT_DURATIONS.pomodoro),
+      cycles: Math.floor(num(run.cycles, 0)),
+      cyclesDate: typeof run.cyclesDate === 'string' ? run.cyclesDate : '',
+      category: typeof run.category === 'string' ? run.category : 'Studying',
+      task: run.task && typeof run.task.id === 'string' && typeof run.task.text === 'string' ? run.task : null,
+    };
+  } catch {
+    return null;
+  }
+}
+
+const DONE_KEY = 'lofi:pomodoro:done';
+
+/** True for exactly one tab per finished session (keyed by its end time). */
+async function claimCompletion(endsAt: number): Promise<boolean> {
+  const claim = () => {
+    try {
+      if (localStorage.getItem(DONE_KEY) === String(endsAt)) return false;
+      localStorage.setItem(DONE_KEY, String(endsAt));
+    } catch {
+      // storage blocked: only this tab can be running anyway
+    }
+    return true;
+  };
+  if (typeof navigator !== 'undefined' && navigator.locks) {
+    return navigator.locks.request('lofi-pomodoro-done', claim);
+  }
+  return claim();
+}
+
 /** Adds one finished focus session to a task and tells an open Tasks window. */
 async function creditTask(id: string) {
   const todos = await db.getTodos();
@@ -129,7 +170,8 @@ export function PomodoroProvider({ children }: { children: React.ReactNode }) {
   const [todayMinutes, setTodayMinutes] = useState(0);
   const [options, setOptionsState] = useState<TimerOptions>(DEFAULT_OPTIONS);
   const [task, setTaskState] = useState<FocusTask | null>(null);
-  const hydrated = useRef(false);
+  // Persisting starts only after the saved state was read, so defaults never overwrite it.
+  const [ready, setReady] = useState(false);
 
   const isRunning = endsAt !== null;
   const timeLeft = isRunning ? Math.max(0, Math.ceil((endsAt - now) / 1000)) : remaining;
@@ -144,26 +186,56 @@ export function PomodoroProvider({ children }: { children: React.ReactNode }) {
     setOptionsState(readOptions(s));
     setRemaining(d.pomodoro);
 
-    try {
-      const run = JSON.parse(localStorage.getItem(RUN_KEY) || 'null') as PersistedRun | null;
-      if (run) {
+    const run = readRun();
+    if (run) {
+      const cycles = run.cyclesDate === today() ? run.cycles : 0;
+      setCategoryState(run.category);
+      if (run.task) setTaskState(run.task);
+      if (run.endsAt && run.endsAt > Date.now()) {
         setModeState(run.mode);
-        setCategoryState(run.category);
-        setCycles(run.cyclesDate === today() ? run.cycles : 0);
-        if (run.task?.id) setTaskState(run.task);
-        if (run.endsAt && run.endsAt > Date.now()) {
-          setEndsAt(run.endsAt);
-        } else if (!run.endsAt) {
-          setRemaining(run.remaining);
-        } else {
-          // The phase finished while the page was closed; start fresh in the same mode.
-          setRemaining(d[run.mode]);
-        }
+        setCycles(cycles);
+        setEndsAt(run.endsAt);
+      } else if (!run.endsAt) {
+        setModeState(run.mode);
+        setCycles(cycles);
+        setRemaining(Math.min(run.remaining, d[run.mode]));
+      } else if (run.mode === 'pomodoro') {
+        // A focus session finished while the page was closed: it still counts.
+        const endedAt = run.endsAt;
+        const minutes = Math.round(d.pomodoro / 60);
+        claimCompletion(endedAt).then((mine) => {
+          if (!mine) return;
+          db.recordPomodoro(run.category, minutes, localDate(new Date(endedAt))).then((ok) => ok && window.dispatchEvent(new Event('lofi:pomodoro-recorded')));
+          if (run.task) creditTask(run.task.id);
+        });
+        const next: PomodoroMode = (cycles + 1) % readOptions(s).longEvery === 0 ? 'longBreak' : 'shortBreak';
+        setModeState(next);
+        setCycles(cycles + 1);
+        setRemaining(d[next]);
+      } else {
+        setModeState('pomodoro');
+        setCycles(cycles);
+        setRemaining(d.pomodoro);
       }
-    } catch {
-      // ignore corrupt state
     }
-    hydrated.current = true;
+    setReady(true);
+  }, []);
+
+  // Keep several open tabs in step: whatever one tab starts, pauses or finishes, the others adopt.
+  useEffect(() => {
+    const onStorage = (e: StorageEvent) => {
+      if (e.key !== RUN_KEY || !e.newValue) return;
+      const run = readRun(e.newValue);
+      if (!run) return;
+      setModeState(run.mode);
+      setEndsAt(run.endsAt && run.endsAt > Date.now() ? run.endsAt : null);
+      setRemaining(run.remaining);
+      setCycles(run.cycles);
+      setCategoryState(run.category);
+      setTaskState((t) => (t?.id === run.task?.id ? t : (run.task ?? null)));
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
   }, []);
 
   // Signed-in users get their account's durations once their profile is loaded.
@@ -185,17 +257,30 @@ export function PomodoroProvider({ children }: { children: React.ReactNode }) {
   }, []);
   useEffect(() => {
     loadToday();
+    window.addEventListener('lofi:pomodoro-recorded', loadToday);
+    return () => window.removeEventListener('lofi:pomodoro-recorded', loadToday);
   }, [loadToday, user?.id]);
 
+  // A task belongs to whoever was signed in when it was picked.
+  const lastUser = useRef<string | null | undefined>(undefined);
   useEffect(() => {
-    if (!hydrated.current) return;
+    if (!ready) return;
+    const id = user?.id ?? null;
+    if (lastUser.current !== undefined && lastUser.current !== id) setTaskState(null);
+    lastUser.current = id;
+  }, [user?.id, ready]);
+
+  useEffect(() => {
+    if (!ready) return;
     const run: PersistedRun = { mode, endsAt, remaining, cycles, cyclesDate: today(), category, task };
     try {
-      localStorage.setItem(RUN_KEY, JSON.stringify(run));
+      const next = JSON.stringify(run);
+      // Skipping identical writes stops two tabs from echoing storage events at each other.
+      if (localStorage.getItem(RUN_KEY) !== next) localStorage.setItem(RUN_KEY, next);
     } catch {
       // ignore
     }
-  }, [mode, endsAt, remaining, cycles, category, task]);
+  }, [ready, mode, endsAt, remaining, cycles, category, task]);
 
   // --- ticking ---
   useEffect(() => {
@@ -232,24 +317,29 @@ export function PomodoroProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   // --- phase completion ---
-  const completingRef = useRef(false);
   useEffect(() => {
-    if (!isRunning || timeLeft > 0 || completingRef.current) return;
-    completingRef.current = true;
+    if (!isRunning || timeLeft > 0 || endsAt === null) return;
+    // The next phase starts where this one ended (a throttled background tab may notice late).
+    const base = Math.max(endsAt, Date.now() - 60_000);
 
     if (mode === 'pomodoro') {
       const minutes = Math.round(durations.pomodoro / 60);
       const nextCycles = cycles + 1;
       setCycles(nextCycles);
-      trackPomodoroSession(minutes, true);
-      db.recordPomodoro(category, minutes).then((ok) => {
-        if (ok) loadToday();
+      // With several tabs open only one records the session.
+      const endedAt = endsAt;
+      claimCompletion(endedAt).then((mine) => {
+        if (!mine) return;
+        trackPomodoroSession(minutes, true);
+        db.recordPomodoro(category, minutes).then((ok) => {
+          if (ok) loadToday();
+        });
+        if (task) creditTask(task.id);
       });
-      if (task) creditTask(task.id);
       const longBreak = nextCycles % options.longEvery === 0;
       const next: PomodoroMode = longBreak ? 'longBreak' : 'shortBreak';
       setModeState(next);
-      if (options.autoBreaks) setEndsAt(Date.now() + durations[next] * 1000);
+      if (options.autoBreaks) setEndsAt(base + durations[next] * 1000);
       else {
         setEndsAt(null);
         setRemaining(durations[next]);
@@ -263,7 +353,7 @@ export function PomodoroProvider({ children }: { children: React.ReactNode }) {
       if (goalReached) toast(`Daily goal reached — ${options.goal} focus sessions today! 🏆`, 'success');
     } else {
       setModeState('pomodoro');
-      if (options.autoFocus) setEndsAt(Date.now() + durations.pomodoro * 1000);
+      if (options.autoFocus) setEndsAt(base + durations.pomodoro * 1000);
       else {
         setEndsAt(null);
         setRemaining(durations.pomodoro);
@@ -272,16 +362,15 @@ export function PomodoroProvider({ children }: { children: React.ReactNode }) {
       notify("Break's over", options.autoFocus ? 'Time to focus again.' : 'Start the next focus session when you’re ready.');
     }
     setNow(Date.now());
-    completingRef.current = false;
-  }, [isRunning, timeLeft, mode, cycles, category, durations, play, notify, loadToday, task, options, todaySessions]);
+  }, [isRunning, timeLeft, endsAt, mode, cycles, category, durations, play, notify, loadToday, task, options, todaySessions]);
 
   // The music player can follow the timer (play during focus, pause on breaks).
   useEffect(() => {
-    if (!hydrated.current) return;
+    if (!ready) return;
     window.dispatchEvent(
       new CustomEvent('lofi:pomodoro-phase', { detail: { phase: mode === 'pomodoro' ? 'focus' : 'break', running: isRunning } })
     );
-  }, [mode, isRunning]);
+  }, [ready, mode, isRunning]);
 
   // --- mirror into app state (bottom bar badge) and the tab title ---
   useEffect(() => {

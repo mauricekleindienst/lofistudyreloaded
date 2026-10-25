@@ -164,7 +164,11 @@ function migrateLegacyKeys() {
 
 function localCollection<T extends { id: string; created_at?: string; updated_at?: string }>(key: string) {
   return {
-    all: () => readLocal<T[]>(key, []),
+    // Guard against hand-edited or corrupt storage: anything but an array of objects is ignored.
+    all: (): T[] => {
+      const items = readLocal<unknown>(key, []);
+      return Array.isArray(items) ? (items.filter((i) => i && typeof i === 'object' && typeof (i as T).id === 'string') as T[]) : [];
+    },
     create(item: New<T>): T {
       const now = new Date().toISOString();
       const doc = { ...item, id: localId(), created_at: now, updated_at: now } as unknown as T;
@@ -185,6 +189,9 @@ function localCollection<T extends { id: string; created_at?: string; updated_at
       writeLocal(key, this.all().filter((d) => d.id !== id));
       return true;
     },
+    removeMany(ids: Set<string>) {
+      writeLocal(key, this.all().filter((d) => !ids.has(d.id)));
+    },
     clear() {
       try {
         localStorage.removeItem(key);
@@ -193,6 +200,11 @@ function localCollection<T extends { id: string; created_at?: string; updated_at
       }
     },
   };
+}
+
+function localStats(): PomodoroStats[] {
+  const items = readLocal<unknown>(KEY.pomodoro, []);
+  return Array.isArray(items) ? (items.filter((s) => s && typeof s === 'object' && typeof s.date === 'string') as PomodoroStats[]) : [];
 }
 
 const local = {
@@ -297,10 +309,10 @@ class DatabaseService {
 
   // --- pomodoro ---
 
-  async recordPomodoro(category: string, minutes: number): Promise<boolean> {
-    const date = localDate();
+  /** date: the local day the session ended (defaults to today) */
+  async recordPomodoro(category: string, minutes: number, date = localDate()): Promise<boolean> {
     if (!this.authenticated) {
-      const all = readLocal<PomodoroStats[]>(KEY.pomodoro, []);
+      const all = localStats();
       const existing = all.find((s) => s.date === date && s.category === category);
       if (existing) {
         existing.pomodoro_count += 1;
@@ -323,7 +335,7 @@ class DatabaseService {
   /** from = YYYY-MM-DD (inclusive), undefined = all time */
   async getPomodoroStats(from?: string): Promise<PomodoroStats[]> {
     if (!this.authenticated) {
-      return readLocal<PomodoroStats[]>(KEY.pomodoro, []).filter((s) => !from || s.date >= from);
+      return localStats().filter((s) => !from || s.date >= from);
     }
     try {
       return (await api<{ stats: PomodoroStats[] }>(`/api/pomodoro${from ? `?from=${from}` : ''}`)).stats;
@@ -347,7 +359,8 @@ class DatabaseService {
   // --- settings (always cached locally so the UI can start instantly) ---
 
   getLocalSettings(): UserSettings {
-    return readLocal<UserSettings>(KEY.settings, {});
+    const s = readLocal<unknown>(KEY.settings, {});
+    return s && typeof s === 'object' && !Array.isArray(s) ? (s as UserSettings) : {};
   }
 
   async saveSettings(changes: Partial<UserSettings>): Promise<void> {
@@ -363,13 +376,22 @@ class DatabaseService {
   // --- guest -> account ---
 
   hasGuestData(): boolean {
-    return (
-      local.todos.all().length + local.notes.all().length + local.appointments.all().length + local.decks.all().length + local.habits.all().length > 0
-    );
+    return Object.values(local).some((store) => store.all().length > 0) || localStats().length > 0;
   }
 
-  /** After sign-in: move anything created as a guest into the account. */
-  async importGuestData(): Promise<number> {
+  private importing: Promise<number> | null = null;
+
+  /** After sign-in: move anything created as a guest into the account (one run at a time). */
+  importGuestData(): Promise<number> {
+    if (!this.importing) {
+      this.importing = this.runImport().finally(() => {
+        this.importing = null;
+      });
+    }
+    return this.importing;
+  }
+
+  private async runImport(): Promise<number> {
     if (!this.authenticated || !this.hasGuestData()) return 0;
     const strip = <T extends { id: string }>(items: T[]) =>
       items.map((item) => {
@@ -377,18 +399,26 @@ class DatabaseService {
         delete rest.id;
         return rest;
       });
+    // Snapshot what is sent; only those items are removed afterwards, so anything created
+    // while the request is in flight stays on the device.
+    const sent = Object.fromEntries(Object.entries(local).map(([k, store]) => [k, store.all()])) as {
+      [K in keyof typeof local]: ReturnType<(typeof local)[K]['all']>;
+    };
+    const stats = localStats();
     try {
       const res = await api<{ imported: Record<string, number> }>('/api/account/import', {
         method: 'POST',
         json: {
-          todos: strip(local.todos.all()),
-          notes: strip(local.notes.all()),
-          appointments: strip(local.appointments.all()),
-          decks: strip(local.decks.all()),
-          habits: strip(local.habits.all()),
+          todos: strip(sent.todos),
+          notes: strip(sent.notes),
+          appointments: strip(sent.appointments),
+          decks: strip(sent.decks),
+          habits: strip(sent.habits),
+          pomodoro: stats,
         },
       });
-      Object.values(local).forEach((store) => store.clear());
+      (Object.keys(local) as (keyof typeof local)[]).forEach((k) => local[k].removeMany(new Set(sent[k].map((i) => i.id))));
+      if (stats.length) writeLocal(KEY.pomodoro, []);
       return Object.values(res.imported).reduce((a, b) => a + b, 0);
     } catch (err) {
       reportError('Importing your guest data', err);

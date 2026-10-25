@@ -139,7 +139,7 @@ export function AmbientProvider({ children }: { children: React.ReactNode }) {
   const [paused, setPaused] = useState(true);
   const [failed, setFailed] = useState<Record<string, true>>({});
   const audio = useRef<Record<string, HTMLAudioElement>>({});
-  const hydrated = useRef(false);
+  const [ready, setReady] = useState(false);
 
   useEffect(() => {
     try {
@@ -151,17 +151,17 @@ export function AmbientProvider({ children }: { children: React.ReactNode }) {
     } catch {
       // ignore
     }
-    hydrated.current = true;
+    setReady(true);
   }, []);
 
   useEffect(() => {
-    if (!hydrated.current) return;
+    if (!ready) return;
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify({ levels, master } satisfies Persisted));
     } catch {
       // ignore
     }
-  }, [levels, master]);
+  }, [ready, levels, master]);
 
   // Sync <audio> elements with the desired mix.
   useEffect(() => {
@@ -172,13 +172,18 @@ export function AmbientProvider({ children }: { children: React.ReactNode }) {
         el = new Audio(sound.noise ? noiseUrl(sound.noise) : sound.url);
         el.loop = true;
         el.preload = 'auto';
-        el.addEventListener('error', () => setFailed((f) => ({ ...f, [sound.id]: true })));
+        el.addEventListener('error', () => {
+          // A broken sound turns itself off instead of blocking the whole mix.
+          setFailed((f) => ({ ...f, [sound.id]: true }));
+          setLevels((prev) => ({ ...prev, [sound.id]: 0 }));
+        });
         audio.current[sound.id] = el;
       }
-      if (!el) continue;
+      if (!el || failed[sound.id]) continue;
       el.volume = Math.min(1, (level / 100) * (master / 100));
       if (level > 0 && !paused) {
-        if (el.paused) el.play().catch(() => setPaused(true));
+        // Only a refused autoplay pauses the mix; a load error is handled by the error listener.
+        if (el.paused) el.play().catch((err: DOMException) => err.name === 'NotAllowedError' && setPaused(true));
       } else if (!el.paused) {
         el.pause();
       }
@@ -196,6 +201,16 @@ export function AmbientProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const toggle = useCallback((id: string) => {
+    // Turning a failed sound on again retries it with a fresh element.
+    if (audio.current[id]?.error) {
+      audio.current[id].src = '';
+      delete audio.current[id];
+      setFailed((f) => {
+        const next = { ...f };
+        delete next[id];
+        return next;
+      });
+    }
     setLevels((prev) => {
       const on = (prev[id] ?? 0) > 0;
       return { ...prev, [id]: on ? 0 : DEFAULT_LEVEL };

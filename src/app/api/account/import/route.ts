@@ -1,6 +1,6 @@
 import { ObjectId } from 'mongodb';
 import { collections } from '@/lib/server/mongo';
-import { route, json, readJson, requireUser, rateLimit, HttpError } from '@/lib/server/http';
+import { route, json, readJson, requireUser, rateLimit, HttpError, dateStr, str } from '@/lib/server/http';
 import { parseAppointment, parseDeck, parseHabit, parseNote, parseTodo } from '@/lib/server/resources';
 
 export const runtime = 'nodejs';
@@ -73,6 +73,34 @@ export const POST = route(async (request) => {
   decks.splice(await room(decksCol, 200));
   habits.splice(await room(habitsCol, 50));
 
+  // Guest focus sessions: kept separately so they show up in your own stats but can't be
+  // used to climb the leaderboard (nothing on the device can prove they happened).
+  const stats = list(body.pomodoro, 'pomodoro')
+    .map((s) =>
+      safe(() => ({
+        date: dateStr(s.date, 'date')!,
+        category: str(s.category ?? 'Other', 'category', { max: 30, min: 1 })!,
+        count: Math.min(100, Math.max(0, Math.floor(Number(s.pomodoro_count) || 0))),
+        minutes: Math.min(1440, Math.max(0, Math.floor(Number(s.total_focus_time_minutes) || 0))),
+      }))
+    )
+    .filter((s): s is NonNullable<typeof s> => Boolean(s && (s.count || s.minutes)));
+  if (stats.length) {
+    await (await collections.pomodoroStats()).bulkWrite(
+      stats.map((s) => ({
+        updateOne: {
+          filter: { userId, date: s.date, category: s.category },
+          update: {
+            $inc: { importedCount: s.count, importedMinutes: s.minutes },
+            $set: { updatedAt: now },
+            $setOnInsert: { _id: new ObjectId(), pomodoroCount: 0, focusMinutes: 0 },
+          },
+          upsert: true,
+        },
+      }))
+    );
+  }
+
   if (todos.length) await todosCol.insertMany(todos as never[]);
   if (decks.length) await decksCol.insertMany(decks as never[]);
   if (habits.length) await habitsCol.insertMany(habits as never[]);
@@ -80,6 +108,6 @@ export const POST = route(async (request) => {
   if (appointments.length) await apptCol.insertMany(appointments as never[]);
 
   return json({
-    imported: { todos: todos.length, notes: notes.length, appointments: appointments.length, decks: decks.length, habits: habits.length },
+    imported: { todos: todos.length, notes: notes.length, appointments: appointments.length, decks: decks.length, habits: habits.length, sessions: stats.length },
   });
 });

@@ -6,13 +6,20 @@ const escapeHtml = (text: string) =>
   text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 
 function inline(text: string): string {
-  return escapeHtml(text)
-    .replace(/`([^`]+)`/g, '<code>$1</code>')
-    .replace(/(^|[\s(])(https?:\/\/[^\s<)]+)/g, '$1<a href="$2" target="_blank" rel="noopener noreferrer nofollow">$2</a>')
+  // Code spans and links are swapped out for placeholders first, so the emphasis rules
+  // below can't rewrite inside a URL or across tags.
+  const kept: string[] = [];
+  const keep = (html: string) => `\u0000${kept.push(html) - 1}\u0000`;
+  return escapeHtml(text.replace(/\u0000/g, ''))
+    .replace(/`([^`]+)`/g, (_, code: string) => keep(`<code>${code}</code>`))
+    .replace(/(^|[\s(])(https?:\/\/[^\s<)]+)/g, (_, pre: string, url: string) =>
+      pre + keep(`<a href="${url}" target="_blank" rel="noopener noreferrer nofollow">${url}</a>`)
+    )
     .replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>')
     .replace(/__(.+?)__/g, '<u>$1</u>')
     .replace(/~~(.+?)~~/g, '<del>$1</del>')
-    .replace(/(^|[^*])\*([^*\s][^*]*?)\*(?!\*)/g, '$1<em>$2</em>');
+    .replace(/(^|[^*])\*([^*\s][^*]*?)\*(?!\*)/g, '$1<em>$2</em>')
+    .replace(/\u0000(\d+)\u0000/g, (_, i: string) => kept[Number(i)]);
 }
 
 export function renderMarkdown(source: string): string {

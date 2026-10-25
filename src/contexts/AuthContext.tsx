@@ -42,10 +42,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [loading, setLoading] = useState(true);
   const [providers, setProviders] = useState<OAuthProvider[]>([]);
 
-  // Keep the data layer in sync *during render*, so child effects that run in
-  // the same commit already talk to the right backend (account vs. guest storage).
-  db.setAuthenticated(Boolean(user));
-
+  // applyUser switches the data layer *before* setUser, so components reloading on the
+  // new user already talk to the right backend. (Syncing it from `user` during render
+  // flipped it back to guest mode mid-import, when `user` was still null.)
   const applyUser = useCallback(async (next: AppUser | null, { importGuest = false } = {}) => {
     db.setAuthenticated(Boolean(next));
     if (next && importGuest) {

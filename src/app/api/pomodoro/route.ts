@@ -1,14 +1,15 @@
 import { ObjectId } from 'mongodb';
+import type { PomodoroStatDoc } from '@/lib/server/models';
 import { collections } from '@/lib/server/mongo';
 import { route, json, readJson, requireUser, dateStr, str, rateLimit, HttpError } from '@/lib/server/http';
 
 export const runtime = 'nodejs';
 
-const serialize = (s: { date: string; category: string; pomodoroCount: number; focusMinutes: number }) => ({
+const serialize = (s: PomodoroStatDoc) => ({
   date: s.date,
   category: s.category,
-  pomodoro_count: s.pomodoroCount,
-  total_focus_time_minutes: s.focusMinutes,
+  pomodoro_count: (s.pomodoroCount ?? 0) + (s.importedCount ?? 0),
+  total_focus_time_minutes: (s.focusMinutes ?? 0) + (s.importedMinutes ?? 0),
 });
 
 /** GET ?from=YYYY-MM-DD (the client's local date); omit for all time. */

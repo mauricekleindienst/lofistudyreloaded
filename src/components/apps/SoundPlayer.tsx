@@ -91,13 +91,13 @@ export default function SoundPlayer() {
                 className={styles.cardToggle}
                 onClick={() => amb.toggle(sound.id)}
                 aria-pressed={on}
-                disabled={broken}
+                title={broken ? 'Couldn’t load — tap to try again' : undefined}
               >
                 <span className={styles.cardIcon}>
                   <Icon size={20} />
                 </span>
                 <span className={styles.cardName}>{sound.name}</span>
-                {broken && <span className={styles.cardError}>Unavailable</span>}
+                {broken && <span className={styles.cardError}>Unavailable · retry</span>}
               </button>
               <input
                 type="range"
