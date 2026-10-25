@@ -69,8 +69,9 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
   const [openWindows, setOpenWindows] = useState<ModernWindow[]>([]);
   const zCounter = useRef(100);
   const [currentBackground, setCurrentBackground] = useState<Background>(DEFAULT_BACKGROUND);
-  const [videoReady, setVideoReady] = useState(false);
-  const [videoFailed, setVideoFailed] = useState(false);
+  // Readiness is tracked per source, so switching backgrounds can't race a stale event.
+  const [readySrc, setReadySrc] = useState<string | null>(null);
+  const [failedSrc, setFailedSrc] = useState<string | null>(null);
   const [useMobileVideo, setUseMobileVideo] = useState(false);
   const [reduceMotion, setReduceMotion] = useState(false);
   const [showBackgrounds, setShowBackgrounds] = useState(false);
@@ -138,15 +139,15 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
     if (fromAccount) setCurrentBackground(fromAccount);
   }, [user?.id, user?.settings?.selectedBackground]);
 
-  useEffect(() => {
-    setVideoReady(false);
-    setVideoFailed(false);
-  }, [currentBackground.id, useMobileVideo]);
+  const videoSrc = useMobileVideo ? currentBackground.srcMobile : currentBackground.src;
 
   // Autoplay can be refused (iOS low-power mode); the poster stays visible then.
+  // The element is server-rendered, so it may already be playable before React
+  // attached onCanPlay — check readyState instead of relying on the event alone.
   useEffect(() => {
     const video = videoRef.current;
     if (!video || reduceMotion) return;
+    if (video.readyState >= 3) setReadySrc(videoSrc);
     video.play().catch(() => undefined);
     const onVisibility = () => {
       if (document.visibilityState === 'visible') video.play().catch(() => undefined);
@@ -154,7 +155,7 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
     };
     document.addEventListener('visibilitychange', onVisibility);
     return () => document.removeEventListener('visibilitychange', onVisibility);
-  }, [currentBackground.id, useMobileVideo, reduceMotion]);
+  }, [videoSrc, reduceMotion]);
 
   const handleBackgroundChange = useCallback((background: Background) => {
     setCurrentBackground(background);
@@ -263,7 +264,7 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
   const currentTime = now ? now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
   const currentDate = now ? now.toLocaleDateString([], { weekday: 'short', month: 'short', day: 'numeric' }) : '';
 
-  const videoSrc = useMobileVideo ? currentBackground.srcMobile : currentBackground.src;
+  const videoReady = readySrc === videoSrc;
 
   return (
     <div className={desktopStyles.desktop}>
@@ -273,7 +274,7 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
         style={{ backgroundImage: `url(${currentBackground.poster})` }}
         aria-hidden
       />
-      {!reduceMotion && !videoFailed && (
+      {!reduceMotion && failedSrc !== videoSrc && (
         <video
           key={videoSrc}
           ref={videoRef}
@@ -288,8 +289,9 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
           disablePictureInPicture
           aria-hidden
           tabIndex={-1}
-          onCanPlay={() => setVideoReady(true)}
-          onError={() => setVideoFailed(true)}
+          onCanPlay={() => setReadySrc(videoSrc)}
+          onPlaying={() => setReadySrc(videoSrc)}
+          onError={() => setFailedSrc(videoSrc)}
           style={{ opacity: videoReady ? 1 : 0 }}
         />
       )}
