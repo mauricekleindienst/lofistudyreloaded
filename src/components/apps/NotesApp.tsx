@@ -144,17 +144,23 @@ export default function NotesApp() {
 
   // Existing notes: save automatically a moment after typing stops.
   const autosaveTimer = useRef<number | null>(null);
+  /** edit waiting for the autosave timer; flushed if the window or page closes first */
+  const pending = useRef<{ id: string; title: string; content: string } | null>(null);
   useEffect(() => {
     if (!isEditing || isCreating || !selectedNote) return;
     const title = editTitle.trim();
     if (!title || (title === selectedNote.title && editContent === selectedNote.content)) return;
+    const change = { id: selectedNote.id, title, content: editContent };
+    pending.current = change;
     if (autosaveTimer.current) window.clearTimeout(autosaveTimer.current);
     autosaveTimer.current = window.setTimeout(async () => {
+      pending.current = null;
       setAutoSaved('saving');
-      const updated = await db.updateNote(selectedNote.id, { title, content: editContent });
+      const updated = await db.updateNote(change.id, { title: change.title, content: change.content });
       if (updated) {
         setNotes((prev) => prev.map((n) => (n.id === updated.id ? updated : n)));
-        setSelectedNote(updated);
+        // The user may have moved on to another note while this was saving.
+        setSelectedNote((current) => (current?.id === updated.id ? updated : current));
         setAutoSaved('saved');
       } else setAutoSaved('idle');
     }, 1200);
@@ -162,6 +168,47 @@ export default function NotesApp() {
       if (autosaveTimer.current) window.clearTimeout(autosaveTimer.current);
     };
   }, [isEditing, isCreating, selectedNote, editTitle, editContent, db]);
+
+  useEffect(() => {
+    const flush = () => {
+      const change = pending.current;
+      if (!change) return;
+      pending.current = null;
+      db.updateNote(change.id, { title: change.title, content: change.content });
+    };
+    window.addEventListener('pagehide', flush);
+    return () => {
+      window.removeEventListener('pagehide', flush);
+      flush();
+    };
+  }, [db]);
+
+  /**
+   * Leaving the editor never throws work away: an existing note is saved right now,
+   * a new one stays as the local draft that "New note" restores.
+   */
+  const keepEdits = () => {
+    if (!hasUnsavedEdits()) return;
+    if (isCreating) {
+      toast('Your new note is kept as a draft — press “New Note” to continue.', 'info');
+      return;
+    }
+    const title = editTitle.trim();
+    if (!selectedNote || !title) return;
+    pending.current = null;
+    if (autosaveTimer.current) window.clearTimeout(autosaveTimer.current);
+    const id = selectedNote.id;
+    db.updateNote(id, { title, content: editContent }).then((updated) => {
+      if (updated) setNotes((prev) => prev.map((n) => (n.id === id ? updated : n)));
+    });
+  };
+
+  /** Edits that would be lost by leaving the editor now. */
+  const hasUnsavedEdits = () =>
+    isEditing &&
+    (isCreating
+      ? Boolean(editTitle.trim() || editContent.trim())
+      : editTitle.trim() !== (selectedNote?.title ?? '') || editContent !== (selectedNote?.content ?? ''));
 
   const togglePin = async (note: Note) => {
     const pinned = !note.pinned;
@@ -267,11 +314,7 @@ export default function NotesApp() {
 
   // Handle selecting a note
   const handleSelectNote = (note: Note) => {
-    if (isEditing && (editTitle !== selectedNote?.title || editContent !== selectedNote?.content)) {
-      if (!confirm('You have unsaved changes. Do you want to discard them?')) {
-        return;
-      }
-    }
+    keepEdits();
 
     setSelectedNote(note);
     setEditTitle(note.title);
@@ -478,6 +521,15 @@ export default function NotesApp() {
                 key={note.id}
                 className={`${styles.noteCard} ${selectedNote?.id === note.id ? styles.selected : ''}`}
                 onClick={() => handleSelectNote(note)}
+                role="button"
+                tabIndex={0}
+                aria-label={`Open note ${note.title}`}
+                aria-current={selectedNote?.id === note.id}
+                onKeyDown={(e) => {
+                  if (e.target !== e.currentTarget || (e.key !== 'Enter' && e.key !== ' ')) return;
+                  e.preventDefault();
+                  handleSelectNote(note);
+                }}
               >
                 <div className={styles.noteHeader}>
                   <h3 className={styles.noteTitle}>
@@ -537,9 +589,7 @@ export default function NotesApp() {
                 type="button"
                 className={styles.backButton}
                 onClick={() => {
-                  if (isEditing && (editTitle !== (selectedNote?.title ?? '') || editContent !== (selectedNote?.content ?? ''))) {
-                    if (!confirm('Discard unsaved changes?')) return;
-                  }
+                  keepEdits();
                   setIsEditing(false);
                   setIsCreating(false);
                   setSelectedNote(null);

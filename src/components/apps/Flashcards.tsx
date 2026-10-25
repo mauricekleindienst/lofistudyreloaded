@@ -418,8 +418,9 @@ function Study({ deck, cram, onExit, onSave }: { deck: Deck; cram: boolean; onEx
   });
   const [flipped, setFlipped] = useState(false);
   const [results, setResults] = useState<Record<Grade, number>>({ again: 0, hard: 0, good: 0, easy: 0 });
-  // Graded cards in this session (box/due changed), saved when the session ends.
+  // Graded cards in this session (box/due changed); saved shortly after each answer.
   const [graded, setGraded] = useState<Record<string, FlashCard>>({});
+  const rootRef = useRef<HTMLDivElement>(null);
   const dirty = useRef(false);
   const [total] = useState(queue.length);
 
@@ -429,12 +430,24 @@ function Study({ deck, cram, onExit, onSave }: { deck: Deck; cram: boolean; onEx
     onSave(deck.cards.map((c) => graded[c.id] ?? c));
   };
 
-  // Save when leaving the session, even by closing the window.
+  // Save a moment after each answer, and right away when the session, window or page closes.
   const saveRef = useRef(save);
   useEffect(() => {
     saveRef.current = save;
   });
-  useEffect(() => () => saveRef.current(), []);
+  useEffect(() => {
+    if (!Object.keys(graded).length) return;
+    const id = window.setTimeout(() => saveRef.current(), 1500);
+    return () => window.clearTimeout(id);
+  }, [graded]);
+  useEffect(() => {
+    const flush = () => saveRef.current();
+    window.addEventListener('pagehide', flush);
+    return () => {
+      window.removeEventListener('pagehide', flush);
+      flush();
+    };
+  }, []);
 
   const card = queue.length ? (graded[queue[0]] ?? deck.cards.find((c) => c.id === queue[0])) : undefined;
 
@@ -449,8 +462,15 @@ function Study({ deck, cram, onExit, onSave }: { deck: Deck; cram: boolean; onEx
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if ((e.target as HTMLElement).closest('input, textarea, [contenteditable]')) return;
+      // Only while this study view has focus (or nothing else does), never for other windows.
+      const root = rootRef.current;
+      const active = document.activeElement;
+      if (!root || !(root.contains(active) || !active || active === document.body)) return;
+      const target = e.target as HTMLElement;
+      if (target.closest('input, textarea, select, [contenteditable]') || e.ctrlKey || e.metaKey || e.altKey) return;
       if (e.key === ' ' || e.key === 'Enter') {
+        // A focused button handles Enter/Space itself.
+        if (target.closest('button, a')) return;
         e.preventDefault();
         setFlipped((f) => !f);
       } else if (flipped && ['1', '2', '3', '4'].includes(e.key)) {
@@ -495,7 +515,7 @@ function Study({ deck, cram, onExit, onSave }: { deck: Deck; cram: boolean; onEx
   };
 
   return (
-    <div className={styles.app}>
+    <div className={styles.app} ref={rootRef}>
       <div className={styles.row}>
         <button
           className={styles.icon}

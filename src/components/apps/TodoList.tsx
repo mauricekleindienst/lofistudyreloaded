@@ -120,10 +120,11 @@ const TodoList: React.FC = () => {
   const toggleTodo = async (id: string) => {
     const todo = todos.find(t => t.id === id);
     if (!todo) return;
-    setTodos(prev => prev.map(t => (t.id === id ? { ...t, completed: !t.completed } : t)));
+    setTodos(prev => prev.map(t => (t.id === id ? { ...t, completed: !todo.completed } : t)));
     const result = await db.updateTodo(id, { completed: !todo.completed });
+    // Undo only this field, so a pomodoro credit that arrived meanwhile isn't lost.
     if (!result) {
-      setTodos(prev => prev.map(t => (t.id === id ? todo : t)));
+      setTodos(prev => prev.map(t => (t.id === id ? { ...t, completed: todo.completed } : t)));
     }
   };
 
@@ -165,7 +166,7 @@ const TodoList: React.FC = () => {
     if (!id || !original || !text || text === original.text) return;
     setTodos(prev => prev.map(t => (t.id === id ? { ...t, text } : t)));
     if (!(await db.updateTodo(id, { text }))) {
-      setTodos(prev => prev.map(t => (t.id === id ? original : t)));
+      setTodos(prev => prev.map(t => (t.id === id ? { ...t, text: original.text } : t)));
     }
   };
 

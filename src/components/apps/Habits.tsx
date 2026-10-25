@@ -47,6 +47,12 @@ export default function Habits() {
   const [name, setName] = useState('');
   const [emoji, setEmoji] = useState(EMOJIS[0]);
   const [target, setTarget] = useState(7);
+  // Re-render once a minute so "today" moves on at midnight.
+  const [, setMinute] = useState(0);
+  useEffect(() => {
+    const id = window.setInterval(() => setMinute((m) => m + 1), 60_000);
+    return () => window.clearInterval(id);
+  }, []);
   const week = thisWeek();
   const today = localDate();
 
@@ -77,9 +83,14 @@ export default function Habits() {
   };
 
   const toggleDay = async (habit: Habit, key: string) => {
-    const days = habit.days.includes(key) ? habit.days.filter((d) => d !== key) : [...habit.days, key].sort();
-    setHabits((prev) => prev.map((h) => (h.id === habit.id ? { ...h, days } : h)));
-    if (!(await db.updateHabit(habit.id, { days }))) setHabits((prev) => prev.map((h) => (h.id === habit.id ? habit : h)));
+    const on = !habit.days.includes(key);
+    const flip = (days: string[], value: boolean) => (value ? [...new Set([...days, key])].sort() : days.filter((d) => d !== key));
+    const days = flip(habit.days, on);
+    setHabits((prev) => prev.map((h) => (h.id === habit.id ? { ...h, days: flip(h.days, on) } : h)));
+    // On failure undo just this day, not other days ticked meanwhile.
+    if (!(await db.updateHabit(habit.id, { days }))) {
+      setHabits((prev) => prev.map((h) => (h.id === habit.id ? { ...h, days: flip(h.days, !on) } : h)));
+    }
   };
 
   const remove = async (habit: Habit) => {

@@ -38,9 +38,17 @@
   font-weight: 500;
   color: var(--text-primary);
   font-variant-numeric: tabular-nums;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.15;
+  /* Long numbers shrink (see .long/.xlong) and never get cut off with an ellipsis. */
+  overflow-wrap: anywhere;
+}
+
+.long {
+  font-size: clamp(20px, 7cqi, 32px);
+}
+
+.xlong {
+  font-size: clamp(16px, 5.4cqi, 26px);
 }
 
 .keys {
