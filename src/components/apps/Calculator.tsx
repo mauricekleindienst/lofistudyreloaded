@@ -28,7 +28,7 @@ const CalcButton: React.FC<{ onClick: () => void; className?: string; label?: st
   label,
   children,
 }) => (
-  <button type="button" onClick={onClick} className={`${calculatorStyles.button} ${className}`} aria-label={label}>
+  <button type="button" onClick={onClick} className={`${calculatorStyles.key} ${className}`} aria-label={label}>
     {children}
   </button>
 );
@@ -115,50 +115,65 @@ const Calculator: React.FC = () => {
   }, [inputNumber, inputOperation, performCalculation, deleteDigit, clear]);
 
 
+  const toggleSign = () => {
+    if (display === '0' || display === 'Error') return;
+    setDisplay(display.startsWith('-') ? display.slice(1) : `-${display}`);
+  };
+
+  const op = (o: Op, label: string = o) => (
+    <CalcButton
+      onClick={() => inputOperation(o)}
+      className={`${calculatorStyles.op} ${operation === o && waitingForNewValue ? calculatorStyles.opActive : ''}`}
+      label={label === '-' ? 'Minus' : label}
+    >
+      {o === '-' ? '−' : o}
+    </CalcButton>
+  );
+  const num = (d: string) => (
+    <CalcButton onClick={() => inputNumber(d)} className={d === '0' ? calculatorStyles.wide : ''}>
+      {d}
+    </CalcButton>
+  );
+
   return (
-    <div className={calculatorStyles.calculatorContainer} ref={rootRef} tabIndex={-1}>
-      {/* Display */}
-      <div className={calculatorStyles.display}>
-        <div className={calculatorStyles.displayText} style={{ textAlign: 'right' }} aria-live="polite" role="status">
-          {display}
+    <div className={calculatorStyles.calc} ref={rootRef} tabIndex={-1}>
+      <div className={calculatorStyles.screen}>
+        <div className={calculatorStyles.expression} aria-hidden>
+          {previousValue !== null && operation ? `${format(previousValue)} ${operation === '-' ? '−' : operation}` : '\u00a0'}
         </div>
-        {operation && (
-          <div className={calculatorStyles.operationIndicator}>
-            {operation}
-          </div>
-        )}
+        <output className={calculatorStyles.result} aria-live="polite">
+          {display}
+        </output>
       </div>
 
-      {/* Buttons */}
-      <div className={calculatorStyles.buttonGrid}>
-        <CalcButton onClick={clear} className={calculatorStyles.clearButton}>
-          Clear
+      <div className={calculatorStyles.keys}>
+        <CalcButton onClick={clear} className={calculatorStyles.fn} label="Clear">
+          C
         </CalcButton>
-        <CalcButton onClick={deleteDigit} className={calculatorStyles.deleteButton} label="Delete last digit">
-          <Delete size={16} />
+        <CalcButton onClick={toggleSign} className={calculatorStyles.fn} label="Toggle sign">
+          ±
         </CalcButton>
-        <CalcButton onClick={() => inputOperation('÷')} className={`${calculatorStyles.operatorButton} ${operation === '÷' ? calculatorStyles.activeOperator : ''}`}>÷</CalcButton>
-        <CalcButton onClick={() => inputOperation('×')} className={`${calculatorStyles.operatorButton} ${operation === '×' ? calculatorStyles.activeOperator : ''}`}>×</CalcButton>
-        
-        <CalcButton onClick={() => inputNumber('7')}>7</CalcButton>
-        <CalcButton onClick={() => inputNumber('8')}>8</CalcButton>
-        <CalcButton onClick={() => inputNumber('9')}>9</CalcButton>
-        <CalcButton onClick={() => inputOperation('-')} className={`${calculatorStyles.operatorButton} ${operation === '-' ? calculatorStyles.activeOperator : ''}`}>-</CalcButton>
-        
-        <CalcButton onClick={() => inputNumber('4')}>4</CalcButton>
-        <CalcButton onClick={() => inputNumber('5')}>5</CalcButton>
-        <CalcButton onClick={() => inputNumber('6')}>6</CalcButton>
-        <CalcButton onClick={() => inputOperation('+')} className={`${calculatorStyles.operatorButton} ${operation === '+' ? calculatorStyles.activeOperator : ''}`}>+</CalcButton>
-        
-        <CalcButton onClick={() => inputNumber('1')}>1</CalcButton>
-        <CalcButton onClick={() => inputNumber('2')}>2</CalcButton>
-        <CalcButton onClick={() => inputNumber('3')}>3</CalcButton>
-        <CalcButton onClick={performCalculation} className={calculatorStyles.equalsButton}>
+        <CalcButton onClick={deleteDigit} className={calculatorStyles.fn} label="Delete last digit">
+          <Delete size={18} />
+        </CalcButton>
+        {op('÷', 'Divide')}
+        {num('7')}
+        {num('8')}
+        {num('9')}
+        {op('×', 'Multiply')}
+        {num('4')}
+        {num('5')}
+        {num('6')}
+        {op('-')}
+        {num('1')}
+        {num('2')}
+        {num('3')}
+        {op('+', 'Plus')}
+        {num('0')}
+        {num('.')}
+        <CalcButton onClick={performCalculation} className={calculatorStyles.equals} label="Equals">
           =
         </CalcButton>
-        
-        <CalcButton onClick={() => inputNumber('0')} className={calculatorStyles.zeroButton}>0</CalcButton>
-        <CalcButton onClick={() => inputNumber('.')}>.</CalcButton>
       </div>
     </div>
   );

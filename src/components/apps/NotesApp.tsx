@@ -30,11 +30,10 @@ import {
 import { useDataPersistence } from '../../hooks/useDataPersistence';
 import { useAppState } from '../../contexts/AppStateContext';
 import { toast } from '../../lib/api';
+import { renderMarkdown, stripMarkdown } from '../../lib/markdown';
 import type { Note } from '../../lib/database';
 import styles from '../../../styles/NotesApp.module.css';
 
-const escapeHtml = (text: string) =>
-  text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;').replace(/'/g, '&#39;');
 
 export default function NotesApp() {
   const { updateNotesState } = useAppState();
@@ -217,10 +216,7 @@ export default function NotesApp() {
     return date.toLocaleDateString();
   };
 
-  // Get note preview
-  const getPreview = (content: string): string => {
-    return content.length > 150 ? content.substring(0, 150) + '...' : content;
-  };
+  const getPreview = (content: string): string => stripMarkdown(content);
 
   // Text formatting functions
   const insertTextAtCursor = (text: string, wrapText?: string) => {
@@ -279,42 +275,7 @@ export default function NotesApp() {
     }, 0);
   };
 
-  // Render markdown-like content for display
-  const renderFormattedContent = (content: string) => {
-    if (!content) return '';
-    
-    // Simple markdown-like rendering. Escape first: this ends up in dangerouslySetInnerHTML.
-    let rendered = escapeHtml(content)
-      // Headers
-      .replace(/^### (.*$)/gm, '<h3>$1</h3>')
-      .replace(/^## (.*$)/gm, '<h2>$1</h2>')
-      .replace(/^# (.*$)/gm, '<h1>$1</h1>')
-      // Bold / underline
-      .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-      .replace(/__(.*?)__/g, '<u>$1</u>')
-      // Italic
-      .replace(/\*(.*?)\*/g, '<em>$1</em>')
-      // Strikethrough
-      .replace(/~~(.*?)~~/g, '<del>$1</del>')
-      // Code
-      .replace(/`(.*?)`/g, '<code>$1</code>')
-      // Quote
-      .replace(/^&gt; (.*$)/gm, '<blockquote>$1</blockquote>')
-      // Horizontal line
-      .replace(/^---$/gm, '<hr>')
-      // Lists
-      .replace(/^- (.*$)/gm, '<li>$1</li>')
-      .replace(/^\d+\. (.*$)/gm, '<li>$1</li>')
-      // Line breaks
-      .replace(/\n/g, '<br>');
-
-    // Wrap consecutive li elements in ul/ol
-    rendered = rendered.replace(/(<li>.*<\/li>)/g, (match) => {
-      return `<ul>${match}</ul>`;
-    });
-
-    return rendered;
-  };
+  const renderFormattedContent = renderMarkdown;
 
   const isEmpty = filteredNotes.length === 0 && !isLoading;
 

@@ -52,7 +52,7 @@ const WINDOW_SIZES: Record<string, { width: number; height: number }> = {
   pomodoro: { width: 360, height: 540 },
   todo: { width: 380, height: 600 },
   notes: { width: 820, height: 600 },
-  calculator: { width: 300, height: 440 },
+  calculator: { width: 320, height: 500 },
   'sound-player': { width: 360, height: 640 },
   'account-settings': { width: 440, height: 560 },
   chat: { width: 400, height: 580 },
@@ -214,14 +214,15 @@ const ModernDesktop: React.FC<DesktopProps> = ({ onShowAuth }) => {
         const vw = window.innerWidth;
         const vh = window.innerHeight;
         const preferred = WINDOW_SIZES[app.id] ?? { width: 380, height: 480 };
+        // Windows start below the top bar (~84px) and must end above the dock (~110px).
         const size = {
           width: Math.min(preferred.width, vw - 24),
-          height: Math.min(preferred.height, vh - 150),
+          height: Math.max(260, Math.min(preferred.height, vh - 84 - 112)),
         };
         // Tile new windows left-to-right next to the visible ones; cascade once the row is full.
         const visible = prev.filter((w) => !w.isMinimized);
         const rightEdge = visible.reduce((max, w) => Math.max(max, w.position.x + w.size.width), 0);
-        const top = Math.max(84, Math.min(96, vh - size.height - 100));
+        const top = Math.max(76, Math.min(84, vh - size.height - 112));
         let position = { x: visible.length ? rightEdge + 16 : 24, y: top };
         if (position.x + size.width > vw - 12) {
           const cascade = (visible.length % 6) * 32;

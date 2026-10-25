@@ -11,14 +11,16 @@ interface Track {
   channelName: string;
   channelUrl: string;
   isCustom?: boolean;
+  /** Live streams have no static thumbnail; YouTube serves a grey placeholder instead. */
+  noThumb?: boolean;
 }
 
 const BUILT_IN: Track[] = [
-  { title: 'Lofi hip hop radio 📚', videoId: 'jfKfPfyJRdk', channelName: 'Lofi Girl', channelUrl: 'https://www.youtube.com/@LofiGirl' },
+  { title: 'Lofi hip hop radio 📚', videoId: 'jfKfPfyJRdk', channelName: 'Lofi Girl', channelUrl: 'https://www.youtube.com/@LofiGirl', noThumb: true },
   { title: 'Medieval lofi radio 🏰', videoId: '_uMuuHk_KkQ', channelName: 'Lofi Girl', channelUrl: 'https://www.youtube.com/@LofiGirl' },
-  { title: 'Jazz lofi radio 🎷', videoId: 'HuFYqnbVbzY', channelName: 'Lofi Girl', channelUrl: 'https://www.youtube.com/@LofiGirl' },
-  { title: 'Sad lofi radio ☔', videoId: 'P6Segk8cr-c', channelName: 'Lofi Girl', channelUrl: 'https://www.youtube.com/@LofiGirl' },
-  { title: 'Asian lofi radio ⛩️', videoId: 'Na0w3Mz46GA', channelName: 'Lofi Girl', channelUrl: 'https://www.youtube.com/@LofiGirl' },
+  { title: 'Jazz lofi radio 🎷', videoId: 'HuFYqnbVbzY', channelName: 'Lofi Girl', channelUrl: 'https://www.youtube.com/@LofiGirl', noThumb: true },
+  { title: 'Sad lofi radio ☔', videoId: 'P6Segk8cr-c', channelName: 'Lofi Girl', channelUrl: 'https://www.youtube.com/@LofiGirl', noThumb: true },
+  { title: 'Asian lofi radio ⛩️', videoId: 'Na0w3Mz46GA', channelName: 'Lofi Girl', channelUrl: 'https://www.youtube.com/@LofiGirl', noThumb: true },
   { title: 'Peaceful piano radio 🎹', videoId: '4oStw0r33so', channelName: 'Lofi Girl', channelUrl: 'https://www.youtube.com/@LofiGirl' },
   { title: 'Synthwave radio 🌌', videoId: '4xDzrJKXOOY', channelName: 'Lofi Girl', channelUrl: 'https://www.youtube.com/@LofiGirl' },
   { title: 'Dark ambient radio 🌃', videoId: 'S_MOd40zlYU', channelName: 'Lofi Girl', channelUrl: 'https://www.youtube.com/@LofiGirl' },
@@ -336,9 +338,21 @@ const MusicPlayerSidebar: React.FC<MusicPlayerSidebarProps> = ({ isOpen, onToggl
             ) : (
               currentTrack && (
                 <button type="button" className={styles.videoPoster} onClick={playPause} aria-label={`Play ${currentTrack.title}`}>
-                  {!thumbFailed[currentTrack.videoId] && (
+                  {!thumbFailed[currentTrack.videoId] && !currentTrack.noThumb && (
                     // eslint-disable-next-line @next/next/no-img-element
-                    <img src={thumb(currentTrack.videoId)} alt="" referrerPolicy="no-referrer" onError={() => setThumbFailed((f) => ({ ...f, [currentTrack.videoId]: true }))} />
+                    <img
+                      src={thumb(currentTrack.videoId)}
+                      alt=""
+                      referrerPolicy="no-referrer"
+                      onError={() => setThumbFailed((f) => ({ ...f, [currentTrack.videoId]: true }))}
+                      // Live streams get YouTube's 120px grey placeholder instead of a 404.
+                      onLoad={(e) => e.currentTarget.naturalWidth <= 120 && setThumbFailed((f) => ({ ...f, [currentTrack.videoId]: true }))}
+                    />
+                  )}
+                  {(thumbFailed[currentTrack.videoId] || currentTrack.noThumb) && (
+                    <span className={styles.videoPosterTitle}>
+                      <Music size={16} /> {currentTrack.title}
+                    </span>
                   )}
                   <span className={styles.videoPosterPlay}>
                     <Play size={28} />

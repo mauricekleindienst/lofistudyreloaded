@@ -1,399 +1,113 @@
-/* Calculator App - Responsive Compact Design */
+/* Calculator */
 
-.calculatorContainer {
-  height: 100%;
-  width: 100%;
+.calc {
   display: flex;
   flex-direction: column;
-  padding: var(--spacing-sm);
-  gap: var(--spacing-sm);
-  color: var(--text-primary);
-  background: transparent;
-  box-sizing: border-box;
-  overflow: hidden;
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
+  gap: 12px;
+  height: 100%;
+  padding: 14px;
+  outline: none;
+  container-type: inline-size;
 }
 
-/* Responsive Display Section */
-.display {
-  background: linear-gradient(135deg, 
-    rgba(0, 0, 0, 0.7) 0%, 
-    rgba(0, 0, 0, 0.5) 100%);
-  border: 1px solid var(--border-color);
-  border-radius: var(--radius-md);
-  padding: var(--spacing-md);
-  backdrop-filter: blur(8px);
-  box-shadow: inset 0 1px 6px rgba(0, 0, 0, 0.3);
-  height: clamp(50px, 8vh, 70px);
+.screen {
   display: flex;
-  align-items: center;
+  flex-direction: column;
+  align-items: flex-end;
   justify-content: flex-end;
-  position: relative;
-  overflow: hidden;
+  gap: 2px;
+  min-height: 76px;
   flex-shrink: 0;
+  padding: 10px 14px;
+  border-radius: 14px;
+  background: rgba(0, 0, 0, 0.35);
+  border: 1px solid var(--border-color);
+  overflow: hidden;
 }
 
-.display::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  height: 1px;
-  background: linear-gradient(90deg, 
-    transparent, 
-    rgba(255, 255, 255, 0.15), 
-    transparent);
+.expression {
+  font-size: 13px;
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
 }
 
-.displayText {
-  font-size: clamp(1.2rem, 3vw, 2rem);
-  font-weight: 300;
+.result {
+  max-width: 100%;
+  font-family: var(--font-geist-mono), ui-monospace, monospace;
+  font-size: clamp(28px, 9cqi, 40px);
+  font-weight: 500;
   color: var(--text-primary);
-  text-shadow: 0 1px 2px rgba(0, 0, 0, 0.5);
-  letter-spacing: 0.5px;
+  font-variant-numeric: tabular-nums;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
-  max-width: 100%;
-  line-height: 1;
 }
 
-.operationIndicator {
-  position: absolute;
-  top: 4px;
-  right: 8px;
-  font-size: 0.7rem;
-  color: var(--accent-color);
-  font-weight: 600;
-}
-
-/* Compact Button Grid */
-.buttonGrid {
+.keys {
+  flex: 1;
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 4px;
-  flex: 1;
+  grid-template-rows: repeat(5, minmax(40px, 72px));
+  gap: 8px;
   min-height: 0;
+  align-content: stretch;
 }
 
-/* Base Button Styles - Compact */
-.button {
-  background: rgba(255, 255, 255, 0.05);
-  backdrop-filter: blur(4px);
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 6px;
-  color: var(--text-primary);
-  font-size: 1rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 36px;
-  position: relative;
-  overflow: hidden;
-  user-select: none;
-  box-sizing: border-box;
-}
-
-.button::before {
-  content: '';
-  position: absolute;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: linear-gradient(135deg, var(--accent-color), var(--accent-light));
-  opacity: 0;
-  transition: opacity 0.2s ease;
-  border-radius: 5px;
-}
-
-.button:hover::before {
-  opacity: 0.1;
-}
-
-.button:active {
-  transform: scale(0.98);
-}
-
-.button:hover {
-  border-color: var(--accent-color);
-  box-shadow: 0 2px 8px rgba(255, 123, 0, 0.2);
-  background: rgba(255, 255, 255, 0.1);
-}
-
-/* Operator Buttons */
-.operatorButton {
-  background: rgba(255, 123, 0, 0.1);
-  border-color: rgba(255, 123, 0, 0.3);
-  color: var(--accent-color);
-  font-weight: 600;
-}
-
-.operatorButton:hover {
-  background: rgba(255, 123, 0, 0.2);
-  color: var(--text-primary);
-}
-
-.operatorButton.activeOperator {
-  background: var(--accent-color);
-  color: var(--text-primary);
-  box-shadow: 0 2px 8px rgba(255, 123, 0, 0.4);
-}
-
-/* Special Buttons */
-.clearButton {
-  background: rgba(220, 38, 38, 0.1);
-  border-color: rgba(220, 38, 38, 0.3);
-  color: #ef4444;
-  font-weight: 600;
-  grid-column: span 2;
-}
-
-.clearButton:hover {
-  background: rgba(220, 38, 38, 0.2);
-  color: var(--text-primary);
-}
-
-.deleteButton {
-  background: rgba(245, 158, 11, 0.1);
-  border-color: rgba(245, 158, 11, 0.3);
-  color: #fbbf24;
-  font-weight: 600;
-}
-
-.deleteButton:hover {
-  background: rgba(245, 158, 11, 0.2);
-  color: var(--text-primary);
-}
-
-.equalsButton {
-  background: rgba(34, 197, 94, 0.1);
-  border-color: rgba(34, 197, 94, 0.3);
-  color: #10b981;
-  font-weight: 700;
-  font-size: 1.2rem;
-  grid-row: span 2;
-}
-
-.equalsButton:hover {
-  background: rgba(34, 197, 94, 0.2);
-  color: var(--text-primary);
-}
-
-.zeroButton {
-  grid-column: span 2;
-}
-
-/* Number Buttons */
-.button:not(.operatorButton):not(.clearButton):not(.deleteButton):not(.equalsButton) {
-  font-weight: 500;
-}
-
-.button:not(.operatorButton):not(.clearButton):not(.deleteButton):not(.equalsButton):hover {
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(12px);
-}
-
-/* History Sidebar (Optional) */
-.historySidebar {
-  width: 140px;
-  display: flex;
-  flex-direction: column;
-  background: rgba(0, 0, 0, 0.2);
-  backdrop-filter: blur(12px);
-  border-radius: 12px;
-  padding: 16px;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
-  flex-shrink: 0;
-}
-
-.sidebarHeader {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  margin-bottom: 12px;
-  padding-bottom: 8px;
-  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
-}
-
-.sidebarHeader h3 {
-  margin: 0;
-  font-size: 12px;
-  font-weight: 600;
-  color: var(--text-secondary);
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-}
-
-.clearHistoryButton {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 6px;
-  background: transparent;
-  border: 1px solid rgba(255, 255, 255, 0.1);
-  border-radius: 6px;
-  color: var(--text-secondary);
-  cursor: pointer;
-  transition: all 0.3s ease;
-  font-size: 12px;
-}
-
-.clearHistoryButton:hover {
-  background: var(--accent-color);
-  color: var(--text-primary);
-  border-color: var(--accent-color);
-  transform: scale(1.05);
-}
-
-.historyList {
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-  max-height: 200px;
-  overflow-y: auto;
-  scrollbar-width: thin;
-}
-
-.historyItem {
-  padding: 8px 10px;
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 6px;
-  font-size: 12px;
-  color: var(--text-secondary);
-  font-family: 'SF Mono', Monaco, 'Cascadia Code', 'Roboto Mono', Consolas, monospace;
-  cursor: pointer;
-  transition: all 0.3s ease;
+.key {
+  display: grid;
+  place-items: center;
   border: 1px solid transparent;
-}
-
-.historyItem:hover {
-  background: rgba(255, 255, 255, 0.1);
+  border-radius: 12px;
+  background: rgba(255, 255, 255, 0.06);
   color: var(--text-primary);
-  border-color: var(--border-color);
-  transform: translateX(2px);
+  font: inherit;
+  font-size: 20px;
+  font-weight: 500;
+  cursor: pointer;
+  user-select: none;
+  touch-action: manipulation;
+  transition: background 0.12s ease, transform 0.08s ease;
 }
 
-/* Custom Scrollbar for History */
-.historyList::-webkit-scrollbar {
-  width: 4px;
+.key:hover {
+  background: rgba(255, 255, 255, 0.1);
 }
 
-.historyList::-webkit-scrollbar-track {
-  background: rgba(255, 255, 255, 0.05);
-  border-radius: 2px;
+.key:active {
+  transform: scale(0.96);
 }
 
-.historyList::-webkit-scrollbar-thumb {
+.fn {
+  background: rgba(255, 255, 255, 0.12);
+  color: var(--text-secondary);
+  font-size: 17px;
+}
+
+.op {
+  background: rgba(255, 123, 0, 0.16);
+  color: #ffb066;
+  font-size: 22px;
+}
+
+.op:hover {
+  background: rgba(255, 123, 0, 0.26);
+}
+
+.opActive {
+  background: #ffb066;
+  color: #1a1206;
+}
+
+.equals {
   background: var(--accent-color);
-  border-radius: 2px;
-  transition: background 0.3s ease;
+  color: #fff;
+  font-size: 22px;
 }
 
-.historyList::-webkit-scrollbar-thumb:hover {
-  background: var(--accent-light);
+.equals:hover {
+  background: var(--accent-hover);
 }
 
-/* Responsive Design */
-@media (max-width: 768px) {
-  .calculatorContainer {
-    padding: 16px;
-    gap: 12px;
-    min-height: 300px;
-  }
-
-  .display {
-    padding: 16px;
-    min-height: 70px;
-  }
-
-  .displayText {
-    font-size: clamp(1.5rem, 6vw, 2rem);
-  }
-
-  .button {
-    height: 50px;
-    font-size: 16px;
-  }
-
-  .buttonGrid {
-    gap: 10px;
-  }
-
-  .historySidebar {
-    display: none; /* Hide sidebar on mobile */
-  }
-}
-
-@media (max-width: 480px) {
-  .calculatorContainer {
-    padding: 12px;
-    gap: 10px;
-    min-height: 280px;
-  }
-
-  .display {
-    padding: 12px;
-    min-height: 60px;
-  }
-
-  .displayText {
-    font-size: clamp(1.2rem, 5vw, 1.8rem);
-  }
-
-  .button {
-    height: 45px;
-    font-size: 14px;
-    border-radius: 10px;
-  }
-
-  .buttonGrid {
-    gap: 8px;
-  }
-
-  .operationIndicator {
-    top: 8px;
-    right: 12px;
-    font-size: 10px;
-    padding: 2px 6px;
-  }
-}
-
-/* Animation Classes */
-.button-press {
-  animation: buttonPress 0.1s ease-out;
-}
-
-@keyframes buttonPress {
-  0% { transform: scale(1); }
-  50% { transform: scale(0.95); }
-  100% { transform: scale(1); }
-}
-
-.display-update {
-  animation: displayUpdate 0.2s ease-out;
-}
-
-@keyframes displayUpdate {
-  0% { opacity: 0.7; transform: scale(0.98); }
-  100% { opacity: 1; transform: scale(1); }
-}
-
-/* Additional utility classes */
-.hidden {
-  display: none;
-}
-
-.fade-in {
-  animation: fadeIn 0.3s ease-out;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; }
-  to { opacity: 1; }
+.wide {
+  grid-column: span 2;
 }

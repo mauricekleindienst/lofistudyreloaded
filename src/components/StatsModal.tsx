@@ -277,7 +277,7 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, onSignIn }) =>
                                       <span className={styles.categoryName}>{category}</span>
                                     </div>
                                     <div className={styles.categoryStats}>
-                                      <span className={styles.sessionCount}>{data.sessions} sessions</span>
+                                      <span className={styles.sessionCount}>{data.sessions} {data.sessions === 1 ? 'session' : 'sessions'}</span>
                                       <span className={styles.timeLabel}>{formatTime(data.time)}</span>
                                     </div>
                                   </div>
@@ -393,7 +393,7 @@ const StatsModal: React.FC<StatsModalProps> = ({ isOpen, onClose, onSignIn }) =>
                               )}
                             </div>
                             <div className={styles.userStats}>
-                              <span>{leaderboardUser.totalSessions} sessions</span>
+                              <span>{leaderboardUser.totalSessions} {leaderboardUser.totalSessions === 1 ? 'session' : 'sessions'}</span>
                               <span>•</span>
                               <span>{formatTime(leaderboardUser.totalFocusTime)}</span>
                             </div>

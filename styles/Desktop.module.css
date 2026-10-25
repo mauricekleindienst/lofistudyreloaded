@@ -618,3 +618,7 @@
     display: none;
   }
 }
+
+.topRightIcons {
+  z-index: 900;
+}

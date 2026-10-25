@@ -863,3 +863,17 @@
     gap: 8px;
   }
 }
+
+/* Title on its own line, filters wrap below it */
+.scoreboardHeader {
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+}
+
+.scoreboardFilters {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 8px;
+}

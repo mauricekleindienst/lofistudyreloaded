@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useLayoutEffect } from 'react';
-import { Send, RefreshCw, User, Users, LogIn, MessageSquare, X } from 'lucide-react';
+import { Send, RefreshCw, User, Users, LogIn, X } from 'lucide-react';
 import { openAuthModal } from '../../lib/ui';
 import { useAuth } from '../../contexts/AuthContext';
 import { useRealtimeChat } from '../../hooks/useRealtimeChat';
@@ -122,15 +122,12 @@ const ChatApp: React.FC = () => {
   return (
     <div className={styles.container}>
       <div className={styles.header}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <MessageSquare size={20} />
-          <h2>Community Chat</h2>
+        <div className={styles.onlineUsers} title="People with the chat open in the last minute">
+          <span className={styles.onlineDot} aria-hidden />
+          <Users size={14} />
+          <span>{onlineUsers} online</span>
         </div>
         <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
-          <div className={styles.onlineUsers}>
-            <Users size={14} />
-            <span>{onlineUsers} online</span>
-          </div>
           {user && (
             <button
               onClick={() => setUsernameDialogOpen(true)}

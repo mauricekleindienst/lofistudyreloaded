@@ -734,3 +734,8 @@
     justify-content: space-between;
   }
 }
+
+/* Layering: windows (30+) < top bar/dock (900) < modals & sidebar (1000+) < toasts (2000) */
+.selectionBar {
+  z-index: 900;
+}

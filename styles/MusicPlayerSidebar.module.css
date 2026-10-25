@@ -1613,3 +1613,24 @@
 .nowPlaying .trackThumbnail {
   display: none;
 }
+
+.videoPoster {
+  background:
+    radial-gradient(circle at 30% 20%, rgba(255, 123, 0, 0.35), transparent 55%),
+    radial-gradient(circle at 80% 90%, rgba(99, 102, 241, 0.35), transparent 55%),
+    #14171d;
+}
+
+.videoPosterTitle {
+  position: absolute;
+  left: 14px;
+  bottom: 12px;
+  right: 14px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.85);
+  text-align: left;
+}
